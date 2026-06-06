@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import { DeleteForm } from "./DeleteForm";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -218,25 +219,7 @@ export default async function EditPlatikaPage({ params }: Props) {
           <p className="text-xs mb-4" style={{ color: "var(--color-text-muted)" }}>
             Eliminar esta plática es irreversible.
           </p>
-          <form
-            action={deletePlatika}
-            onSubmit={(e) => {
-              if (!confirm("¿Eliminar esta plática permanentemente?")) e.preventDefault();
-            }}
-          >
-            <input type="hidden" name="id" value={id} />
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl text-xs font-semibold"
-              style={{
-                background: "rgba(248,113,113,0.15)",
-                color: "var(--color-destructive)",
-                border: "1px solid rgba(248,113,113,0.3)",
-              }}
-            >
-              Eliminar plática
-            </button>
-          </form>
+          <DeleteForm action={deletePlatika} id={id} />
         </div>
       )}
     </div>
