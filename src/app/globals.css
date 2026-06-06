@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+:root {
+  /* Elim LLDM Design System — "Santuario Oscuro" */
+  --color-bg: #0A0A12;
+  --color-surface: #12121E;
+  --color-surface-elevated: #1C1C2E;
+  --color-border: #2A2A3E;
+  --color-primary: #D4A017;
+  --color-primary-light: #EDB84A;
+  --color-primary-dark: #A07810;
+  --color-text: #F8F8FF;
+  --color-text-muted: #9090A8;
+  --color-live: #FF4444;
+  --color-success: #4ADE80;
+  --color-destructive: #F87171;
+  --color-info: #60A5FA;
+  --radius: 8px;
+
+  /* Tailwind v4 theme mapping */
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-cinzel);
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-primary: var(--color-primary);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --font-sans: var(--font-inter);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-dark);
+}
+
+/* Gold glow utility */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(212, 160, 23, 0.35);
+}
+
+/* Live badge pulse */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.animate-live {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
