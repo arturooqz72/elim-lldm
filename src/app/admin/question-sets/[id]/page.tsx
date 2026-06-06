@@ -1,9 +1,10 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { QuestionForm } from "./QuestionForm";
+import { DeleteQuestionForm } from "./DeleteQuestionForm";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -244,17 +245,11 @@ export default async function EditQuestionSetPage({ params, searchParams }: Prop
                       >
                         ✎
                       </Link>
-                      <form action={deleteQuestion} onSubmit={(e) => !confirm("¿Eliminar pregunta?") && e.preventDefault()}>
-                        <input type="hidden" name="questionId" value={q.id} />
-                        <input type="hidden" name="setId" value={id} />
-                        <button
-                          type="submit"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center"
-                          style={{ background: "rgba(248,113,113,0.1)", color: "var(--color-destructive)" }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </form>
+                      <DeleteQuestionForm
+                        action={deleteQuestion}
+                        questionId={q.id}
+                        setId={id}
+                      />
                     </div>
                   </div>
                 </div>
