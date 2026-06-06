@@ -10,6 +10,45 @@ interface Props {
   searchParams: Promise<{ edit?: string }>;
 }
 
+async function addQuestion(formData: FormData) {
+  "use server";
+  const setId = formData.get("setId") as string;
+  const supabase = await createServiceClient();
+  await supabase.from("questions").insert({
+    question_set_id: setId,
+    question_text: (formData.get("question_text") as string).trim(),
+    option_a: (formData.get("option_a") as string).trim(),
+    option_b: (formData.get("option_b") as string).trim(),
+    option_c: (formData.get("option_c") as string).trim(),
+    option_d: (formData.get("option_d") as string).trim(),
+    correct_option: formData.get("correct_option") as string,
+    bible_reference: ((formData.get("bible_reference") as string).trim()) || null,
+    time_limit_seconds: parseInt((formData.get("time_limit_seconds") as string) || "30", 10),
+    points: parseInt((formData.get("points") as string) || "100", 10),
+    order_index: parseInt((formData.get("order_index") as string) || "0", 10),
+  });
+  revalidatePath(`/admin/question-sets/${setId}`);
+}
+
+async function updateQuestion(formData: FormData) {
+  "use server";
+  const questionId = formData.get("questionId") as string;
+  const setId = formData.get("setId") as string;
+  const supabase = await createServiceClient();
+  await supabase.from("questions").update({
+    question_text: (formData.get("question_text") as string).trim(),
+    option_a: (formData.get("option_a") as string).trim(),
+    option_b: (formData.get("option_b") as string).trim(),
+    option_c: (formData.get("option_c") as string).trim(),
+    option_d: (formData.get("option_d") as string).trim(),
+    correct_option: formData.get("correct_option") as string,
+    bible_reference: ((formData.get("bible_reference") as string).trim()) || null,
+    time_limit_seconds: parseInt((formData.get("time_limit_seconds") as string) || "30", 10),
+    points: parseInt((formData.get("points") as string) || "100", 10),
+  }).eq("id", questionId);
+  revalidatePath(`/admin/question-sets/${setId}`);
+}
+
 async function deleteQuestion(formData: FormData) {
   "use server";
   const questionId = formData.get("questionId") as string;
@@ -230,6 +269,8 @@ export default async function EditQuestionSetPage({ params, searchParams }: Prop
             setId={id}
             nextOrderIndex={questions.length}
             editQuestion={editId ? questions.find((q) => q.id === editId) : undefined}
+            addAction={addQuestion}
+            updateAction={updateQuestion}
           />
         </div>
       </div>
