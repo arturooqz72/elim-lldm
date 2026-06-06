@@ -27,6 +27,28 @@ async function updatePlatika(formData: FormData) {
   revalidatePath(`/admin/platikas/${id}`);
 }
 
+async function goLive(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  const supabase = await createServiceClient();
+  await supabase
+    .from("platikas")
+    .update({ status: "live", started_at: new Date().toISOString() })
+    .eq("id", id);
+  revalidatePath(`/admin/platikas/${id}`);
+}
+
+async function endPlatika(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  const supabase = await createServiceClient();
+  await supabase
+    .from("platikas")
+    .update({ status: "ended", ended_at: new Date().toISOString() })
+    .eq("id", id);
+  revalidatePath(`/admin/platikas/${id}`);
+}
+
 async function deletePlatika(formData: FormData) {
   "use server";
   const id = formData.get("id") as string;
@@ -130,6 +152,38 @@ export default async function EditPlatikaPage({ params }: Props) {
           </p>
         )}
       </div>
+
+      {/* Live controls */}
+      {p.status === "scheduled" && (
+        <form action={goLive} className="mb-6">
+          <input type="hidden" name="id" value={id} />
+          <button
+            type="submit"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold"
+            style={{ background: "var(--color-live)", color: "#fff" }}
+          >
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            Iniciar en vivo
+          </button>
+        </form>
+      )}
+
+      {p.status === "live" && (
+        <form action={endPlatika} className="mb-6">
+          <input type="hidden" name="id" value={id} />
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl text-sm font-bold"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            Terminar transmisión
+          </button>
+        </form>
+      )}
 
       {/* Edit form */}
       <form action={updatePlatika} className="flex flex-col gap-5">
