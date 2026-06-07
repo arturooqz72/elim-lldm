@@ -75,6 +75,26 @@ export default async function LandingPage() {
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden px-4 pt-24 pb-20 md:pt-32 md:pb-28">
+          {/* Hero background video */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ opacity: 0.6 }}
+            >
+              <source src="/videos/elim-intro.mp4" type="video/mp4" />
+            </video>
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(10,10,18,0.25) 0%, rgba(10,10,18,0.65) 75%, var(--color-bg) 100%)",
+              }}
+            />
+          </div>
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
