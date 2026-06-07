@@ -1,5 +1,5 @@
 const AZURACAST_API = "https://radio.elimlldm.net/api";
-const STATION_ID = "elim_radio";
+const STATION_ID = "elim_lldm";
 
 export interface NowPlayingData {
   station: {
@@ -39,4 +39,4 @@ export async function getNowPlaying(): Promise<NowPlayingData | null> {
 }
 
 export const RADIO_STREAM_URL =
-  "https://radio.elimlldm.net/listen/elim_radio/radio.mp3";
+  "https://radio.elimlldm.net/listen/elim_lldm/radio.mp3";
