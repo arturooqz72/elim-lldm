@@ -92,16 +92,10 @@ export default async function AdminDashboard() {
             <Link
               key={s.label}
               href={s.href}
-              className="rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200"
+              className="rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200 hover:opacity-80"
               style={{
                 background: "var(--color-surface)",
                 border: "1px solid var(--color-border)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = s.color;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
               }}
             >
               <div
@@ -142,6 +136,12 @@ export default async function AdminDashboard() {
           label="Nuevo set de preguntas"
           description="Crear banco de preguntas bíblicas"
           color="#60A5FA"
+        />
+        <QuickAction
+          href="/trivia/nueva"
+          label="Nueva sala de Trivia"
+          description="Abrir una sala de trivia en vivo"
+          color="var(--trivia-gold)"
         />
         <QuickAction
           href="/admin/archivo/nueva"
@@ -270,16 +270,10 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200"
+      className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 hover:opacity-80"
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = color;
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
       }}
     >
       <div
