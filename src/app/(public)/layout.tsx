@@ -8,11 +8,16 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await getProfile();
+  let profile: Profile | null = null;
+  try {
+    profile = (await getProfile()) as Profile | null;
+  } catch {
+    // cookies() unavailable in static context — navbar renders as unauthenticated
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PublicHeader initialProfile={profile as Profile | null} />
+      <PublicHeader initialProfile={profile} />
       <main className="flex-1">{children}</main>
       <PublicFooter />
     </div>
