@@ -61,16 +61,10 @@ export default async function AdminPlatikaListPage() {
                 <Link
                   key={p.id}
                   href={`/admin/platikas/${p.id}`}
-                  className="flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200"
+                  className="flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 hover:opacity-80"
                   style={{
                     background: "var(--color-surface)",
                     border: "1px solid var(--color-border)",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,160,23,0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)";
                   }}
                 >
                   <div className="flex items-center gap-3 min-w-0">

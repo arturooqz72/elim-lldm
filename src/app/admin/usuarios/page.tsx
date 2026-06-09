@@ -154,14 +154,11 @@ export default async function UsuariosPage({
               </div>
 
               {/* Role */}
-              <form action={setRole}>
+              <form action={setRole} className="flex items-center gap-1">
                 <input type="hidden" name="id" value={user.id} />
                 <select
                   name="role"
                   defaultValue={user.role}
-                  onChange={(e) => {
-                    (e.target.form as HTMLFormElement).requestSubmit();
-                  }}
                   className="rounded-lg px-2 py-1 text-xs outline-none"
                   style={{
                     background: "var(--color-surface-elevated)",
@@ -173,6 +170,14 @@ export default async function UsuariosPage({
                   <option value="anfitrion">Anfitrión</option>
                   <option value="admin">Admin</option>
                 </select>
+                <button
+                  type="submit"
+                  className="rounded px-1.5 py-1 text-xs font-bold"
+                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-primary)", border: "1px solid var(--color-border)" }}
+                  title="Aplicar rol"
+                >
+                  ✓
+                </button>
               </form>
 
               {/* Verified LLDM */}
