@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, LogIn, LogOut, ChevronDown, UserCircle } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
 
@@ -11,27 +11,18 @@ const NAV_LINKS = [
   { href: "/radio", label: "Radio", icon: Radio },
   { href: "/platikas", label: "Pláticas", icon: Mic },
   { href: "/juegos", label: "Juegos", icon: Gamepad2 },
+  { href: "/trivia", label: "Trivia en vivo", icon: Sparkles },
   { href: "/archivo", label: "Archivo", icon: Archive },
 ];
 
-export function PublicHeader() {
+export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      if (data) setProfile(data as Profile);
-    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
@@ -97,6 +88,21 @@ export function PublicHeader() {
 
         {/* Auth */}
         <div className="flex items-center gap-2">
+          {profile?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200"
+              style={{
+                background: "rgba(212,160,23,0.12)",
+                border: "1px solid rgba(212,160,23,0.35)",
+                color: "var(--color-primary)",
+              }}
+            >
+              <ShieldCheck size={15} />
+              Panel Admin
+            </Link>
+          )}
+
           {profile ? (
             <div className="relative">
               <button
@@ -144,16 +150,6 @@ export function PublicHeader() {
                     <UserCircle size={14} />
                     Mi perfil
                   </Link>
-                  {profile.role === "admin" && (
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 px-4 py-2 text-sm transition-colors"
-                      style={{ color: "var(--color-primary)" }}
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      Panel Admin
-                    </Link>
-                  )}
                   <div
                     className="mx-3 my-1 h-px"
                     style={{ background: "var(--color-border)" }}
@@ -221,6 +217,18 @@ export function PublicHeader() {
               </Link>
             );
           })}
+
+          {profile?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
+              style={{ color: "var(--color-primary)", background: "rgba(212,160,23,0.1)" }}
+              onClick={() => setMobileOpen(false)}
+            >
+              <ShieldCheck size={18} />
+              Panel Admin
+            </Link>
+          )}
         </div>
       )}
     </header>
