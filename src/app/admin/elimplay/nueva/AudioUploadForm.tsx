@@ -103,6 +103,7 @@ const inputStyle = {
 export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<FileItem[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [categoryId, setCategoryId] = useState("");
@@ -114,19 +115,42 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   const [done, setDone] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Sin esto, soltar un archivo fuera del rectángulo exacto del dropzone
-  // hace que el navegador navegue a ese archivo y reemplace toda la página.
+  // Manejo de drag & drop a nivel documento (fase de captura): por defecto el
+  // navegador abre el archivo soltado en una pestaña nueva. Capturamos el
+  // evento antes de que React/el navegador lo procesen, para garantizar que
+  // preventDefault surta efecto y para detectar el drop sobre el dropzone
+  // sin depender de los handlers sintéticos de React en el div.
   useEffect(() => {
-    function preventDefault(e: DragEvent) {
+    function handleDragOver(e: DragEvent) {
+      if (!e.dataTransfer?.types.includes("Files")) return;
       e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      if (!isUploading && dropzoneRef.current?.contains(e.target as Node)) {
+        setIsDragging(true);
+      }
     }
-    window.addEventListener("dragover", preventDefault);
-    window.addEventListener("drop", preventDefault);
+    function handleDragLeave(e: DragEvent) {
+      if (!dropzoneRef.current?.contains(e.relatedTarget as Node)) {
+        setIsDragging(false);
+      }
+    }
+    function handleDrop(e: DragEvent) {
+      if (!e.dataTransfer?.types.includes("Files")) return;
+      e.preventDefault();
+      setIsDragging(false);
+      if (!isUploading && dropzoneRef.current?.contains(e.target as Node)) {
+        addFiles(e.dataTransfer.files);
+      }
+    }
+    document.addEventListener("dragover", handleDragOver, true);
+    document.addEventListener("dragleave", handleDragLeave, true);
+    document.addEventListener("drop", handleDrop, true);
     return () => {
-      window.removeEventListener("dragover", preventDefault);
-      window.removeEventListener("drop", preventDefault);
+      document.removeEventListener("dragover", handleDragOver, true);
+      document.removeEventListener("dragleave", handleDragLeave, true);
+      document.removeEventListener("drop", handleDrop, true);
     };
-  }, []);
+  }, [isUploading]);
 
   function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
@@ -302,28 +326,7 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div
-        onDragEnter={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!isUploading) setIsDragging(true);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.dataTransfer.dropEffect = "copy";
-          if (!isUploading) setIsDragging(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsDragging(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsDragging(false);
-          if (!isUploading) addFiles(e.dataTransfer.files);
-        }}
+        ref={dropzoneRef}
         onClick={() => !isUploading && fileInputRef.current?.click()}
         className="flex flex-col items-center justify-center gap-2 w-full py-10 rounded-xl cursor-pointer transition-colors"
         style={{
