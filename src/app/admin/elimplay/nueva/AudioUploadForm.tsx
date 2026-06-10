@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Upload, Loader2, CheckCircle, XCircle, X, Music, FileAudio } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -113,6 +113,20 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Sin esto, soltar un archivo fuera del rectángulo exacto del dropzone
+  // hace que el navegador navegue a ese archivo y reemplace toda la página.
+  useEffect(() => {
+    function preventDefault(e: DragEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", preventDefault);
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
+  }, []);
 
   function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
@@ -288,13 +302,25 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div
-        onDragOver={(e) => {
+        onDragEnter={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           if (!isUploading) setIsDragging(true);
         }}
-        onDragLeave={() => setIsDragging(false)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "copy";
+          if (!isUploading) setIsDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setIsDragging(false);
           if (!isUploading) addFiles(e.dataTransfer.files);
         }}
