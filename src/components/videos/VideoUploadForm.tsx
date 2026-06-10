@@ -37,6 +37,22 @@ async function sha1Hex(file: File): Promise<string> {
     .join("");
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Tiempo de espera agotado en: ${label} (${ms}ms)`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 function uploadToB2WithProgress(
   uploadUrl: string,
   authorizationToken: string,
@@ -83,6 +99,13 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [debugLines, setDebugLines] = useState<string[]>([]);
+
+  function log(msg: string) {
+    const line = `${new Date().toLocaleTimeString()} — ${msg}`;
+    console.log("[VideoUpload]", line);
+    setDebugLines((prev) => [...prev, line]);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -90,20 +113,30 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
     setError(null);
     setIsUploading(true);
     setProgress(0);
+    setDebugLines([]);
 
     try {
+      log("Iniciando subida");
       const supabase = createClient();
+      log("Verificando sesión...");
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await withTimeout(supabase.auth.getUser(), 10000, "verificar sesión");
       if (!user) throw new Error("Sesión inválida. Inicia sesión de nuevo.");
+      log(`Sesión OK (user=${user.id})`);
 
       setStatusText("Preparando subida...");
-      const initRes = await fetch("/api/videos/b2-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: videoFile.name }),
-      });
+      log("Llamando a /api/videos/b2-upload...");
+      const initRes = await withTimeout(
+        fetch("/api/videos/b2-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName: videoFile.name }),
+        }),
+        15000,
+        "preparar subida (b2-upload)"
+      );
+      log(`/api/videos/b2-upload respondió con status ${initRes.status}`);
       const initData = (await initRes.json()) as {
         uploadUrl?: string;
         authorizationToken?: string;
@@ -120,34 +153,49 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
       ) {
         throw new Error(initData.error || "No se pudo iniciar la subida del video.");
       }
+      log(`uploadUrl recibido: ${initData.uploadUrl}`);
 
       setStatusText("Calculando huella del archivo...");
+      log("Calculando SHA-1 del archivo...");
       const sha1 = await sha1Hex(videoFile);
-      const duration_seconds = await getVideoDuration(videoFile);
+      log(`SHA-1 listo: ${sha1}`);
+      log("Calculando duración del video...");
+      const duration_seconds = await withTimeout(getVideoDuration(videoFile), 15000, "calcular duración del video");
+      log(`Duración: ${duration_seconds}s`);
 
       setStatusText("Subiendo video...");
+      log(`Subiendo a Backblaze (${formatFileSize(videoFile.size)})...`);
       await uploadToB2WithProgress(
         initData.uploadUrl,
         initData.authorizationToken,
         videoFile,
         initData.fileName,
         sha1,
-        setProgress
+        (pct) => {
+          setProgress(pct);
+          if (pct === 0 || pct === 100 || pct % 20 === 0) log(`Progreso subida: ${pct}%`);
+        }
       );
+      log("Subida a Backblaze completada");
 
       let thumbnail_url: string | null = null;
       if (thumbFile) {
         setStatusText("Subiendo miniatura...");
+        log("Subiendo miniatura...");
         const thumbPath = `thumbnails/${user.id}/${Date.now()}-${thumbFile.name}`;
         const { error: thumbErr } = await supabase.storage
           .from("video-thumbnails")
           .upload(thumbPath, thumbFile, { cacheControl: "3600" });
         if (!thumbErr) {
           thumbnail_url = supabase.storage.from("video-thumbnails").getPublicUrl(thumbPath).data.publicUrl;
+          log("Miniatura subida");
+        } else {
+          log(`Error subiendo miniatura (se ignora): ${thumbErr.message}`);
         }
       }
 
       setStatusText("Guardando registro...");
+      log("Guardando registro en la base de datos...");
       const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
 
       const { error: insertErr } = await supabase.from("videos").insert({
@@ -162,10 +210,13 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
         created_by: user.id,
       });
       if (insertErr) throw new Error(insertErr.message);
+      log("Registro guardado. ¡Listo!");
 
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido al subir el video");
+      const message = err instanceof Error ? err.message : "Error desconocido al subir el video";
+      log(`ERROR: ${message}`);
+      setError(message);
     } finally {
       setIsUploading(false);
       setStatusText(null);
@@ -323,6 +374,15 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
           {error}
         </p>
+      )}
+
+      {debugLines.length > 0 && (
+        <pre
+          className="text-[10px] leading-relaxed p-3 rounded-xl overflow-x-auto whitespace-pre-wrap break-all"
+          style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+        >
+          {debugLines.join("\n")}
+        </pre>
       )}
 
       <button
