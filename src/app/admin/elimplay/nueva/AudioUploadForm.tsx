@@ -121,13 +121,14 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   // preventDefault surta efecto y para detectar el drop sobre el dropzone
   // sin depender de los handlers sintéticos de React en el div.
   useEffect(() => {
+    function isOverDropzone(e: DragEvent) {
+      return dropzoneRef.current?.contains(e.target as Node) ?? false;
+    }
     function handleDragOver(e: DragEvent) {
-      if (!e.dataTransfer?.types.includes("Files")) return;
+      if (!isOverDropzone(e)) return;
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-      if (!isUploading && dropzoneRef.current?.contains(e.target as Node)) {
-        setIsDragging(true);
-      }
+      if (!isUploading) setIsDragging(true);
     }
     function handleDragLeave(e: DragEvent) {
       if (!dropzoneRef.current?.contains(e.relatedTarget as Node)) {
@@ -135,12 +136,17 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
       }
     }
     function handleDrop(e: DragEvent) {
-      if (!e.dataTransfer?.types.includes("Files")) return;
+      if (!isOverDropzone(e)) return;
       e.preventDefault();
       setIsDragging(false);
-      if (!isUploading && dropzoneRef.current?.contains(e.target as Node)) {
-        addFiles(e.dataTransfer.files);
+      if (isUploading) return;
+      if (!e.dataTransfer || e.dataTransfer.files.length === 0) {
+        setFormError(
+          "No se detectaron archivos. Arrastra los archivos desde el Explorador de Windows, no desde otra pestaña o ventana del navegador."
+        );
+        return;
       }
+      addFiles(e.dataTransfer.files);
     }
     document.addEventListener("dragover", handleDragOver, true);
     document.addEventListener("dragleave", handleDragLeave, true);
