@@ -164,3 +164,34 @@ export interface AudioTrack {
   created_by: string | null;
   created_at: string;
 }
+
+export type VideoStatus = "pending" | "approved" | "rejected";
+
+export interface VideoCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface VideoItem {
+  id: string;
+  title: string;
+  description: string | null;
+  video_url: string;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  category_id: string | null;
+  tags: string[];
+  status: VideoStatus;
+  rejection_reason: string | null;
+  view_count: number;
+  created_by: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  published_at: string | null;
+  created_at: string;
+}

@@ -12,6 +12,7 @@ import {
   Archive,
   Folder,
   Music,
+  Video,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const NAV = [
   { href: "/admin/archivo", label: "Archivo", icon: Archive },
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
   { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
+  { href: "/admin/videos", label: "Videos", icon: Video },
 ];
 
 export function AdminSidebar() {
