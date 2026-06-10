@@ -1,6 +1,6 @@
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Layers } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AudioUploadForm } from "./AudioUploadForm";
 import type { AudioCategory } from "@/types";
@@ -36,19 +36,9 @@ export default async function NuevoAudioPage() {
         </span>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-          Subir audio
-        </h1>
-        <Link
-          href="/admin/elimplay/nueva/masiva"
-          className="flex items-center gap-1.5 text-sm font-medium transition-colors"
-          style={{ color: "var(--color-primary)" }}
-        >
-          <Layers size={14} />
-          Subida masiva
-        </Link>
-      </div>
+      <h1 className="text-2xl font-bold mb-6" style={{ color: "var(--color-text)" }}>
+        Subir audio
+      </h1>
 
       <AudioUploadForm categories={categories} />
     </div>

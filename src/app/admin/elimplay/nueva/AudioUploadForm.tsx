@@ -1,12 +1,48 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Upload, Loader2, CheckCircle, Music } from "lucide-react";
+import { useRef, useState } from "react";
+import { Upload, Loader2, CheckCircle, XCircle, X, Music, FileAudio } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 interface AudioUploadFormProps {
   categories: Array<{ id: string; name: string }>;
+}
+
+type FileStatus = "pending" | "uploading" | "done" | "error";
+
+interface FileItem {
+  id: string;
+  file: File;
+  title: string;
+  status: FileStatus;
+  progress: number;
+  error?: string;
+}
+
+const ACCEPTED_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".flac", ".opus"];
+const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(",");
+const MAX_CONCURRENT_UPLOADS = 3;
+
+function isAudioFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+}
+
+function titleFromFilename(name: string): string {
+  const base = name.replace(/\.[^/.]+$/, "");
+  const cleaned = base.replace(/^[\s\d]+[-_.\s]*/, "").replace(/[_-]+/g, " ").trim();
+  const result = cleaned || base;
+  return result
+    .split(" ")
+    .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function getAudioDuration(file: File): Promise<number> {
@@ -22,202 +58,410 @@ function getAudioDuration(file: File): Promise<number> {
   });
 }
 
+function storagePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function uploadWithProgress(
+  url: string,
+  formData: FormData,
+  headers: Record<string, string>,
+  onProgress: (pct: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      let message = `Error ${xhr.status} al subir el archivo`;
+      try {
+        const body = JSON.parse(xhr.responseText) as { message?: string; error?: string };
+        message = body.message || body.error || message;
+      } catch {
+        // respuesta no es JSON, usar mensaje genérico
+      }
+      reject(new Error(message));
+    };
+    xhr.onerror = () => reject(new Error("Error de red al subir el archivo"));
+    xhr.send(formData);
+  });
+}
+
+const inputStyle = {
+  background: "var(--color-surface-elevated)",
+  border: "1px solid var(--color-border)",
+  color: "var(--color-text)",
+} as const;
+
 export function AudioUploadForm({ categories }: AudioUploadFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [items, setItems] = useState<FileItem[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [artist, setArtist] = useState("");
+  const [tags, setTags] = useState("");
+  const [isPublished, setIsPublished] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [done, setDone] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!audioFile) { setError("Selecciona un archivo de audio"); return; }
-    setError(null);
+  function addFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const incoming = Array.from(fileList);
+    const accepted = incoming.filter(isAudioFile);
+    const rejected = incoming.length - accepted.length;
 
-    startTransition(async () => {
+    if (accepted.length > 0) {
+      const newItems: FileItem[] = accepted.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+        file,
+        title: titleFromFilename(file.name),
+        status: "pending",
+        progress: 0,
+      }));
+      setItems((prev) => [...prev, ...newItems]);
+    }
+
+    setFormError(
+      rejected > 0
+        ? `Se ignoraron ${rejected} archivo${rejected === 1 ? "" : "s"} con formato no permitido. Formatos aceptados: ${ACCEPTED_EXTENSIONS.join(", ")}`
+        : null
+    );
+  }
+
+  function updateTitle(id: string, title: string) {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, title } : it)));
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+  }
+
+  function patchItem(id: string, patch: Partial<FileItem>) {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  }
+
+  async function uploadOne(
+    item: FileItem,
+    ctx: { accessToken: string; anonKey: string; storageUrl: string; singleFile: boolean }
+  ) {
+    patchItem(item.id, { status: "uploading", progress: 0, error: undefined });
+    try {
+      const duration_seconds = await getAudioDuration(item.file);
+
+      const path = `tracks/${Date.now()}-${item.file.name}`;
+      const formData = new FormData();
+      formData.append("cacheControl", "3600");
+      formData.append("", item.file);
+
+      await uploadWithProgress(
+        `${ctx.storageUrl}/object/audio-tracks/${storagePath(path)}`,
+        formData,
+        {
+          Authorization: `Bearer ${ctx.accessToken}`,
+          apikey: ctx.anonKey,
+          "x-upsert": "false",
+        },
+        (pct) => patchItem(item.id, { progress: pct })
+      );
+
       const supabase = createClient();
-      const form = e.currentTarget;
-      const data = new FormData(form);
+      const { data: urlData } = supabase.storage.from("audio-tracks").getPublicUrl(path);
 
-      // Duration
-      setUploadProgress("Leyendo duración...");
-      const duration_seconds = await getAudioDuration(audioFile);
-
-      // Upload audio
-      setUploadProgress("Subiendo audio...");
-      const audioPath = `tracks/${Date.now()}-${audioFile.name}`;
-      const { error: audioErr } = await supabase.storage
-        .from("audio-tracks")
-        .upload(audioPath, audioFile, { cacheControl: "3600" });
-      if (audioErr) { setError(audioErr.message); setUploadProgress(null); return; }
-
-      const { data: audioUrlData } = supabase.storage
-        .from("audio-tracks")
-        .getPublicUrl(audioPath);
-      const audio_url = audioUrlData.publicUrl;
-
-      // Upload cover if provided
       let cover_url: string | null = null;
-      if (coverFile) {
-        setUploadProgress("Subiendo portada...");
+      if (ctx.singleFile && coverFile) {
         const coverPath = `covers/${Date.now()}-${coverFile.name}`;
         const { error: coverErr } = await supabase.storage
           .from("audio-tracks")
           .upload(coverPath, coverFile, { cacheControl: "3600" });
         if (!coverErr) {
-          const { data: coverUrlData } = supabase.storage.from("audio-tracks").getPublicUrl(coverPath);
-          cover_url = coverUrlData.publicUrl;
+          cover_url = supabase.storage.from("audio-tracks").getPublicUrl(coverPath).data.publicUrl;
         }
       }
 
-      setUploadProgress("Guardando registro...");
-
-      const tags = ((data.get("tags") as string) ?? "")
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-      const isPublished = data.get("is_published") === "on";
+      const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
 
       const { error: insertErr } = await supabase.from("audio_tracks").insert({
-        title: (data.get("title") as string).trim(),
-        artist: ((data.get("artist") as string) ?? "").trim() || null,
-        description: ((data.get("description") as string) ?? "").trim() || null,
-        audio_url,
+        title: item.title.trim() || item.file.name,
+        artist: artist.trim() || null,
+        description: null,
+        audio_url: urlData.publicUrl,
         cover_url,
         duration_seconds: duration_seconds || null,
-        category_id: (data.get("category_id") as string) || null,
-        tags,
+        category_id: categoryId || null,
+        tags: tagList,
         is_published: isPublished,
         published_at: isPublished ? new Date().toISOString() : null,
       });
+      if (insertErr) throw new Error(insertErr.message);
 
-      setUploadProgress(null);
-      if (insertErr) { setError(insertErr.message); return; }
+      patchItem(item.id, { status: "done", progress: 100 });
+    } catch (err) {
+      patchItem(item.id, {
+        status: "error",
+        error: err instanceof Error ? err.message : "Error desconocido",
+      });
+    }
+  }
 
-      setDone(true);
-      setTimeout(() => router.push("/admin/elimplay"), 1500);
-    });
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (items.length === 0 || isUploading) return;
+    setFormError(null);
+    setIsUploading(true);
+
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1`
+      : undefined;
+
+    if (!accessToken || !anonKey || !storageUrl) {
+      setFormError("No se pudo iniciar la subida: sesión inválida.");
+      setIsUploading(false);
+      return;
+    }
+
+    const ctx = { accessToken, anonKey, storageUrl, singleFile: items.length === 1 };
+    const queue = [...items];
+    let nextIndex = 0;
+
+    async function worker() {
+      while (nextIndex < queue.length) {
+        const current = queue[nextIndex];
+        nextIndex++;
+        await uploadOne(current, ctx);
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(MAX_CONCURRENT_UPLOADS, queue.length) }, () => worker())
+    );
+
+    setIsUploading(false);
+    setDone(true);
   }
 
   if (done) {
+    const successCount = items.filter((it) => it.status === "done").length;
+    const errorCount = items.filter((it) => it.status === "error").length;
     return (
       <div
-        className="flex flex-col items-center justify-center py-12 rounded-2xl"
-        style={{ background: "var(--color-surface)", border: "1px solid rgba(74,222,128,0.3)" }}
+        className="flex flex-col items-center justify-center gap-3 py-12 rounded-2xl"
+        style={{
+          background: "var(--color-surface)",
+          border: `1px solid ${errorCount > 0 ? "rgba(248,113,113,0.3)" : "rgba(74,222,128,0.3)"}`,
+        }}
       >
-        <CheckCircle size={32} className="mb-3" style={{ color: "var(--color-success)" }} />
-        <p className="font-semibold" style={{ color: "var(--color-success)" }}>
-          Audio subido exitosamente
+        <CheckCircle size={32} style={{ color: "var(--color-success)" }} />
+        <p className="font-semibold text-center" style={{ color: "var(--color-text)" }}>
+          {successCount} audio{successCount === 1 ? "" : "s"} subido{successCount === 1 ? "" : "s"} exitosamente
+          {errorCount > 0 && `, ${errorCount} con error`}
         </p>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/elimplay")}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold mt-2"
+          style={{ background: "var(--color-primary)", color: "#000" }}
+        >
+          Volver a ElimPlay
+        </button>
       </div>
     );
   }
 
+  const finishedCount = items.filter((it) => it.status === "done" || it.status === "error").length;
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <Field label="Título" required>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!isUploading) setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          if (!isUploading) addFiles(e.dataTransfer.files);
+        }}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        className="flex flex-col items-center justify-center gap-2 w-full py-10 rounded-xl cursor-pointer transition-colors"
+        style={{
+          background: "var(--color-surface-elevated)",
+          border: `2px dashed ${
+            isDragging ? "var(--color-primary)" : items.length > 0 ? "rgba(212,160,23,0.5)" : "var(--color-border)"
+          }`,
+        }}
+      >
+        <Upload size={22} style={{ color: items.length > 0 ? "var(--color-primary)" : "var(--color-text-muted)" }} />
+        <span
+          className="text-sm text-center px-4"
+          style={{ color: items.length > 0 ? "var(--color-primary)" : "var(--color-text-muted)" }}
+        >
+          {items.length > 0
+            ? `${items.length} archivo${items.length === 1 ? "" : "s"} seleccionado${items.length === 1 ? "" : "s"} — arrastra más o haz clic para agregar`
+            : "Arrastra audios aquí o haz clic para seleccionar (varios a la vez)"}
+        </span>
+        <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          Formatos: {ACCEPTED_EXTENSIONS.join(", ")}
+        </span>
         <input
-          type="text"
-          name="title"
-          required
-          maxLength={120}
-          placeholder="Título del audio"
-          className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-          style={inputStyle}
-        />
-      </Field>
-
-      <Field label="Artista / Intérprete">
-        <input
-          type="text"
-          name="artist"
-          maxLength={120}
-          placeholder="Nombre del artista o coro (opcional)"
-          className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-          style={inputStyle}
-        />
-      </Field>
-
-      <Field label="Descripción">
-        <textarea
-          name="description"
-          rows={3}
-          maxLength={500}
-          className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
-          style={inputStyle}
-        />
-      </Field>
-
-      <Field label="Archivo de audio" required>
-        <label
-          className="flex flex-col items-center justify-center gap-2 w-full py-8 rounded-xl cursor-pointer transition-colors"
-          style={{
-            background: "var(--color-surface-elevated)",
-            border: `2px dashed ${audioFile ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPT_ATTR}
+          multiple
+          className="hidden"
+          disabled={isUploading}
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
           }}
-        >
-          <Upload size={20} style={{ color: audioFile ? "var(--color-primary)" : "var(--color-text-muted)" }} />
-          <span className="text-sm" style={{ color: audioFile ? "var(--color-primary)" : "var(--color-text-muted)" }}>
-            {audioFile ? audioFile.name : "Seleccionar audio (MP3, WAV, etc.)"}
-          </span>
-          <input
-            type="file"
-            accept="audio/*"
-            className="hidden"
-            onChange={(e) => setAudioFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-      </Field>
+        />
+      </div>
 
-      <Field label="Portada">
-        <label
-          className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
-          style={{
-            background: "var(--color-surface-elevated)",
-            border: `2px dashed ${coverFile ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
-          }}
-        >
-          {coverFile ? (
-            <span className="text-sm" style={{ color: "var(--color-primary)" }}>{coverFile.name}</span>
-          ) : (
-            <>
-              <Music size={18} style={{ color: "var(--color-text-muted)" }} />
-              <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-                Imagen de portada (opcional)
-              </span>
-            </>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-      </Field>
-
-      <Field label="Categoría">
-        <select
-          name="category_id"
-          className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-          style={inputStyle}
-        >
-          <option value="">Sin categoría</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+      {items.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-col gap-2 px-3 py-2.5 rounded-xl"
+              style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="flex items-center gap-3">
+                <FileAudio size={16} className="shrink-0" style={{ color: "var(--color-text-muted)" }} />
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <input
+                    type="text"
+                    value={item.title}
+                    onChange={(e) => updateTitle(item.id, e.target.value)}
+                    disabled={isUploading}
+                    className="w-full bg-transparent text-sm outline-none disabled:opacity-70"
+                    style={{ color: "var(--color-text)" }}
+                  />
+                  <span className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
+                    {item.file.name} · {formatFileSize(item.file.size)}
+                  </span>
+                </div>
+                {item.status === "pending" && !isUploading && (
+                  <button type="button" onClick={() => removeItem(item.id)} style={{ color: "var(--color-text-muted)" }}>
+                    <X size={15} />
+                  </button>
+                )}
+                {item.status === "uploading" && (
+                  <span className="text-xs shrink-0" style={{ color: "var(--color-primary)" }}>
+                    {item.progress}%
+                  </span>
+                )}
+                {item.status === "done" && <CheckCircle size={15} className="shrink-0" style={{ color: "var(--color-success)" }} />}
+                {item.status === "error" && (
+                  <span title={item.error}>
+                    <XCircle size={15} className="shrink-0" style={{ color: "var(--color-destructive)" }} />
+                  </span>
+                )}
+              </div>
+              {(item.status === "uploading" || item.status === "done") && (
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-border)" }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${item.progress}%`,
+                      background: item.status === "done" ? "var(--color-success)" : "var(--color-primary)",
+                    }}
+                  />
+                </div>
+              )}
+              {item.status === "error" && item.error && (
+                <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
+                  {item.error}
+                </p>
+              )}
+            </div>
           ))}
-        </select>
-      </Field>
+        </div>
+      )}
+
+      {items.length === 1 && (
+        <Field label="Portada (opcional)">
+          <label
+            className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: `2px dashed ${coverFile ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
+            }}
+          >
+            {coverFile ? (
+              <span className="text-sm" style={{ color: "var(--color-primary)" }}>{coverFile.name}</span>
+            ) : (
+              <>
+                <Music size={18} style={{ color: "var(--color-text-muted)" }} />
+                <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  Imagen de portada (opcional)
+                </span>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={isUploading}
+              onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        </Field>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Categoría">
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            disabled={isUploading}
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            style={inputStyle}
+          >
+            <option value="">Sin categoría</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Artista / Intérprete">
+          <input
+            type="text"
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+            disabled={isUploading}
+            maxLength={120}
+            placeholder="Opcional"
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            style={inputStyle}
+          />
+        </Field>
+      </div>
 
       <Field label="Etiquetas">
         <input
           type="text"
-          name="tags"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          disabled={isUploading}
           maxLength={200}
           placeholder="Ej: alabanza, coro juvenil, 2026 (separadas por coma)"
           className="w-full rounded-xl px-4 py-3 text-sm outline-none"
@@ -227,7 +471,13 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
 
       <label className="flex items-center gap-3 cursor-pointer">
         <div className="relative">
-          <input type="checkbox" name="is_published" defaultChecked className="peer sr-only" />
+          <input
+            type="checkbox"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            disabled={isUploading}
+            className="peer sr-only"
+          />
           <div
             className="w-10 h-5 rounded-full transition-colors peer-checked:bg-[#D4A017]"
             style={{ background: "var(--color-border)" }}
@@ -239,37 +489,26 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
         </span>
       </label>
 
-      {error && (
+      {formError && (
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
-          {error}
-        </p>
-      )}
-
-      {uploadProgress && (
-        <p className="text-xs flex items-center gap-2" style={{ color: "var(--color-text-muted)" }}>
-          <Loader2 size={12} className="animate-spin" />
-          {uploadProgress}
+          {formError}
         </p>
       )}
 
       <button
         type="submit"
-        disabled={isPending || !audioFile}
+        disabled={isUploading || items.length === 0}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
         style={{ background: "var(--color-primary)", color: "#000" }}
       >
-        {isPending ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-        Subir audio
+        {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+        {isUploading
+          ? `Subiendo ${finishedCount}/${items.length}...`
+          : `Subir ${items.length || ""} audio${items.length === 1 ? "" : "s"}`.trim()}
       </button>
     </form>
   );
 }
-
-const inputStyle = {
-  background: "var(--color-surface-elevated)",
-  border: "1px solid var(--color-border)",
-  color: "var(--color-text)",
-} as const;
 
 function Field({
   label,

@@ -1,6 +1,6 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { Plus, Layers, Music, Eye, EyeOff, Pencil, Folder } from "lucide-react";
+import { Plus, Music, Eye, EyeOff, Pencil, Folder } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { TrackRowActions } from "./TrackRowActions";
@@ -54,18 +54,6 @@ export default async function AdminElimPlayPage() {
           >
             <Folder size={16} />
             Categorías
-          </Link>
-          <Link
-            href="/admin/elimplay/nueva/masiva"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{
-              background: "var(--color-surface-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-            }}
-          >
-            <Layers size={16} />
-            Subida masiva
           </Link>
           <Link
             href="/admin/elimplay/nueva"
