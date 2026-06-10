@@ -75,3 +75,92 @@ export interface GameBroadcastEvent {
     | "PLAYER_JOINED";
   payload: Record<string, unknown>;
 }
+
+// ── Trivia en Vivo (modo de transmisión vertical 9:16) ─────────────────────────
+
+export type TriviaDifficulty = "facil" | "medio" | "dificil";
+
+export type TriviaStatus = "lobby" | "in_progress" | "finished";
+
+export const TRIVIA_CATEGORIES = [
+  "Antiguo Testamento",
+  "Nuevo Testamento",
+  "Vida de Jesús",
+  "Parábolas",
+  "Profetas y Reyes",
+  "Apocalipsis",
+  "Doctrina LLDM",
+  "Personajes Bíblicos",
+  "General",
+] as const;
+
+export type TriviaCategory = (typeof TRIVIA_CATEGORIES)[number];
+
+export const TRIVIA_DIFFICULTY_LABEL: Record<TriviaDifficulty, string> = {
+  facil: "Fácil",
+  medio: "Medio",
+  dificil: "Difícil",
+};
+
+export interface TriviaRoom {
+  id: string;
+  name: string;
+  category: string;
+  difficulty: TriviaDifficulty;
+  status: TriviaStatus;
+  host_id: string;
+  question_set_id: string;
+  current_question_index: number;
+  join_code: string;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface TriviaTeam {
+  id: string;
+  room_id: string;
+  name: string;
+  color: string;
+  score: number;
+  created_by: string;
+  created_at: string;
+}
+
+export interface TriviaPlayer {
+  id: string;
+  room_id: string;
+  team_id: string | null;
+  user_id: string;
+  score: number;
+  joined_at: string;
+}
+
+// ── ElimPlay (reproductor de audio) ─────────────────────────────────────────
+
+export interface AudioCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface AudioTrack {
+  id: string;
+  title: string;
+  artist: string | null;
+  description: string | null;
+  audio_url: string;
+  cover_url: string | null;
+  duration_seconds: number | null;
+  category_id: string | null;
+  tags: string[];
+  play_count: number;
+  is_published: boolean;
+  published_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}

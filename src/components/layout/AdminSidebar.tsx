@@ -8,8 +8,10 @@ import {
   Mic,
   BookOpen,
   Gamepad2,
+  Sparkles,
   Archive,
   Folder,
+  Music,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -22,8 +24,10 @@ const NAV = [
   { href: "/admin/platikas", label: "Pláticas", icon: Mic },
   { href: "/admin/question-sets", label: "Banco de preguntas", icon: BookOpen },
   { href: "/admin/juegos", label: "Juegos", icon: Gamepad2 },
+  { href: "/admin/trivia", label: "Salas de Trivia", icon: Sparkles },
   { href: "/admin/archivo", label: "Archivo", icon: Archive },
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
+  { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
 ];
 
 export function AdminSidebar() {

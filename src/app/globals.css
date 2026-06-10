@@ -17,6 +17,10 @@
   --color-info: #60A5FA;
   --radius: 8px;
 
+  /* Trivia en Vivo — paleta dorada propia para el modo de transmisión */
+  --trivia-gold: #f5c842;
+  --trivia-gold-dark: #b8860b;
+
   /* Tailwind v4 theme mapping */
   --background: var(--color-bg);
   --foreground: var(--color-text);
@@ -78,4 +82,14 @@ body {
 }
 .animate-live {
   animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+/* ElimPlay — global player bar */
+body.has-player {
+  padding-bottom: 88px;
+}
+@media (max-width: 640px) {
+  body.has-player {
+    padding-bottom: 96px;
+  }
 }
