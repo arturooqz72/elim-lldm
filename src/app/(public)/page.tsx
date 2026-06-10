@@ -140,16 +140,16 @@ export default async function LandingPage() {
               className="text-5xl md:text-[4.5rem] font-bold leading-[1.1] tracking-tight"
               style={{ color: "var(--color-text)" }}
             >
-              Predicando la{" "}
+              Donde la{" "}
               <span
                 style={{
                   color: "var(--color-primary)",
                   fontFamily: "var(--font-cinzel)",
                 }}
               >
-                Fe
+                fe
               </span>{" "}
-              al Mundo
+              se vive y se comparte
             </h1>
 
             <p
