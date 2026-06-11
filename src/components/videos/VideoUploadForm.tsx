@@ -120,8 +120,9 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
       const supabase = createClient();
       log("Verificando sesión...");
       const {
-        data: { user },
-      } = await withTimeout(supabase.auth.getUser(), 10000, "verificar sesión");
+        data: { session },
+      } = await withTimeout(supabase.auth.getSession(), 10000, "verificar sesión");
+      const user = session?.user;
       if (!user) throw new Error("Sesión inválida. Inicia sesión de nuevo.");
       log(`Sesión OK (user=${user.id})`);
 
