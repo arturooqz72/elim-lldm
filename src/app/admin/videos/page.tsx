@@ -18,7 +18,7 @@ async function approveVideo(formData: FormData) {
   const category_id = (formData.get("category_id") as string) || null;
 
   const service = await createServiceClient();
-  await service
+  const { error } = await service
     .from("videos")
     .update({
       category_id,
@@ -29,6 +29,7 @@ async function approveVideo(formData: FormData) {
       rejection_reason: null,
     })
     .eq("id", id);
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/videos");
 }
@@ -42,7 +43,7 @@ async function rejectVideo(formData: FormData) {
   const rejection_reason = (formData.get("rejection_reason") as string)?.trim() || null;
 
   const service = await createServiceClient();
-  await service
+  const { error } = await service
     .from("videos")
     .update({
       status: "rejected",
@@ -52,6 +53,7 @@ async function rejectVideo(formData: FormData) {
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id);
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/videos");
 }
@@ -63,7 +65,8 @@ async function deleteVideo(formData: FormData) {
 
   const id = formData.get("id") as string;
   const service = await createServiceClient();
-  await service.from("videos").delete().eq("id", id);
+  const { error } = await service.from("videos").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/videos");
 }
