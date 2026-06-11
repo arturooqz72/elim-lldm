@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Music, User } from "lucide-react";
-import { TrackRow } from "@/components/elimplay/TrackRow";
+import { ArrowLeft, Music } from "lucide-react";
+import { ArtistAccordion } from "@/components/elimplay/ArtistAccordion";
 import { PlayAllButton } from "@/components/elimplay/PlayAllButton";
 import type { Metadata } from "next";
 import type { AudioCategory, AudioTrack } from "@/types";
@@ -121,55 +121,13 @@ export default async function ElimPlayCategoryPage({ params }: Props) {
             <Music size={36} className="mb-3" style={{ color: "var(--color-text-muted)" }} />
             <p style={{ color: "var(--color-text-muted)" }}>Aún no hay audios en esta categoría.</p>
           </div>
-        ) : artistGroups.length === 0 ? (
-          <div className="flex flex-col gap-1">
-            {tracks.map((track, i) => (
-              <TrackRow key={track.id} track={track} index={i + 1} queue={tracks} />
-            ))}
-          </div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
             {artistGroups.map((group) => (
-              <div key={group.name}>
-                <div className="flex items-center gap-2 mb-2 px-3">
-                  <User size={14} style={{ color: "var(--color-primary)" }} />
-                  <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                    {group.name}
-                  </h3>
-                  <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    ({group.tracks.length} canto{group.tracks.length === 1 ? "" : "s"})
-                  </span>
-                </div>
-                <div
-                  className="flex flex-col gap-1 ml-3.5 pl-4"
-                  style={{ borderLeft: "1px solid var(--color-border)" }}
-                >
-                  {group.tracks.map((track, i) => (
-                    <TrackRow key={track.id} track={track} index={i + 1} queue={tracks} />
-                  ))}
-                </div>
-              </div>
+              <ArtistAccordion key={group.name} name={group.name} tracks={group.tracks} />
             ))}
-
             {ungrouped.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2 px-3">
-                  <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-                    Otros
-                  </h3>
-                  <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    ({ungrouped.length} canto{ungrouped.length === 1 ? "" : "s"})
-                  </span>
-                </div>
-                <div
-                  className="flex flex-col gap-1 ml-3.5 pl-4"
-                  style={{ borderLeft: "1px solid var(--color-border)" }}
-                >
-                  {ungrouped.map((track, i) => (
-                    <TrackRow key={track.id} track={track} index={i + 1} queue={tracks} />
-                  ))}
-                </div>
-              </div>
+              <ArtistAccordion name="Sin intérprete" tracks={ungrouped} />
             )}
           </div>
         )}
