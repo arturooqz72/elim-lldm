@@ -148,10 +148,18 @@ export interface AudioCategory {
   created_at: string;
 }
 
+export interface Artist {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  bio: string | null;
+  created_at: string;
+}
+
 export interface AudioTrack {
   id: string;
   title: string;
-  artist: string | null;
+  artist_id: string | null;
   description: string | null;
   audio_url: string;
   cover_url: string | null;
@@ -163,6 +171,7 @@ export interface AudioTrack {
   published_at: string | null;
   created_by: string | null;
   created_at: string;
+  artists?: Artist | null;
 }
 
 export type VideoStatus = "pending" | "approved" | "rejected";

@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ArrowLeft, Music, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { ArtistPicker, ARTIST_NEW } from "./ArtistPicker";
+import type { Artist } from "@/types";
 
 export const metadata = { title: "Editar audio — Admin" };
 
@@ -18,13 +20,14 @@ export default async function EditAudioTrackPage({ params }: Props) {
 
   const supabase = await createClient();
 
-  const [{ data: item }, { data: cats }] = await Promise.all([
+  const [{ data: item }, { data: cats }, { data: artistsData }] = await Promise.all([
     supabase
       .from("audio_tracks")
-      .select("id, title, artist, description, audio_url, cover_url, category_id, tags, is_published, published_at")
+      .select("id, title, artist_id, description, audio_url, cover_url, category_id, tags, is_published, published_at")
       .eq("id", id)
       .single(),
     supabase.from("audio_categories").select("id, name").order("order_index", { ascending: true }),
+    supabase.from("artists").select("id, name, photo_url").order("name", { ascending: true }),
   ]);
 
   if (!item) notFound();
@@ -32,7 +35,7 @@ export default async function EditAudioTrackPage({ params }: Props) {
   const a = item as unknown as {
     id: string;
     title: string;
-    artist: string | null;
+    artist_id: string | null;
     description: string | null;
     audio_url: string;
     cover_url: string | null;
@@ -43,6 +46,7 @@ export default async function EditAudioTrackPage({ params }: Props) {
   };
 
   const categories = (cats ?? []) as Array<{ id: string; name: string }>;
+  const artists = (artistsData ?? []) as Pick<Artist, "id" | "name" | "photo_url">[];
 
   async function handleUpdate(formData: FormData) {
     "use server";
@@ -53,11 +57,50 @@ export default async function EditAudioTrackPage({ params }: Props) {
       .map((t) => t.trim())
       .filter(Boolean);
 
+    let artistId = (formData.get("artist_id") as string) || null;
+
+    if (artistId === ARTIST_NEW) {
+      const newName = ((formData.get("new_artist_name") as string) ?? "").trim();
+      if (newName) {
+        const { data: existing } = await service
+          .from("artists")
+          .select("id")
+          .ilike("name", newName)
+          .maybeSingle();
+
+        if (existing) {
+          artistId = existing.id;
+        } else {
+          const { data: created, error } = await service
+            .from("artists")
+            .insert({ name: newName })
+            .select("id")
+            .single();
+          if (error) throw new Error(error.message);
+          artistId = created.id;
+        }
+      } else {
+        artistId = null;
+      }
+    }
+
+    const photo = formData.get("artist_photo") as File | null;
+    if (artistId && photo && photo.size > 0) {
+      const photoPath = `artists/${Date.now()}-${photo.name}`;
+      const { error: photoErr } = await service.storage
+        .from("audio-tracks")
+        .upload(photoPath, photo, { cacheControl: "3600" });
+      if (!photoErr) {
+        const photoUrl = service.storage.from("audio-tracks").getPublicUrl(photoPath).data.publicUrl;
+        await service.from("artists").update({ photo_url: photoUrl }).eq("id", artistId);
+      }
+    }
+
     await service
       .from("audio_tracks")
       .update({
         title: (formData.get("title") as string).trim(),
-        artist: ((formData.get("artist") as string) ?? "").trim() || null,
+        artist_id: artistId,
         description: ((formData.get("description") as string) ?? "").trim() || null,
         category_id: (formData.get("category_id") as string) || null,
         tags,
@@ -139,19 +182,7 @@ export default async function EditAudioTrackPage({ params }: Props) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
-            Artista / Intérprete
-          </label>
-          <input
-            type="text"
-            name="artist"
-            maxLength={120}
-            defaultValue={a.artist ?? ""}
-            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-            style={inputStyle}
-          />
-        </div>
+        <ArtistPicker artists={artists} defaultArtistId={a.artist_id ?? ""} />
 
         <div>
           <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text)" }}>

@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Music, Pause, Play, Shuffle } from "lucide-react";
+import { ChevronDown, Music, Pause, Play } from "lucide-react";
 import { useAudioPlayer } from "./AudioPlayerProvider";
 import { TrackRow } from "./TrackRow";
+import { ShuffleButton } from "./ShuffleButton";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/types";
 
 export function ArtistAccordion({ name, tracks }: { name: string; tracks: AudioTrack[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { currentTrack, isPlaying, queue, playTrack, togglePlay, shuffle, toggleShuffle } = useAudioPlayer();
+  const { currentTrack, isPlaying, queue, playTrack, togglePlay } = useAudioPlayer();
 
   const isThisQueuePlaying =
     isPlaying &&
@@ -26,14 +27,6 @@ export function ArtistAccordion({ name, tracks }: { name: string; tracks: AudioT
     } else {
       playTrack(tracks[0], tracks);
     }
-  }
-
-  function handleShuffle(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (tracks.length === 0) return;
-    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-    if (!shuffle) toggleShuffle();
-    playTrack(shuffled[0], shuffled);
   }
 
   function toggleOpen() {
@@ -82,18 +75,7 @@ export function ArtistAccordion({ name, tracks }: { name: string; tracks: AudioT
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleShuffle}
-            title="Reproducir aleatoriamente"
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
-            style={{
-              background: "var(--color-surface-elevated)",
-              color: shuffle ? "var(--color-primary)" : "var(--color-text-muted)",
-            }}
-          >
-            <Shuffle size={15} />
-          </button>
+          <ShuffleButton tracks={tracks} />
           <button
             type="button"
             onClick={handlePlayAll}

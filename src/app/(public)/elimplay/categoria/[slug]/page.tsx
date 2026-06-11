@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Music } from "lucide-react";
 import { ArtistAccordion } from "@/components/elimplay/ArtistAccordion";
+import { ArtistCard } from "@/components/elimplay/ArtistCard";
 import { PlayAllButton } from "@/components/elimplay/PlayAllButton";
 import { groupTracksByArtist } from "@/lib/elimplay";
 import type { Metadata } from "next";
@@ -44,7 +45,7 @@ export default async function ElimPlayCategoryPage({ params }: Props) {
 
   const { data: items } = await supabase
     .from("audio_tracks")
-    .select("*")
+    .select("*, artists(id, name, photo_url)")
     .eq("is_published", true)
     .eq("category_id", cat.id)
     .order("created_at", { ascending: false });
@@ -61,7 +62,7 @@ export default async function ElimPlayCategoryPage({ params }: Props) {
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <Link
             href="/elimplay"
             className="flex items-center gap-1.5 text-sm mb-4 transition-colors"
@@ -88,7 +89,7 @@ export default async function ElimPlayCategoryPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {tracks.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-20 rounded-2xl"
@@ -98,10 +99,14 @@ export default async function ElimPlayCategoryPage({ params }: Props) {
             <p style={{ color: "var(--color-text-muted)" }}>Aún no hay audios en esta categoría.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {artistGroups.map((group) => (
-              <ArtistAccordion key={group.name} name={group.name} tracks={group.tracks} />
-            ))}
+          <div className="flex flex-col gap-4">
+            {artistGroups.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {artistGroups.map(({ artist, tracks: artistTracks }) => (
+                  <ArtistCard key={artist.id} artist={artist} count={artistTracks.length} />
+                ))}
+              </div>
+            )}
             {ungrouped.length > 0 && (
               <ArtistAccordion name="Sin intérprete" tracks={ungrouped} />
             )}

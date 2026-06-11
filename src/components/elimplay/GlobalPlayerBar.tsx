@@ -75,9 +75,9 @@ export function GlobalPlayerBar() {
             <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
               {currentTrack.title}
             </p>
-            {currentTrack.artist && (
+            {currentTrack.artists?.name && (
               <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
-                {currentTrack.artist}
+                {currentTrack.artists.name}
               </p>
             )}
           </div>

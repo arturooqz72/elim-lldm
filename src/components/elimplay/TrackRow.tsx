@@ -70,9 +70,9 @@ export function TrackRow({
         >
           {track.title}
         </p>
-        {track.artist && (
+        {track.artists?.name && (
           <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
-            {track.artist}
+            {track.artists.name}
           </p>
         )}
       </div>

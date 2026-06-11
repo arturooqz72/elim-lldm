@@ -32,7 +32,7 @@ export default async function AdminElimPlayPage() {
 
   const { data: items } = await supabase
     .from("audio_tracks")
-    .select("id, title, artist, is_published, play_count, created_at, audio_categories(name)")
+    .select("id, title, is_published, play_count, created_at, audio_categories(name), artists(name)")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -81,11 +81,11 @@ export default async function AdminElimPlayPage() {
           {(items as unknown as Array<{
             id: string;
             title: string;
-            artist: string | null;
             is_published: boolean;
             play_count: number;
             created_at: string;
             audio_categories: { name: string } | null;
+            artists: { name: string } | null;
           }>).map((item) => (
             <div
               key={item.id}
@@ -101,9 +101,9 @@ export default async function AdminElimPlayPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
                     {item.title}
-                    {item.artist && (
+                    {item.artists?.name && (
                       <span className="font-normal" style={{ color: "var(--color-text-muted)" }}>
-                        {" "}— {item.artist}
+                        {" "}— {item.artists.name}
                       </span>
                     )}
                   </p>

@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 
 interface AudioUploadFormProps {
   categories: Array<{ id: string; name: string }>;
+  artists: Array<{ id: string; name: string; photo_url: string | null }>;
 }
+
+const ARTIST_NEW = "__new__";
 
 type FileStatus = "pending" | "uploading" | "done" | "error";
 
@@ -100,14 +103,16 @@ const inputStyle = {
   color: "var(--color-text)",
 } as const;
 
-export function AudioUploadForm({ categories }: AudioUploadFormProps) {
+export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<FileItem[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [categoryId, setCategoryId] = useState("");
-  const [artist, setArtist] = useState("");
+  const [artistId, setArtistId] = useState("");
+  const [newArtistName, setNewArtistName] = useState("");
+  const [artistPhoto, setArtistPhoto] = useState<File | null>(null);
   const [tags, setTags] = useState("");
   const [isPublished, setIsPublished] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -194,9 +199,51 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
 
+  async function resolveArtistId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+    if (!artistId) return null;
+    if (artistId !== ARTIST_NEW) return artistId;
+
+    const name = newArtistName.trim();
+    if (!name) return null;
+
+    const { data: existing } = await supabase
+      .from("artists")
+      .select("id, photo_url")
+      .ilike("name", name)
+      .maybeSingle();
+
+    let resolvedId: string;
+    let existingPhoto: string | null = null;
+    if (existing) {
+      resolvedId = existing.id;
+      existingPhoto = existing.photo_url;
+    } else {
+      const { data: created, error } = await supabase
+        .from("artists")
+        .insert({ name })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      resolvedId = created.id;
+    }
+
+    if (artistPhoto && !existingPhoto) {
+      const photoPath = `artists/${Date.now()}-${artistPhoto.name}`;
+      const { error: photoErr } = await supabase.storage
+        .from("audio-tracks")
+        .upload(photoPath, artistPhoto, { cacheControl: "3600" });
+      if (!photoErr) {
+        const photoUrl = supabase.storage.from("audio-tracks").getPublicUrl(photoPath).data.publicUrl;
+        await supabase.from("artists").update({ photo_url: photoUrl }).eq("id", resolvedId);
+      }
+    }
+
+    return resolvedId;
+  }
+
   async function uploadOne(
     item: FileItem,
-    ctx: { accessToken: string; anonKey: string; storageUrl: string; singleFile: boolean }
+    ctx: { accessToken: string; anonKey: string; storageUrl: string; singleFile: boolean; artistId: string | null }
   ) {
     patchItem(item.id, { status: "uploading", progress: 0, error: undefined });
     try {
@@ -236,7 +283,7 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
 
       const { error: insertErr } = await supabase.from("audio_tracks").insert({
         title: item.title.trim() || item.file.name,
-        artist: artist.trim() || null,
+        artist_id: ctx.artistId,
         description: null,
         audio_url: urlData.publicUrl,
         cover_url,
@@ -279,7 +326,16 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
       return;
     }
 
-    const ctx = { accessToken, anonKey, storageUrl, singleFile: items.length === 1 };
+    let resolvedArtistId: string | null = null;
+    try {
+      resolvedArtistId = await resolveArtistId(supabase);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Error al guardar el artista");
+      setIsUploading(false);
+      return;
+    }
+
+    const ctx = { accessToken, anonKey, storageUrl, singleFile: items.length === 1, artistId: resolvedArtistId };
     const queue = [...items];
     let nextIndex = 0;
 
@@ -478,18 +534,50 @@ export function AudioUploadForm({ categories }: AudioUploadFormProps) {
         </Field>
 
         <Field label="Artista / Intérprete">
-          <input
-            type="text"
-            value={artist}
-            onChange={(e) => setArtist(e.target.value)}
+          <select
+            value={artistId}
+            onChange={(e) => setArtistId(e.target.value)}
             disabled={isUploading}
-            maxLength={120}
-            placeholder="Opcional"
             className="w-full rounded-xl px-4 py-3 text-sm outline-none"
             style={inputStyle}
-          />
+          >
+            <option value="">Sin intérprete</option>
+            {artists.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+            <option value={ARTIST_NEW}>+ Nuevo artista...</option>
+          </select>
         </Field>
       </div>
+
+      {artistId === ARTIST_NEW && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Nombre del nuevo artista" required>
+            <input
+              type="text"
+              value={newArtistName}
+              onChange={(e) => setNewArtistName(e.target.value)}
+              disabled={isUploading}
+              maxLength={120}
+              placeholder="Ej: Ana Cubillo"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="Foto del artista (opcional)">
+            <input
+              type="file"
+              accept="image/*"
+              disabled={isUploading}
+              onChange={(e) => setArtistPhoto(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none file:mr-2 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-xs file:font-semibold"
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+      )}
 
       <Field label="Etiquetas">
         <input

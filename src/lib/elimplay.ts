@@ -1,26 +1,26 @@
-import type { AudioTrack } from "@/types";
+import type { Artist, AudioTrack } from "@/types";
 
 export function groupTracksByArtist(tracks: AudioTrack[]) {
   const order: string[] = [];
-  const byArtist = new Map<string, AudioTrack[]>();
+  const byArtist = new Map<string, { artist: Artist; tracks: AudioTrack[] }>();
   const ungrouped: AudioTrack[] = [];
 
   for (const track of tracks) {
-    const artist = track.artist?.trim();
+    const artist = track.artists;
     if (!artist) {
       ungrouped.push(track);
       continue;
     }
-    if (!byArtist.has(artist)) {
-      byArtist.set(artist, []);
-      order.push(artist);
+    if (!byArtist.has(artist.id)) {
+      byArtist.set(artist.id, { artist, tracks: [] });
+      order.push(artist.id);
     }
-    byArtist.get(artist)!.push(track);
+    byArtist.get(artist.id)!.tracks.push(track);
   }
 
-  order.sort((a, b) => a.localeCompare(b, "es"));
+  order.sort((a, b) => byArtist.get(a)!.artist.name.localeCompare(byArtist.get(b)!.artist.name, "es"));
   return {
-    artistGroups: order.map((name) => ({ name, tracks: byArtist.get(name)! })),
+    artistGroups: order.map((id) => byArtist.get(id)!),
     ungrouped,
   };
 }
