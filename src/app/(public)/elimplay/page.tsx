@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { TrackCard } from "@/components/elimplay/TrackCard";
+import { TrackRow } from "@/components/elimplay/TrackRow";
+import { ArtistAccordion } from "@/components/elimplay/ArtistAccordion";
+import { groupTracksByArtist } from "@/lib/elimplay";
 import { Music, Search } from "lucide-react";
-import Link from "next/link";
 import type { Metadata } from "next";
 import type { AudioCategory, AudioTrack } from "@/types";
 
@@ -53,9 +54,9 @@ export default async function ElimPlayPage({
           {tracks.length === 0 ? (
             <EmptyState text="No se encontraron audios con ese nombre" />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {tracks.map((track) => (
-                <TrackCard key={track.id} track={track} queue={tracks} />
+            <div className="flex flex-col gap-1">
+              {tracks.map((track, i) => (
+                <TrackRow key={track.id} track={track} index={i + 1} queue={tracks} />
               ))}
             </div>
           )}
@@ -64,7 +65,7 @@ export default async function ElimPlayPage({
     );
   }
 
-  // Browse mode — one section per category
+  // Browse mode — one section per category, grouped by artist
   const sections = await Promise.all(
     cats.map(async (cat) => {
       const { data } = await supabase
@@ -72,44 +73,41 @@ export default async function ElimPlayPage({
         .select("*")
         .eq("is_published", true)
         .eq("category_id", cat.id)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      return { category: cat, tracks: (data ?? []) as AudioTrack[] };
+        .order("created_at", { ascending: false });
+      const tracks = (data ?? []) as AudioTrack[];
+      return { category: cat, ...groupTracksByArtist(tracks) };
     })
   );
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
       <ElimPlayHeader />
-      <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-10">
+      <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-10">
         {sections.length === 0 ? (
           <EmptyState text="Aún no hay categorías de audio configuradas" />
         ) : (
-          sections.map(({ category, tracks }) => (
+          sections.map(({ category, artistGroups, ungrouped }) => (
             <section key={category.id}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: "var(--color-text)" }}>
-                  {category.icon && <span>{category.icon}</span>}
-                  {category.name}
-                </h2>
-                <Link
-                  href={`/elimplay/categoria/${category.slug}`}
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-primary)" }}
-                >
-                  Ver todo →
-                </Link>
-              </div>
+              <h2
+                className="text-xl font-bold flex items-center gap-2 mb-4"
+                style={{ color: "var(--color-text)" }}
+              >
+                {category.icon && <span>{category.icon}</span>}
+                {category.name}
+              </h2>
 
-              {tracks.length === 0 ? (
+              {artistGroups.length === 0 && ungrouped.length === 0 ? (
                 <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
                   Aún no hay audios en esta categoría.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {tracks.map((track) => (
-                    <TrackCard key={track.id} track={track} queue={tracks} />
+                <div className="flex flex-col gap-3">
+                  {artistGroups.map((group) => (
+                    <ArtistAccordion key={group.name} name={group.name} tracks={group.tracks} />
                   ))}
+                  {ungrouped.length > 0 && (
+                    <ArtistAccordion name="Sin intérprete" tracks={ungrouped} />
+                  )}
                 </div>
               )}
             </section>

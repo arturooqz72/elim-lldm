@@ -4,33 +4,9 @@ import Link from "next/link";
 import { ArrowLeft, Music } from "lucide-react";
 import { ArtistAccordion } from "@/components/elimplay/ArtistAccordion";
 import { PlayAllButton } from "@/components/elimplay/PlayAllButton";
+import { groupTracksByArtist } from "@/lib/elimplay";
 import type { Metadata } from "next";
 import type { AudioCategory, AudioTrack } from "@/types";
-
-function groupTracksByArtist(tracks: AudioTrack[]) {
-  const order: string[] = [];
-  const byArtist = new Map<string, AudioTrack[]>();
-  const ungrouped: AudioTrack[] = [];
-
-  for (const track of tracks) {
-    const artist = track.artist?.trim();
-    if (!artist) {
-      ungrouped.push(track);
-      continue;
-    }
-    if (!byArtist.has(artist)) {
-      byArtist.set(artist, []);
-      order.push(artist);
-    }
-    byArtist.get(artist)!.push(track);
-  }
-
-  order.sort((a, b) => a.localeCompare(b, "es"));
-  return {
-    artistGroups: order.map((name) => ({ name, tracks: byArtist.get(name)! })),
-    ungrouped,
-  };
-}
 
 interface Props {
   params: Promise<{ slug: string }>;
