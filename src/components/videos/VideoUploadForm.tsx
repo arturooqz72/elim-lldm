@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Upload, Loader2, CheckCircle, Film, ImageIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 interface VideoUploadFormProps {
@@ -117,7 +117,7 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
 
     try {
       log("Iniciando subida");
-      const supabase = createClient();
+      const supabase = createFreshClient();
       log("Verificando sesión...");
       const {
         data: { session },
