@@ -204,3 +204,27 @@ export interface VideoItem {
   published_at: string | null;
   created_at: string;
 }
+
+export type ElimIAMode = "lldm" | "general";
+
+export type ElimIARole = "user" | "assistant";
+
+export interface ElimIAMessage {
+  id: string;
+  user_id: string;
+  mode: ElimIAMode;
+  role: ElimIARole;
+  content: string;
+  created_at: string;
+}
+
+export interface ElimIADocument {
+  id: string;
+  title: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+}

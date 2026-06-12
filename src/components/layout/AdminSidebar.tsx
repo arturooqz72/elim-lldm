@@ -13,6 +13,7 @@ import {
   Folder,
   Music,
   Video,
+  Bot,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const NAV = [
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
   { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
   { href: "/admin/videos", label: "Videos", icon: Video },
+  { href: "/admin/elim-ia", label: "Elim IA", icon: Bot },
 ];
 
 export function AdminSidebar() {

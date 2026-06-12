@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, Music, Video, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
 
@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/archivo", label: "Archivo", icon: Archive },
   { href: "/elimplay", label: "ElimPlay", icon: Music },
   { href: "/videos", label: "Videos", icon: Video },
+  { href: "/elim-ia", label: "Elim IA", icon: Bot },
 ];
 
 export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
