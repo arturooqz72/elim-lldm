@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getNowPlaying } from "@/lib/azuracast/api";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDuration } from "@/lib/utils";
+import { LiveBanner } from "@/components/layout/LiveBanner";
 import {
   Radio,
   Mic,
@@ -18,7 +19,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Elim LLDM — Predicando la Fe al Mundo",
   description:
-    "Plataforma cristiana LLDM: radio 24/7, pláticas en vivo con debate, juegos bíblicos en tiempo real y archivo de grabaciones. Abierto a todo el mundo.",
+    "Plataforma cristiana LLDM: radio 24/7, Estudio en Vivo con debate, juegos bíblicos en tiempo real y archivo de grabaciones. Abierto a todo el mundo.",
 };
 
 export default async function LandingPage() {
@@ -55,6 +56,9 @@ export default async function LandingPage() {
   const recentArchive = archiveRaw as unknown as ArchiveRow[] | null;
   const livePláticas = upcoming?.filter((p) => p.status === "live") ?? [];
   const scheduledPláticas = upcoming?.filter((p) => p.status === "scheduled") ?? [];
+  const initialLive = livePláticas[0]
+    ? { id: livePláticas[0].id, title: livePláticas[0].title }
+    : null;
 
   return (
     <>
@@ -180,7 +184,7 @@ export default async function LandingPage() {
                   color: "var(--color-text-muted)",
                 }}
               >
-                Ver Pláticas
+                Ver Estudio en Vivo
                 <ChevronRight size={16} />
               </Link>
             </div>
@@ -225,46 +229,7 @@ export default async function LandingPage() {
         </section>
 
         {/* ── LIVE ALERT ───────────────────────────────────────────── */}
-        {livePláticas.length > 0 && (
-          <section className="px-4 pb-4">
-            <div className="max-w-5xl mx-auto">
-              <div
-                className="rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
-                style={{
-                  background: "rgba(255,68,68,0.06)",
-                  border: "1px solid rgba(255,68,68,0.2)",
-                }}
-              >
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shrink-0"
-                  style={{ background: "var(--color-live)", color: "#fff" }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  EN VIVO AHORA
-                </span>
-                <div className="flex flex-col gap-1 flex-1">
-                  {livePláticas.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/platikas/${p.id}`}
-                      className="text-sm font-medium hover:underline"
-                      style={{ color: "var(--color-text)" }}
-                    >
-                      {p.title}
-                    </Link>
-                  ))}
-                </div>
-                <Link
-                  href="/platikas"
-                  className="shrink-0 flex items-center gap-1 text-sm font-semibold"
-                  style={{ color: "var(--color-live)" }}
-                >
-                  Unirse <ChevronRight size={14} />
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
+        <LiveBanner initial={initialLive} />
 
         {/* ── FEATURE CARDS ────────────────────────────────────────── */}
         <section className="px-4 py-14">
@@ -281,11 +246,11 @@ export default async function LandingPage() {
                 },
                 {
                   icon: Mic,
-                  title: "Sala de Pláticas",
+                  title: "Estudio en Vivo – Elim",
                   description:
-                    "Pláticas en vivo con debate abierto. Solicita subir al escenario, chatea y comparte tu fe.",
+                    "Transmisiones en vivo con debate abierto. Solicita subir al escenario, chatea y comparte tu fe.",
                   href: "/platikas",
-                  cta: "Ver pláticas",
+                  cta: "Ver Estudio en Vivo",
                 },
                 {
                   icon: Gamepad2,
@@ -362,7 +327,7 @@ export default async function LandingPage() {
                   <div className="flex items-center gap-2">
                     <Mic size={15} style={{ color: "var(--color-primary)" }} />
                     <h2 className="font-semibold text-sm" style={{ color: "var(--color-text)" }}>
-                      Próximas pláticas
+                      Próximas — Estudio en Vivo
                     </h2>
                   </div>
                   <Link
@@ -568,7 +533,7 @@ export default async function LandingPage() {
                   className="text-sm md:text-base max-w-lg leading-relaxed"
                   style={{ color: "var(--color-text-muted)" }}
                 >
-                  Crea tu cuenta con Google para chatear en pláticas en vivo,
+                  Crea tu cuenta con Google para chatear en el Estudio en Vivo,
                   solicitar subir al escenario de debate y competir en juegos bíblicos.
                   Sin costo, sin requisitos.
                 </p>

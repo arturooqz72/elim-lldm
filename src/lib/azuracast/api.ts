@@ -1,5 +1,5 @@
-const AZURACAST_API = "https://radio.elimlldm.net/api";
-const STATION_ID = "elim_lldm";
+export const AZURACAST_API = "https://radio.elimlldm.net/api";
+export const STATION_ID = "elim_lldm";
 
 export interface NowPlayingData {
   station: {
@@ -29,6 +29,20 @@ export async function getNowPlaying(): Promise<NowPlayingData | null> {
   try {
     const res = await fetch(`${AZURACAST_API}/nowplaying/${STATION_ID}`, {
       next: { revalidate: 30 },
+    });
+
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/** Fetches now-playing data without Next.js caching, for client-side polling. */
+export async function fetchNowPlaying(): Promise<NowPlayingData | null> {
+  try {
+    const res = await fetch(`${AZURACAST_API}/nowplaying/${STATION_ID}`, {
+      cache: "no-store",
     });
 
     if (!res.ok) return null;

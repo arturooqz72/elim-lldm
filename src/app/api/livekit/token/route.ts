@@ -15,6 +15,9 @@ export async function POST(request: Request) {
     participantRole: ParticipantRole;
   };
 
+  // TEMP DEBUG — remover después de diagnosticar
+  console.log("[api/livekit/token] request received", { roomName, role: participantRole });
+
   if (!roomName || !participantRole) {
     return NextResponse.json({ error: "Missing roomName or participantRole" }, { status: 400 });
   }
@@ -34,15 +37,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const token = await generateLiveKitToken({
-    roomName,
-    participantIdentity: user.id,
-    participantName: profile.display_name,
-    role: participantRole,
-  });
+  try {
+    const token = await generateLiveKitToken({
+      roomName,
+      participantIdentity: user.id,
+      participantName: profile.display_name,
+      role: participantRole,
+    });
 
-  return NextResponse.json({
-    token,
-    wsUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL,
-  });
+    return NextResponse.json({
+      token,
+      wsUrl: process.env.NEXT_PUBLIC_LIVEKIT_URL,
+    });
+  } catch (err) {
+    // TEMP DEBUG — remover después de diagnosticar
+    console.error("[api/livekit/token] failed to generate token", { roomName, role: participantRole, err });
+    return NextResponse.json({ error: "Failed to generate LiveKit token" }, { status: 500 });
+  }
 }

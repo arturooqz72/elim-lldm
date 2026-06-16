@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { RoomServiceClient } from "livekit-server-sdk";
+import { EgressClient, RoomServiceClient } from "livekit-server-sdk";
+
+const EGRESS_ID_COLUMNS = ["youtube_egress_id", "facebook_egress_id", "tiktok_egress_id"] as const;
 
 export async function POST(
   _request: Request,
@@ -29,6 +31,27 @@ export async function POST(
   const isHost = pláticas.host_id === user.id;
   const isAdmin = profile?.role === "admin";
   if (!isHost && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // Stop any active stream egresses (YouTube, Facebook, TikTok)
+  const activeEgressIds = EGRESS_ID_COLUMNS.map((column) => pláticas[column] as string | null).filter(
+    (egressId): egressId is string => !!egressId
+  );
+
+  if (activeEgressIds.length > 0) {
+    const egressClient = new EgressClient(
+      process.env.LIVEKIT_URL!,
+      process.env.LIVEKIT_API_KEY!,
+      process.env.LIVEKIT_API_SECRET!
+    );
+
+    for (const egressId of activeEgressIds) {
+      try {
+        await egressClient.stopEgress(egressId);
+      } catch {
+        // Egress may already have stopped/finished
+      }
+    }
+  }
 
   // Delete LiveKit room
   if (pláticas.livekit_room_name) {
@@ -65,6 +88,9 @@ export async function POST(
     .update({
       status: "ended",
       radio_output_active: false,
+      youtube_egress_id: null,
+      facebook_egress_id: null,
+      tiktok_egress_id: null,
       ended_at: new Date().toISOString(),
     })
     .eq("id", id);

@@ -3,7 +3,7 @@ import { formatDate } from "@/lib/utils";
 import { Plus, Mic, Radio } from "lucide-react";
 import Link from "next/link";
 
-export const metadata = { title: "Pláticas — Admin" };
+export const metadata = { title: "Estudio en Vivo — Admin" };
 
 export default async function AdminPlatikaListPage() {
   const supabase = await createClient();
@@ -25,7 +25,7 @@ export default async function AdminPlatikaListPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
-            Pláticas
+            Estudio en Vivo
           </h1>
         </div>
         <Link
@@ -34,7 +34,7 @@ export default async function AdminPlatikaListPage() {
           style={{ background: "var(--color-primary)", color: "#000" }}
         >
           <Plus size={16} />
-          Nueva plática
+          Nueva sesión
         </Link>
       </div>
 
@@ -116,7 +116,7 @@ export default async function AdminPlatikaListPage() {
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <Mic size={36} className="mb-3" style={{ color: "var(--color-text-muted)" }} />
-          <p style={{ color: "var(--color-text-muted)" }}>No hay pláticas. Crea la primera.</p>
+          <p style={{ color: "var(--color-text-muted)" }}>No hay sesiones de Estudio en Vivo. Crea la primera.</p>
         </div>
       )}
     </div>

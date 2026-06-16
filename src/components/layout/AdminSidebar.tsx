@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
-  { href: "/admin/platikas", label: "Pláticas", icon: Mic },
+  { href: "/admin/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/admin/question-sets", label: "Banco de preguntas", icon: BookOpen },
   { href: "/admin/juegos", label: "Juegos", icon: Gamepad2 },
   { href: "/admin/trivia", label: "Salas de Trivia", icon: Sparkles },

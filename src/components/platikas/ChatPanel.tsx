@@ -251,7 +251,10 @@ export function ChatPanel({ platikaId, currentUserId, isHost }: ChatPanelProps) 
             color: "var(--color-text-muted)",
           }}
         >
-          <a href="/login" style={{ color: "var(--color-primary)" }}>
+          <a
+            href={`/login?returnUrl=${encodeURIComponent(`/platikas/${platikaId}`)}`}
+            style={{ color: "var(--color-primary)" }}
+          >
             Inicia sesión
           </a>{" "}
           para chatear

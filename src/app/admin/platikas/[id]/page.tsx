@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -30,11 +31,22 @@ async function updatePlatika(formData: FormData) {
 async function goLive(formData: FormData) {
   "use server";
   const id = formData.get("id") as string;
-  const supabase = await createServiceClient();
-  await supabase
-    .from("platikas")
-    .update({ status: "live", started_at: new Date().toISOString() })
-    .eq("id", id);
+
+  const cookieStore = await cookies();
+  const headersList = await headers();
+  const host = headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") ?? "https";
+
+  const res = await fetch(`${protocol}://${host}/api/platikas/${id}/go-live`, {
+    method: "POST",
+    headers: { Cookie: cookieStore.toString() },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? "No se pudo iniciar la transmisión");
+  }
+
   revalidatePath(`/admin/platikas/${id}`);
 }
 
@@ -91,7 +103,7 @@ export default async function EditPlatikaPage({ params }: Props) {
           style={{ color: "var(--color-text-muted)" }}
         >
           <ArrowLeft size={15} />
-          Pláticas
+          Estudio en Vivo
         </Link>
         <Link
           href={`/platikas/${id}`}
@@ -107,7 +119,7 @@ export default async function EditPlatikaPage({ params }: Props) {
       {/* Status badge */}
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-          Editar plática
+          Editar sesión
         </h1>
         <span
           className="px-2 py-0.5 rounded-full text-xs font-bold"
@@ -271,7 +283,7 @@ export default async function EditPlatikaPage({ params }: Props) {
             Zona de peligro
           </p>
           <p className="text-xs mb-4" style={{ color: "var(--color-text-muted)" }}>
-            Eliminar esta plática es irreversible.
+            Eliminar esta sesión es irreversible.
           </p>
           <DeleteForm action={deletePlatika} id={id} />
         </div>

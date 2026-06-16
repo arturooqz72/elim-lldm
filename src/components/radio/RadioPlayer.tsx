@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, VolumeX, Radio } from "lucide-react";
-import { RADIO_STREAM_URL } from "@/lib/azuracast/api";
+import { RADIO_STREAM_URL, fetchNowPlaying } from "@/lib/azuracast/api";
 import { RadioVisualizer } from "./RadioVisualizer";
+
+const NOW_PLAYING_POLL_INTERVAL_MS = 20_000;
 
 interface RadioPlayerProps {
   listenerCount?: number;
@@ -13,16 +15,20 @@ interface RadioPlayerProps {
 }
 
 export function RadioPlayer({
-  listenerCount,
-  nowPlayingTitle,
-  nowPlayingArtist,
-  albumArt,
+  listenerCount: initialListenerCount,
+  nowPlayingTitle: initialNowPlayingTitle,
+  nowPlayingArtist: initialNowPlayingArtist,
+  albumArt: initialAlbumArt,
 }: RadioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [listenerCount, setListenerCount] = useState(initialListenerCount);
+  const [nowPlayingTitle, setNowPlayingTitle] = useState(initialNowPlayingTitle);
+  const [nowPlayingArtist, setNowPlayingArtist] = useState(initialNowPlayingArtist);
+  const [albumArt, setAlbumArt] = useState(initialAlbumArt);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -44,6 +50,27 @@ export function RadioPlayer({
       audio.removeEventListener("pause", onPause);
     };
   }, [volume]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      const data = await fetchNowPlaying();
+      if (cancelled || !data) return;
+
+      setListenerCount(data.listeners.current);
+      setNowPlayingTitle(data.now_playing.song.title);
+      setNowPlayingArtist(data.now_playing.song.artist);
+      setAlbumArt(data.now_playing.song.art);
+    }
+
+    const interval = setInterval(poll, NOW_PLAYING_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   function togglePlay() {
     const audio = audioRef.current;
@@ -157,7 +184,7 @@ export function RadioPlayer({
         {/* Song info */}
         <div className="min-w-0">
           <p className="font-semibold text-base truncate" style={{ color: "var(--color-text)" }}>
-            {nowPlayingTitle || "Radio Elim LLDM"}
+            {nowPlayingTitle || "Elim LLDM Radio"}
           </p>
           {nowPlayingArtist && (
             <p className="text-sm truncate" style={{ color: "var(--color-text-muted)" }}>

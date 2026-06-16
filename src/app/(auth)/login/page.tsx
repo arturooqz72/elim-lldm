@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, MessageSquare, Gamepad2, Mic } from "lucide-react";
 
 const PERKS = [
-  { icon: Mic, label: "Solicita subir al escenario en pláticas en vivo" },
+  { icon: Mic, label: "Solicita subir al escenario en el Estudio en Vivo" },
   { icon: MessageSquare, label: "Chatea en tiempo real con la comunidad" },
   { icon: Gamepad2, label: "Compite en juegos bíblicos por equipos" },
 ];

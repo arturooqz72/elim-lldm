@@ -228,3 +228,55 @@ export interface ElimIADocument {
   created_by: string;
   created_at: string;
 }
+
+// ── Elim Arena (trivia multijugador en tiempo real, estilo TikTok) ─────────────
+
+export type ArenaStatus = "lobby" | "playing" | "reveal" | "finished";
+
+export interface ArenaSala {
+  id: string;
+  codigo: string;
+  titulo: string;
+  status: ArenaStatus;
+  pregunta_actual: number;
+  pregunta_termina_en: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ArenaPregunta {
+  id: string;
+  sala_id: string;
+  pregunta: string;
+  opcion_a: string;
+  opcion_b: string;
+  opcion_c: string;
+  opcion_d: string;
+  respuesta_correcta: AnswerOption;
+  orden: number;
+}
+
+export interface ArenaJugador {
+  id: string;
+  sala_id: string;
+  nombre: string;
+  puntos: number;
+  ultimo_respondido_at: string | null;
+  created_at: string;
+}
+
+export interface ArenaRespuesta {
+  id: string;
+  sala_id: string;
+  jugador_id: string;
+  pregunta_id: string;
+  respuesta: AnswerOption;
+  es_correcta: boolean;
+  tiempo_ms: number;
+  created_at: string;
+}
+
+export interface ArenaBroadcastEvent {
+  type: "QUESTION_START" | "GAME_FINISHED";
+  payload: Record<string, unknown>;
+}

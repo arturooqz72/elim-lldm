@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
       color: "#60A5FA",
     },
     {
-      label: "Pláticas en vivo",
+      label: "Estudio en Vivo activo",
       value: platikaLiveCount ?? 0,
       icon: Radio,
       href: "/admin/platikas",
@@ -51,7 +51,7 @@ export default async function AdminDashboard() {
       pulse: (platikaLiveCount ?? 0) > 0,
     },
     {
-      label: "Pláticas programadas",
+      label: "Estudio en Vivo programado",
       value: platikaScheduledCount ?? 0,
       icon: Mic,
       href: "/admin/platikas",
@@ -121,7 +121,7 @@ export default async function AdminDashboard() {
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <QuickAction
           href="/admin/platikas/nueva"
-          label="Nueva plática"
+          label="Nueva sesión de Estudio en Vivo"
           description="Programar una transmisión en vivo"
           color="var(--color-primary)"
         />
@@ -163,7 +163,7 @@ export default async function AdminDashboard() {
             style={{ borderBottom: "1px solid var(--color-border)" }}
           >
             <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-              Pláticas activas
+              Estudio en Vivo reciente
             </span>
             <Link
               href="/admin/platikas"
@@ -176,7 +176,7 @@ export default async function AdminDashboard() {
           <div className="p-3 flex flex-col gap-2">
             {!recentPlatikas || recentPlatikas.length === 0 ? (
               <p className="text-xs py-3 text-center" style={{ color: "var(--color-text-muted)" }}>
-                Sin pláticas programadas
+                Sin sesiones programadas
               </p>
             ) : (
               (recentPlatikas as Array<{ id: string; title: string; status: string; scheduled_at: string | null }>).map((p) => (

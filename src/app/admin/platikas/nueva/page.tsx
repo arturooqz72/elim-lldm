@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-export const metadata = { title: "Nueva plática — Admin" };
+export const metadata = { title: "Nueva sesión — Admin" };
 
 async function createPlatika(formData: FormData) {
   "use server";
@@ -49,12 +49,12 @@ export default async function NuevaPlatikaPage() {
           style={{ color: "var(--color-text-muted)" }}
         >
           <ArrowLeft size={15} />
-          Pláticas
+          Estudio en Vivo
         </Link>
       </div>
 
       <h1 className="text-2xl font-bold mb-6" style={{ color: "var(--color-text)" }}>
-        Nueva plática
+        Nueva sesión
       </h1>
 
       <form action={createPlatika} className="flex flex-col gap-5">
@@ -139,7 +139,7 @@ export default async function NuevaPlatikaPage() {
             className="flex-1 py-3 rounded-xl text-sm font-semibold"
             style={{ background: "var(--color-primary)", color: "#000" }}
           >
-            Crear plática
+            Crear sesión
           </button>
         </div>
       </form>

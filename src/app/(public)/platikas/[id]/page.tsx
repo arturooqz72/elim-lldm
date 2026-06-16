@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = data as { title?: string; description?: string; thumbnail_url?: string | null } | null;
 
   return {
-    title: p?.title ? `${p.title} — Elim LLDM` : "Plática — Elim LLDM",
+    title: p?.title ? `${p.title} — Elim LLDM` : "Estudio en Vivo — Elim LLDM",
     description: p?.description ?? undefined,
     openGraph: p?.thumbnail_url ? { images: [p.thumbnail_url] } : undefined,
   };
@@ -125,7 +125,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
               style={{ color: "var(--color-text-muted)" }}
             >
               <ArrowLeft size={14} />
-              Pláticas
+              Estudio en Vivo
             </Link>
 
             {/* Status badges */}
@@ -292,7 +292,7 @@ function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
 
       <div className="text-center flex flex-col gap-2 max-w-sm px-4">
         <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
-          Esta plática aún no ha comenzado
+          Esta sesión del Estudio en Vivo aún no ha comenzado
         </p>
         {dateStr && (
           <p
@@ -322,7 +322,7 @@ function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
         }}
       >
         <ArrowLeft size={14} />
-        Ver todas las pláticas
+        Ver Estudio en Vivo
       </Link>
     </div>
   );
@@ -346,7 +346,7 @@ function EndedState({ recordingUrl }: { recordingUrl: string | null }) {
 
       <div className="text-center flex flex-col gap-2 max-w-sm px-4">
         <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
-          Esta plática ha terminado
+          Esta sesión del Estudio en Vivo ha terminado
         </p>
         {recordingUrl ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -385,7 +385,7 @@ function EndedState({ recordingUrl }: { recordingUrl: string | null }) {
           }}
         >
           <ArrowLeft size={14} />
-          Más pláticas
+          Más del Estudio en Vivo
         </Link>
         <Link
           href="/archivo"

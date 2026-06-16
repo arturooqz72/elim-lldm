@@ -25,7 +25,7 @@ export function PublicFooter() {
         <nav className="flex items-center gap-6">
           {[
             { href: "/radio", label: "Radio" },
-            { href: "/platikas", label: "Pláticas" },
+            { href: "/platikas", label: "Estudio en Vivo" },
             { href: "/juegos", label: "Juegos" },
             { href: "/archivo", label: "Archivo" },
           ].map(({ href, label }) => (

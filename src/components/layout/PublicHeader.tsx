@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck } from "lucide-react";
+import { useState, useEffect, Fragment } from "react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { LiveBadge } from "./LiveBadge";
 import type { Profile } from "@/types";
 
 const NAV_LINKS = [
   { href: "/radio", label: "Radio", icon: Radio },
-  { href: "/platikas", label: "Pláticas", icon: Mic },
+  { href: "/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/juegos", label: "Juegos", icon: Gamepad2 },
   { href: "/trivia", label: "Trivia en vivo", icon: Sparkles },
+  { href: "/arena", label: "Elim Arena", icon: Trophy },
   { href: "/archivo", label: "Archivo", icon: Archive },
   { href: "/elimplay", label: "ElimPlay", icon: Music },
   { href: "/videos", label: "Videos", icon: Video },
@@ -73,18 +75,20 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{
-                  color: active ? "var(--color-primary)" : "var(--color-text-muted)",
-                  background: active ? "rgba(212,160,23,0.1)" : "transparent",
-                }}
-              >
-                <Icon size={15} />
-                {label}
-              </Link>
+              <Fragment key={href}>
+                <Link
+                  href={href}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  style={{
+                    color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                    background: active ? "rgba(212,160,23,0.1)" : "transparent",
+                  }}
+                >
+                  <Icon size={15} />
+                  {label}
+                </Link>
+                {href === "/platikas" && <LiveBadge />}
+              </Fragment>
             );
           })}
         </nav>
@@ -205,19 +209,21 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
-                style={{
-                  color: active ? "var(--color-primary)" : "var(--color-text)",
-                  background: active ? "rgba(212,160,23,0.1)" : "transparent",
-                }}
-                onClick={() => setMobileOpen(false)}
-              >
-                <Icon size={18} />
-                {label}
-              </Link>
+              <div key={href} className="flex items-center gap-2">
+                <Link
+                  href={href}
+                  className="flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
+                  style={{
+                    color: active ? "var(--color-primary)" : "var(--color-text)",
+                    background: active ? "rgba(212,160,23,0.1)" : "transparent",
+                  }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Icon size={18} />
+                  {label}
+                </Link>
+                {href === "/platikas" && <LiveBadge className="mr-3" />}
+              </div>
             );
           })}
 
