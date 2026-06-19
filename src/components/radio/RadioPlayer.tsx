@@ -109,18 +109,28 @@ export function RadioPlayer({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="relative rounded-2xl overflow-hidden"
       style={{
-        background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
+        backgroundImage: "url(/images/radio-bg.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
       }}
     >
+      {/* Dark scrim for text readability over the background image */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(10,10,18,0.55) 0%, rgba(10,10,18,0.75) 45%, var(--color-surface) 100%)",
+        }}
+      />
+
       <audio ref={audioRef} preload="none" />
 
       {/* Album art banner */}
       <div
-        className="relative h-48 flex items-center justify-center overflow-hidden"
-        style={{ background: "var(--color-surface-elevated)" }}
+        className="relative z-10 h-48 flex items-center justify-center overflow-hidden"
       >
         {albumArt ? (
           <>
@@ -180,7 +190,7 @@ export function RadioPlayer({
       </div>
 
       {/* Info + controls */}
-      <div className="p-5 flex flex-col gap-4">
+      <div className="relative z-10 p-5 flex flex-col gap-4">
         {/* Song info */}
         <div className="min-w-0">
           <p className="font-semibold text-base truncate" style={{ color: "var(--color-text)" }}>
