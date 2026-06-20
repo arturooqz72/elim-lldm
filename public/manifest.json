@@ -1,0 +1,25 @@
+{
+  "name": "Elim LLDM Radio",
+  "short_name": "Elim Radio",
+  "description": "Radio cristiana LLDM 24/7 — predicando la fe al mundo.",
+  "start_url": "/radio",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#D4A017",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
