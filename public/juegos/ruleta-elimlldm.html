@@ -324,7 +324,7 @@
   var STORAGE_KEY = "ruletaElimLLDM_data_v3";
   var VOWELS = ["A","E","I","O","U"];
   var CONSONANTS = "BCDFGHJKLMNÑPQRSTVWXYZ".split("");
-  var TURN_SECONDS = 10;
+  var TURN_SECONDS = 15;
 
   var DEFAULT_DATA = {
     vowelCost: 700,
@@ -432,7 +432,12 @@
   var resolveBtn = $("resolveBtn");
   var nextPuzzleBtn = $("nextPuzzleBtn");
 
-  // ---------- Sound (Web Audio API, no external files needed) ----------
+  // ---------- Sound (Web Audio API — fully synthesized, no external files) ----------
+  var masterGain = null;
+  var reverbNode = null;
+  var reverbSendGain = null;
+  var noiseBuffer = null;
+
   function getAudioCtx(){
     if(!audioCtx){
       var Ctx = window.AudioContext || window.webkitAudioContext;
@@ -441,46 +446,170 @@
     }
     return audioCtx;
   }
-  function playTone(freq, duration, waveType){
+
+  function buildImpulseResponse(ctx, seconds, decay){
+    var rate = ctx.sampleRate;
+    var length = Math.max(1, Math.floor(rate * seconds));
+    var impulse = ctx.createBuffer(2, length, rate);
+    for(var ch=0; ch<2; ch++){
+      var data = impulse.getChannelData(ch);
+      for(var i=0;i<length;i++){
+        data[i] = (Math.random()*2-1) * Math.pow(1 - i/length, decay);
+      }
+    }
+    return impulse;
+  }
+
+  function getNoiseBuffer(ctx){
+    if(!noiseBuffer){
+      var length = Math.floor(ctx.sampleRate * 1.2);
+      noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      var data = noiseBuffer.getChannelData(0);
+      for(var i=0;i<length;i++){ data[i] = Math.random()*2-1; }
+    }
+    return noiseBuffer;
+  }
+
+  function getMasterGain(ctx){
+    if(!masterGain){
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0.9;
+      masterGain.connect(ctx.destination);
+
+      reverbNode = ctx.createConvolver();
+      reverbNode.buffer = buildImpulseResponse(ctx, 1.6, 2.2);
+      reverbSendGain = ctx.createGain();
+      reverbSendGain.gain.value = 0.22;
+      reverbNode.connect(reverbSendGain);
+      reverbSendGain.connect(ctx.destination);
+    }
+    return masterGain;
+  }
+
+  // One synthesized voice: oscillator or noise burst -> optional filter -> gain envelope -> master (+ optional reverb send)
+  function playVoice(opts){
     if(!soundEnabled) return;
     try{
       var ctx = getAudioCtx();
       if(!ctx) return;
       if(ctx.state === "suspended") ctx.resume();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.type = waveType || "sine";
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(0.16, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
+
+      var now = ctx.currentTime + (opts.delay || 0);
+      var dur = opts.duration || 0.2;
+      var source;
+
+      if(opts.type === "noise"){
+        source = ctx.createBufferSource();
+        source.buffer = getNoiseBuffer(ctx);
+      } else {
+        source = ctx.createOscillator();
+        source.type = opts.wave || "sine";
+        source.frequency.setValueAtTime(opts.freq || 440, now);
+        if(opts.freqEnd !== undefined){
+          source.frequency.exponentialRampToValueAtTime(Math.max(1,opts.freqEnd), now + dur);
+        }
+      }
+
+      var filter = null;
+      if(opts.filterType){
+        filter = ctx.createBiquadFilter();
+        filter.type = opts.filterType;
+        filter.frequency.setValueAtTime(opts.filterFreq || 1000, now);
+        if(opts.filterFreqEnd !== undefined){
+          filter.frequency.exponentialRampToValueAtTime(Math.max(1,opts.filterFreqEnd), now + dur);
+        }
+        if(opts.filterQ) filter.Q.value = opts.filterQ;
+      }
+
+      var gainNode = ctx.createGain();
+      var peak = opts.gain !== undefined ? opts.gain : 0.18;
+      var attack = opts.attack !== undefined ? opts.attack : 0.005;
+      gainNode.gain.setValueAtTime(0.0001, now);
+      gainNode.gain.exponentialRampToValueAtTime(peak, now + attack);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      var node = source;
+      if(filter){ node.connect(filter); node = filter; }
+      node.connect(gainNode);
+      gainNode.connect(getMasterGain(ctx));
+      if(opts.reverb){ gainNode.connect(reverbNode); }
+
+      source.start(now);
+      source.stop(now + dur + 0.05);
     }catch(e){ /* audio not available, ignore */ }
   }
+
+  function playChimeNote(freq, delaySec, duration, gain){
+    playVoice({ wave:"triangle", freq:freq, duration: duration || 0.35, delay: delaySec || 0, gain: gain || 0.16, attack:0.008, filterType:"lowpass", filterFreq: freq*4, reverb:true });
+    playVoice({ wave:"sine", freq:freq*2, duration:(duration||0.35)*0.7, delay:delaySec||0, gain:(gain||0.16)*0.35, attack:0.005, reverb:true });
+  }
+
+  // ---- Spinning wheel: continuous ratchet-tick texture that eases out like a real peg wheel ----
+  var spinTickHandle = null;
+  function playSpinTick(strength){
+    playVoice({ type:"noise", duration:0.045, gain: 0.05 + strength*0.14, attack:0.001, filterType:"bandpass", filterFreq:1900, filterQ:7 });
+    playVoice({ type:"noise", duration:0.03, gain: 0.03 + strength*0.06, attack:0.001, filterType:"highpass", filterFreq:3500 });
+  }
+  function startSpinTicking(totalMs){
+    stopSpinTicking();
+    var startTime = performance.now();
+    function tick(){
+      var elapsed = performance.now() - startTime;
+      if(elapsed >= totalMs){ spinTickHandle = null; return; }
+      var progress = elapsed / totalMs;
+      var eased = 1 - Math.pow(1 - progress, 2); // ease-out, matches the CSS wheel deceleration
+      var interval = 35 + eased * 260; // starts fast (35ms) → ends slow (~295ms)
+      playSpinTick(1 - eased);
+      spinTickHandle = setTimeout(tick, interval);
+    }
+    tick();
+  }
+  function stopSpinTicking(){
+    if(spinTickHandle){ clearTimeout(spinTickHandle); spinTickHandle = null; }
+  }
+
+  // ---- Turn countdown: alternating tick / tock, faster and more urgent near zero ----
+  function playCountdownTick(isUrgent){
+    playVoice({ wave:"square", freq: isUrgent ? 1250 : 950, duration:0.06, gain: isUrgent ? 0.14 : 0.09, attack:0.002, filterType:"highpass", filterFreq:600 });
+  }
+
   function playSound(name){
     if(!soundEnabled) return;
     switch(name){
-      case "spin": playTone(300, 0.15, "square"); break;
-      case "land": playTone(440, 0.15, "sine"); break;
-      case "correct":
-        playTone(660, 0.12, "sine");
-        setTimeout(function(){ playTone(880, 0.15, "sine"); }, 120);
+      case "land":
+        playVoice({ wave:"sine", freq:180, freqEnd:70, duration:0.28, gain:0.32, attack:0.004, filterType:"lowpass", filterFreq:900 });
+        playVoice({ type:"noise", duration:0.06, gain:0.14, attack:0.001, filterType:"bandpass", filterFreq:1200, filterQ:4 });
         break;
-      case "wrong": playTone(160, 0.3, "sawtooth"); break;
-      case "bankrupt": playTone(90, 0.5, "sawtooth"); break;
-      case "loseturn": playTone(200, 0.25, "triangle"); break;
-      case "timeout": playTone(220, 0.4, "square"); break;
+      case "correct":
+        playChimeNote(659.25, 0, 0.3, 0.15);
+        playChimeNote(830.61, 0.09, 0.32, 0.15);
+        playChimeNote(987.77, 0.18, 0.4, 0.16);
+        break;
+      case "wrong":
+        playVoice({ wave:"sawtooth", freq:220, freqEnd:110, duration:0.22, gain:0.2, attack:0.003, filterType:"lowpass", filterFreq:800, filterFreqEnd:250 });
+        playVoice({ wave:"square", freq:140, duration:0.18, delay:0.05, gain:0.14, attack:0.003, filterType:"lowpass", filterFreq:500 });
+        break;
+      case "bankrupt":
+        playVoice({ wave:"sawtooth", freq:220, freqEnd:40, duration:0.9, gain:0.24, attack:0.005, filterType:"lowpass", filterFreq:900, filterFreqEnd:150, reverb:true });
+        playVoice({ type:"noise", duration:0.5, gain:0.16, attack:0.002, filterType:"lowpass", filterFreq:600 });
+        break;
+      case "loseturn":
+        playVoice({ wave:"triangle", freq:320, freqEnd:180, duration:0.3, gain:0.16, attack:0.005 });
+        break;
+      case "timeout":
+        playVoice({ wave:"square", freq:440, duration:0.12, gain:0.16, attack:0.003 });
+        playVoice({ wave:"square", freq:440, duration:0.12, delay:0.16, gain:0.16, attack:0.003 });
+        break;
       case "win":
-        playTone(523, 0.12, "sine");
-        setTimeout(function(){ playTone(659, 0.12, "sine"); }, 130);
-        setTimeout(function(){ playTone(784, 0.22, "sine"); }, 260);
+        playChimeNote(523.25, 0, 0.3, 0.16);
+        playChimeNote(659.25, 0.12, 0.3, 0.16);
+        playChimeNote(783.99, 0.24, 0.3, 0.17);
+        playChimeNote(1046.5, 0.38, 0.6, 0.2);
         break;
     }
   }
 
-  // ---------- Turn timer (10 seconds to act) ----------
+  // ---------- Turn timer (15 seconds to act, with tick-tock each second) ----------
   function clearTimer(){
     if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
     timerBadge.style.display = "none";
@@ -498,7 +627,9 @@
         onExpire();
       } else {
         timerBadge.textContent = "⏱ " + timeLeft;
-        if(timeLeft <= 3) timerBadge.classList.add("urgent");
+        var urgent = timeLeft <= 3;
+        if(urgent) timerBadge.classList.add("urgent");
+        playCountdownTick(urgent);
       }
     }, 1000);
   }
@@ -591,7 +722,7 @@
     spinning = true;
     spinBtn.disabled = true;
     buyVowelBtn.disabled = true;
-    playSound("spin");
+    startSpinTicking(4200);
     setInfo("Girando la ruleta...");
     var segs = DATA.wheel;
     var segAngle = 360/segs.length;
@@ -605,6 +736,7 @@
 
     setTimeout(function(){
       spinning = false;
+      stopSpinTicking();
       var effectiveAngle = (360 - finalMod) % 360;
       var index = Math.floor(effectiveAngle / segAngle) % segs.length;
       var seg = segs[index];
@@ -632,7 +764,7 @@
     playSound("land");
     lastSpinValue = seg.value;
     canGuessConsonant = true;
-    setInfo(players[currentPlayerIndex].name + " sacó " + seg.value + " puntos. Elige una consonante (10 segundos).");
+    setInfo(players[currentPlayerIndex].name + " sacó " + seg.value + " puntos. Elige una consonante (" + TURN_SECONDS + " segundos).");
     updateLetterButtonsState();
     startActionTimer(onActionTimeout);
   }
@@ -792,7 +924,7 @@
 
   buyVowelBtn.addEventListener("click", function(){
     if(players[currentPlayerIndex].score < DATA.vowelCost) return;
-    setInfo("Elige una vocal para comprar por " + DATA.vowelCost + " puntos (10 segundos).");
+    setInfo("Elige una vocal para comprar por " + DATA.vowelCost + " puntos (" + TURN_SECONDS + " segundos).");
     vowelPurchasedThisTurn = true;
     var buttons = lettersEl.querySelectorAll(".letter-btn.vowel");
     buttons.forEach(function(btn){
