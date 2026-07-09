@@ -379,6 +379,8 @@
   var SEG_COLORS = ["#e74c3c","#f1c40f","#2ecc71","#3498db","#111111","#e67e22","#9b59b6","#1abc9c","#7f8c8d","#e74c3c","#f1c40f","#2ecc71","#3498db","#e67e22","#9b59b6","#1abc9c"];
 
   // ---------- Data / storage ----------
+  var HISTORY_KEY = "ruletaElimLLDM_history_v1";
+
   function loadData(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -393,13 +395,30 @@
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){ console.warn(e); }
   }
 
+  // Recently shown phrases persist across "Nueva partida" and page reloads,
+  // so restarting the game doesn't immediately repeat what was just played.
+  function loadUsedPhrases(){
+    try{
+      var raw = localStorage.getItem(HISTORY_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      }
+    }catch(e){ console.warn(e); }
+    return [];
+  }
+  function saveUsedPhrases(){
+    try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(usedPhrases)); }catch(e){ console.warn(e); }
+  }
+
   var DATA = loadData();
 
   // ---------- Game state ----------
   var players = [];
   var currentPlayerIndex = 0;
   var currentPuzzleIndex = -1;
-  var usedPuzzleIndexes = [];
+  var usedPhrases = loadUsedPhrases();
+  var lastCategory = null;
   var currentPuzzle = null;
   var guessedLetters = new Set();
   var lastSpinValue = null; // number, "bankrupt", "lose_turn", or null
@@ -670,7 +689,8 @@
       players.push({ name: val, score: 0 });
     }
     currentPlayerIndex = 0;
-    usedPuzzleIndexes = [];
+    // Nota: usedPhrases NO se reinicia aquí a propósito — así "Nueva partida"
+    // no repite de inmediato las frases/temas ya vistos en la partida anterior.
     soundEnabled = $("soundToggle").checked;
     buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
     setupScreen.style.display = "none";
@@ -770,16 +790,34 @@
   }
 
   // ---------- Puzzle / board ----------
+  function phraseKey(p){ return p.category + "||" + p.phrase; }
+
+  // Picks a phrase that hasn't been shown since the pool last fully cycled
+  // (tracked in usedPhrases, persisted across restarts), and prefers a
+  // different category than the last one so themes don't repeat back to back.
   function pickPuzzleIndex(){
     var puzzles = DATA.puzzles;
     if(puzzles.length === 0) return -1;
-    if(usedPuzzleIndexes.length >= puzzles.length) usedPuzzleIndexes = [];
+
     var available = [];
     for(var i=0;i<puzzles.length;i++){
-      if(usedPuzzleIndexes.indexOf(i) === -1) available.push(i);
+      if(usedPhrases.indexOf(phraseKey(puzzles[i])) === -1) available.push(i);
     }
-    var choice = available[Math.floor(Math.random()*available.length)];
-    usedPuzzleIndexes.push(choice);
+    if(available.length === 0){
+      usedPhrases = [];
+      for(var j=0;j<puzzles.length;j++) available.push(j);
+    }
+
+    var preferred = available.filter(function(i){ return puzzles[i].category !== lastCategory; });
+    var pool = preferred.length > 0 ? preferred : available;
+
+    var choice = pool[Math.floor(Math.random()*pool.length)];
+    usedPhrases.push(phraseKey(puzzles[choice]));
+    if(usedPhrases.length > puzzles.length * 3){
+      usedPhrases = usedPhrases.slice(-puzzles.length);
+    }
+    saveUsedPhrases();
+    lastCategory = puzzles[choice].category;
     return choice;
   }
 
