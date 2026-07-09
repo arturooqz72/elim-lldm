@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Ruleta - Elim LLDM</title>
+<style>
+  :root{
+    --gold:#e8b84b;
+    --gold-dark:#b8862f;
+    --dark:#171208;
+    --panel:#1f1710;
+    --sky1:#2a2013;
+    --sky2:#171208;
+    --tile:#0f2a4a;
+    --tile-border:#0a1c33;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Arial, sans-serif;
+    background: radial-gradient(ellipse at top, var(--sky1), var(--sky2));
+    color:#fff;
+    min-height:100vh;
+    padding:20px;
+  }
+  .app{max-width:1100px;margin:0 auto;}
+  header{
+    text-align:center;
+    margin-bottom:18px;
+  }
+  header h1{
+    font-size:2.4rem;
+    margin:0;
+    letter-spacing:1px;
+    color:var(--gold);
+    text-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  header p{color:#cbb98a;margin:6px 0 0;}
+  .top-actions{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+  }
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    font-weight:600;
+    font-size:.95rem;
+  }
+  .btn-gold{
+    background:linear-gradient(180deg,#f6d37a,var(--gold-dark));
+    color:#2a1a05;
+    box-shadow:0 3px 0 #7a5416, 0 4px 10px rgba(0,0,0,.4);
+  }
+  .btn-gold:hover{filter:brightness(1.05);}
+  .btn-gold:disabled{opacity:.4;cursor:not-allowed;filter:none;}
+  .btn-outline{
+    background:transparent;
+    color:var(--gold);
+    border:1.5px solid var(--gold);
+  }
+  .btn-danger{background:#8a2b2b;color:#fff;}
+  .btn-small{padding:6px 10px;font-size:.8rem;border-radius:6px;}
+
+  /* Setup screen */
+  #setupScreen{
+    background:var(--panel);
+    border:1px solid #3a2c14;
+    border-radius:16px;
+    padding:28px;
+    max-width:520px;
+    margin:0 auto;
+  }
+  #setupScreen h2{color:var(--gold);margin-top:0;}
+  #setupScreen label{display:block;margin:14px 0 6px;color:#e6d9b8;font-size:.9rem;}
+  #setupScreen input[type=text], #setupScreen input[type=number]{
+    width:100%;padding:9px 10px;border-radius:8px;border:1px solid #4a3a1c;
+    background:#0f0b06;color:#fff;font-size:.95rem;
+  }
+  #playerNamesWrap div{margin-bottom:8px;}
+
+  /* Game layout */
+  .game-wrap{display:none;gap:20px;flex-wrap:wrap;justify-content:center;}
+  .game-wrap.active{display:flex;}
+  .left-col{display:flex;flex-direction:column;align-items:center;gap:14px;width:300px;}
+  .right-col{flex:1;min-width:340px;}
+
+  /* Wheel */
+  .wheel-wrap{position:relative;width:280px;height:280px;}
+  .pointer{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;
+    border-top:24px solid var(--gold);z-index:5;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  }
+  #wheel{
+    width:280px;height:280px;border-radius:50%;
+    border:6px solid var(--gold-dark);
+    box-shadow:0 0 0 3px #2a1a05, 0 8px 24px rgba(0,0,0,.6);
+    position:relative;
+    transform:rotate(0deg);
+  }
+  #wheel .seg-label{
+    position:absolute;left:50%;top:50%;
+    transform-origin:0 0;
+    font-size:.68rem;
+    font-weight:700;
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.7);
+    width:60px;
+    text-align:center;
+  }
+  .hub{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:34px;height:34px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #fff2c9, var(--gold-dark));
+    border:2px solid #2a1a05;z-index:4;
+  }
+  #spinBtn{width:100%;font-size:1rem;padding:14px;}
+  .timer-badge{
+    font-size:1.3rem;font-weight:800;color:var(--gold);
+    background:#0f0b06;border:2px solid var(--gold-dark);border-radius:10px;
+    padding:6px 14px;text-align:center;
+  }
+  .timer-badge.urgent{color:#ff5c5c;border-color:#ff5c5c;animation:pulse .5s infinite;}
+  @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+
+  .scoreboard{display:flex;gap:8px;width:100%;flex-wrap:wrap;justify-content:center;}
+  .score-card{
+    flex:1;min-width:80px;
+    background:#0f0b06;border:2px solid #3a2c14;border-radius:10px;
+    padding:8px;text-align:center;
+  }
+  .score-card.active{border-color:var(--gold);box-shadow:0 0 10px rgba(232,184,75,.5);}
+  .score-card .pname{font-size:.75rem;color:#cbb98a;}
+  .score-card .pscore{font-size:1.3rem;font-weight:700;color:var(--gold);}
+
+  /* Info / message bar */
+  .info-bar{
+    background:#0f2a4a;border:1px solid #1c4770;border-radius:10px;
+    padding:12px 16px;margin-bottom:14px;min-height:44px;
+    color:#dbe9ff;font-size:.95rem;
+  }
+
+  /* Category */
+  .category-bar{
+    background:linear-gradient(180deg,#2b1f8c,#1a1256);
+    border:2px solid #4436c9;border-radius:10px;
+    text-align:center;padding:10px;margin-bottom:14px;
+  }
+  .category-bar .label{font-size:.75rem;color:#b9b0ff;text-transform:uppercase;letter-spacing:1px;}
+  .category-bar .value{font-size:1.3rem;font-weight:700;color:#fff;}
+
+  /* Board */
+  .board{
+    display:flex;flex-direction:column;gap:6px;
+    background:#0a3d1f;border:3px solid #0f5c2e;border-radius:10px;
+    padding:14px;margin-bottom:16px;
+  }
+  .board-row{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;}
+  .tile{
+    width:30px;height:36px;background:var(--tile);border:2px solid var(--tile-border);
+    border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:1rem;color:#fff;
+  }
+  .tile.space{background:transparent;border:none;width:14px;}
+  .tile.hidden{background:var(--tile);color:transparent;}
+
+  /* Letters */
+  .letters{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .letters .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+  .letter-btn{
+    width:34px;height:34px;border-radius:6px;background:#cfe4ff;color:#0f2a4a;
+    font-weight:700;border:1px solid #9db8dc;
+  }
+  .letter-btn.vowel{background:#ffe9a8;border-color:#d8b45a;}
+  .letter-btn:disabled{background:#333;color:#666;border-color:#222;}
+
+  .controls-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+
+  /* Admin modal */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+    align-items:center;justify-content:center;z-index:50;padding:16px;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal{
+    background:#17130c;border:1px solid #4a3a1c;border-radius:14px;
+    max-width:700px;width:100%;max-height:88vh;overflow-y:auto;padding:22px;
+  }
+  .modal h2{color:var(--gold);margin-top:0;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tab-btn{background:#2a2013;color:#cbb98a;border:1px solid #3a2c14;}
+  .tab-btn.active{background:var(--gold);color:#2a1a05;}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+  .item-row{
+    display:flex;gap:8px;align-items:center;background:#231b10;border:1px solid #3a2c14;
+    border-radius:8px;padding:8px 10px;margin-bottom:8px;flex-wrap:wrap;
+  }
+  .item-row input, .item-row select{
+    background:#0f0b06;color:#fff;border:1px solid #4a3a1c;border-radius:6px;padding:6px 8px;
+  }
+  .item-row .flex1{flex:1;min-width:120px;}
+  .add-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed #3a2c14;}
+  .close-modal{float:right;}
+  .modal-footer{display:flex;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:10px;}
+  #importFile{display:none;}
+  .hint{font-size:.78rem;color:#8a7a55;margin-top:4px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>LA RULETA &mdash; ELIM LLDM</h1>
+    <p>Juego de preguntas y frases — edita todo desde el panel de administración</p>
+  </header>
+
+  <div class="top-actions">
+    <button class="btn-outline" id="openAdminBtn">⚙ Editar preguntas y ruleta</button>
+    <button class="btn-outline" id="restartBtn" style="display:none;">↺ Nueva partida</button>
+  </div>
+
+  <!-- SETUP SCREEN -->
+  <div id="setupScreen">
+    <h2>Configurar partida</h2>
+    <label for="numPlayers">Número de jugadores</label>
+    <input type="number" id="numPlayers" min="1" max="4" value="2">
+    <div id="playerNamesWrap"></div>
+    <label>
+      <input type="checkbox" id="soundToggle" checked style="width:auto;"> Sonidos activados
+    </label>
+    <div style="margin-top:18px;">
+      <button class="btn-gold" id="startGameBtn" style="width:100%;">Comenzar juego</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="game-wrap" id="gameWrap">
+    <div class="left-col">
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <div id="wheel"></div>
+        <div class="hub"></div>
+      </div>
+      <button class="btn-gold" id="spinBtn">GIRAR LA RULETA</button>
+      <div class="timer-badge" id="timerBadge" style="display:none;">⏱ 10</div>
+      <div class="scoreboard" id="scoreboard"></div>
+    </div>
+    <div class="right-col">
+      <div class="info-bar" id="infoBar">Bienvenido. Presiona "Girar la ruleta" para comenzar.</div>
+      <div class="category-bar">
+        <div class="label">Categoría</div>
+        <div class="value" id="categoryLabel">—</div>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="letters" id="letters"></div>
+      <div class="controls-row">
+        <button class="btn-gold" id="buyVowelBtn" disabled>Comprar Vocal (700)</button>
+        <button class="btn-gold" id="resolveBtn">Resolver Panel</button>
+        <button class="btn-outline" id="nextPuzzleBtn" style="display:none;">Siguiente frase →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="adminOverlay">
+  <div class="modal">
+    <button class="btn-small btn-danger close-modal" id="closeAdminBtn">Cerrar ✕</button>
+    <h2>Panel de administración</h2>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tabPhrases">Categorías y frases</button>
+      <button class="tab-btn" data-tab="tabWheel">Valores de la ruleta</button>
+    </div>
+
+    <div class="tab-content active" id="tabPhrases">
+      <div id="phraseList"></div>
+      <div class="add-form">
+        <input type="text" id="newCategory" class="flex1" placeholder="Categoría (ej. Saludo Cristiano)">
+        <input type="text" id="newPhrase" class="flex1" placeholder="Frase a adivinar">
+        <button class="btn-gold btn-small" id="addPhraseBtn">Agregar</button>
+      </div>
+      <p class="hint">Las tildes y la letra Ñ se conservan. Escribe en mayúsculas o minúsculas, se normaliza solo.</p>
+    </div>
+
+    <div class="tab-content" id="tabWheel">
+      <div id="wheelList"></div>
+      <div class="add-form">
+        <input type="text" id="newSegLabel" placeholder="Etiqueta (ej. 500)" style="width:120px;">
+        <input type="number" id="newSegValue" placeholder="Puntos" style="width:100px;">
+        <select id="newSegType">
+          <option value="points">Puntos</option>
+          <option value="bankrupt">Bancarrota</option>
+          <option value="lose_turn">Pierde turno</option>
+        </select>
+        <button class="btn-gold btn-small" id="addSegBtn">Agregar casilla</button>
+      </div>
+      <label style="display:block;margin-top:14px;color:#e6d9b8;font-size:.9rem;">Costo de comprar vocal</label>
+      <input type="number" id="vowelCostInput" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
+    </div>
+
+    <div class="modal-footer">
+      <div>
+        <button class="btn-outline btn-small" id="exportBtn">⬇ Exportar JSON</button>
+        <button class="btn-outline btn-small" id="importBtn">⬆ Importar JSON</button>
+        <input type="file" id="importFile" accept="application/json">
+      </div>
+      <button class="btn-danger btn-small" id="resetDefaultsBtn">Restaurar valores originales</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "ruletaElimLLDM_data_v3";
+  var VOWELS = ["A","E","I","O","U"];
+  var CONSONANTS = "BCDFGHJKLMNÑPQRSTVWXYZ".split("");
+  var TURN_SECONDS = 10;
+
+  var DEFAULT_DATA = {
+    vowelCost: 700,
+    puzzles: [
+      { category: "Saludo Cristiano", phrase: "LA PAZ DE CRISTO SEA CON USTEDES" },
+      { category: "Versiculo Biblico", phrase: "DIOS ES AMOR" },
+      { category: "Versiculo Biblico", phrase: "EL SEÑOR ES MI PASTOR NADA ME FALTARA" },
+      { category: "Versiculo Biblico", phrase: "DE TAL MANERA AMO DIOS AL MUNDO" },
+      { category: "Mandamiento", phrase: "AMARAS A TU PROJIMO COMO A TI MISMO" },
+      { category: "Mandamiento", phrase: "HONRA A TU PADRE Y A TU MADRE" },
+      { category: "Mandamiento", phrase: "NO TOMARAS EL NOMBRE DE DIOS EN VANO" },
+      { category: "Fruto del Espiritu", phrase: "AMOR GOZO PAZ PACIENCIA" },
+      { category: "Fruto del Espiritu", phrase: "BENIGNIDAD BONDAD FE MANSEDUMBRE" },
+      { category: "Personaje Biblico", phrase: "MOISES LIBERTADOR DE ISRAEL" },
+      { category: "Personaje Biblico", phrase: "DAVID EL REY PASTOR" },
+      { category: "Personaje Biblico", phrase: "NOE Y EL DILUVIO" },
+      { category: "Personaje Biblico", phrase: "ABRAHAM PADRE DE LA FE" },
+      { category: "Libro de la Biblia", phrase: "EL LIBRO DE LOS SALMOS" },
+      { category: "Libro de la Biblia", phrase: "EL APOCALIPSIS DE JUAN" },
+      { category: "Enseñanza de Jesus", phrase: "BIENAVENTURADOS LOS MANSOS" },
+      { category: "Enseñanza de Jesus", phrase: "YO SOY EL CAMINO LA VERDAD Y LA VIDA" },
+      { category: "Enseñanza de Jesus", phrase: "PEDID Y SE OS DARA" },
+      { category: "Historia Biblica", phrase: "EL ARCA DE NOE" },
+      { category: "Historia Biblica", phrase: "DAVID Y GOLIAT" },
+      { category: "Historia Biblica", phrase: "LA CREACION DEL MUNDO" },
+      { category: "Frase de Fe", phrase: "TODO LO PUEDO EN CRISTO QUE ME FORTALECE" },
+      { category: "Frase de Fe", phrase: "LA FE ES LA CERTEZA DE LO QUE SE ESPERA" },
+      { category: "Nombre de Dios", phrase: "EL ALFA Y LA OMEGA" },
+      { category: "Nombre de Dios", phrase: "EL BUEN PASTOR" },
+      { category: "Oracion", phrase: "PADRE NUESTRO QUE ESTAS EN LOS CIELOS" }
+    ],
+    wheel: [
+      { label:"300", type:"points", value:300 },
+      { label:"500", type:"points", value:500 },
+      { label:"600", type:"points", value:600 },
+      { label:"800", type:"points", value:800 },
+      { label:"BANCARROTA", type:"bankrupt", value:0 },
+      { label:"400", type:"points", value:400 },
+      { label:"700", type:"points", value:700 },
+      { label:"250", type:"points", value:250 },
+      { label:"PIERDE TURNO", type:"lose_turn", value:0 },
+      { label:"900", type:"points", value:900 },
+      { label:"350", type:"points", value:350 },
+      { label:"650", type:"points", value:650 },
+      { label:"500", type:"points", value:500 },
+      { label:"450", type:"points", value:450 },
+      { label:"800", type:"points", value:800 },
+      { label:"300", type:"points", value:300 }
+    ]
+  };
+
+  var SEG_COLORS = ["#e74c3c","#f1c40f","#2ecc71","#3498db","#111111","#e67e22","#9b59b6","#1abc9c","#7f8c8d","#e74c3c","#f1c40f","#2ecc71","#3498db","#e67e22","#9b59b6","#1abc9c"];
+
+  // ---------- Data / storage ----------
+  function loadData(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && parsed.puzzles && parsed.wheel) return parsed;
+      }
+    }catch(e){ console.warn("No se pudo leer localStorage", e); }
+    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  }
+  function saveData(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }catch(e){ console.warn(e); }
+  }
+
+  var DATA = loadData();
+
+  // ---------- Game state ----------
+  var players = [];
+  var currentPlayerIndex = 0;
+  var currentPuzzleIndex = -1;
+  var usedPuzzleIndexes = [];
+  var currentPuzzle = null;
+  var guessedLetters = new Set();
+  var lastSpinValue = null; // number, "bankrupt", "lose_turn", or null
+  var spinning = false;
+  var canGuessConsonant = false;
+  var vowelPurchasedThisTurn = false;
+  var currentRotation = 0;
+  var soundEnabled = true;
+  var audioCtx = null;
+  var actionTimer = null;
+  var timeLeft = 0;
+
+  // ---------- DOM refs ----------
+  var $ = function(id){ return document.getElementById(id); };
+  var setupScreen = $("setupScreen");
+  var gameWrap = $("gameWrap");
+  var numPlayersInput = $("numPlayers");
+  var playerNamesWrap = $("playerNamesWrap");
+  var startGameBtn = $("startGameBtn");
+  var restartBtn = $("restartBtn");
+  var wheelEl = $("wheel");
+  var spinBtn = $("spinBtn");
+  var timerBadge = $("timerBadge");
+  var scoreboardEl = $("scoreboard");
+  var infoBar = $("infoBar");
+  var categoryLabel = $("categoryLabel");
+  var boardEl = $("board");
+  var lettersEl = $("letters");
+  var buyVowelBtn = $("buyVowelBtn");
+  var resolveBtn = $("resolveBtn");
+  var nextPuzzleBtn = $("nextPuzzleBtn");
+
+  // ---------- Sound (Web Audio API, no external files needed) ----------
+  function getAudioCtx(){
+    if(!audioCtx){
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    return audioCtx;
+  }
+  function playTone(freq, duration, waveType){
+    if(!soundEnabled) return;
+    try{
+      var ctx = getAudioCtx();
+      if(!ctx) return;
+      if(ctx.state === "suspended") ctx.resume();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = waveType || "sine";
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.16, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    }catch(e){ /* audio not available, ignore */ }
+  }
+  function playSound(name){
+    if(!soundEnabled) return;
+    switch(name){
+      case "spin": playTone(300, 0.15, "square"); break;
+      case "land": playTone(440, 0.15, "sine"); break;
+      case "correct":
+        playTone(660, 0.12, "sine");
+        setTimeout(function(){ playTone(880, 0.15, "sine"); }, 120);
+        break;
+      case "wrong": playTone(160, 0.3, "sawtooth"); break;
+      case "bankrupt": playTone(90, 0.5, "sawtooth"); break;
+      case "loseturn": playTone(200, 0.25, "triangle"); break;
+      case "timeout": playTone(220, 0.4, "square"); break;
+      case "win":
+        playTone(523, 0.12, "sine");
+        setTimeout(function(){ playTone(659, 0.12, "sine"); }, 130);
+        setTimeout(function(){ playTone(784, 0.22, "sine"); }, 260);
+        break;
+    }
+  }
+
+  // ---------- Turn timer (10 seconds to act) ----------
+  function clearTimer(){
+    if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
+    timerBadge.style.display = "none";
+    timerBadge.classList.remove("urgent");
+  }
+  function startActionTimer(onExpire){
+    clearTimer();
+    timeLeft = TURN_SECONDS;
+    timerBadge.style.display = "block";
+    timerBadge.textContent = "⏱ " + timeLeft;
+    actionTimer = setInterval(function(){
+      timeLeft--;
+      if(timeLeft <= 0){
+        clearTimer();
+        onExpire();
+      } else {
+        timerBadge.textContent = "⏱ " + timeLeft;
+        if(timeLeft <= 3) timerBadge.classList.add("urgent");
+      }
+    }, 1000);
+  }
+  function onActionTimeout(){
+    playSound("timeout");
+    setInfo("⏱ Se acabó el tiempo. Turno de " + nextPlayerName() + ".");
+    nextTurn();
+  }
+
+  // ---------- Setup screen: player name fields ----------
+  function renderPlayerNameFields(){
+    var n = parseInt(numPlayersInput.value,10) || 2;
+    n = Math.max(1, Math.min(4, n));
+    numPlayersInput.value = n;
+    playerNamesWrap.innerHTML = "";
+    for(var i=0;i<n;i++){
+      var div = document.createElement("div");
+      var label = document.createElement("label");
+      label.textContent = "Nombre jugador " + (i+1);
+      var input = document.createElement("input");
+      input.type = "text";
+      input.id = "pname_"+i;
+      input.placeholder = "Jugador " + (i+1);
+      div.appendChild(label);
+      div.appendChild(input);
+      playerNamesWrap.appendChild(div);
+    }
+  }
+  numPlayersInput.addEventListener("input", renderPlayerNameFields);
+  renderPlayerNameFields();
+
+  startGameBtn.addEventListener("click", function(){
+    var n = parseInt(numPlayersInput.value,10) || 2;
+    n = Math.max(1, Math.min(4, n));
+    players = [];
+    for(var i=0;i<n;i++){
+      var val = ($("pname_"+i) && $("pname_"+i).value.trim()) || ("Jugador " + (i+1));
+      players.push({ name: val, score: 0 });
+    }
+    currentPlayerIndex = 0;
+    usedPuzzleIndexes = [];
+    soundEnabled = $("soundToggle").checked;
+    buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
+    setupScreen.style.display = "none";
+    gameWrap.classList.add("active");
+    restartBtn.style.display = "inline-block";
+    buildWheel();
+    renderScoreboard();
+    loadNextPuzzle();
+  });
+
+  restartBtn.addEventListener("click", function(){
+    if(!confirm("¿Iniciar una nueva partida? Se perderá el progreso actual.")) return;
+    clearTimer();
+    gameWrap.classList.remove("active");
+    setupScreen.style.display = "block";
+    restartBtn.style.display = "none";
+  });
+
+  // ---------- Wheel rendering ----------
+  function buildWheel(){
+    wheelEl.innerHTML = "";
+    var segs = DATA.wheel;
+    var segAngle = 360 / segs.length;
+    var gradientParts = [];
+    for(var i=0;i<segs.length;i++){
+      var color = SEG_COLORS[i % SEG_COLORS.length];
+      var start = i*segAngle;
+      var end = (i+1)*segAngle;
+      gradientParts.push(color + " " + start + "deg " + end + "deg");
+    }
+    wheelEl.style.background = "conic-gradient(" + gradientParts.join(",") + ")";
+
+    for(var j=0;j<segs.length;j++){
+      var mid = j*segAngle + segAngle/2;
+      var lbl = document.createElement("div");
+      lbl.className = "seg-label";
+      lbl.textContent = segs[j].label;
+      lbl.style.transform = "rotate(" + mid + "deg) translate(60px, -6px)";
+      wheelEl.appendChild(lbl);
+    }
+    currentRotation = 0;
+    wheelEl.style.transition = "none";
+    wheelEl.style.transform = "rotate(0deg)";
+  }
+
+  function spinWheel(){
+    if(spinning) return;
+    clearTimer();
+    spinning = true;
+    spinBtn.disabled = true;
+    buyVowelBtn.disabled = true;
+    playSound("spin");
+    setInfo("Girando la ruleta...");
+    var segs = DATA.wheel;
+    var segAngle = 360/segs.length;
+    var extraSpins = 5 + Math.floor(Math.random()*3);
+    var randomOffset = Math.random()*360;
+    var totalRotation = currentRotation + extraSpins*360 + randomOffset;
+    wheelEl.style.transition = "transform 4s cubic-bezier(0.15,0.7,0.25,1)";
+    wheelEl.style.transform = "rotate(" + totalRotation + "deg)";
+    var finalMod = totalRotation % 360;
+    currentRotation = totalRotation;
+
+    setTimeout(function(){
+      spinning = false;
+      var effectiveAngle = (360 - finalMod) % 360;
+      var index = Math.floor(effectiveAngle / segAngle) % segs.length;
+      var seg = segs[index];
+      onWheelResult(seg);
+    }, 4200);
+  }
+
+  spinBtn.addEventListener("click", spinWheel);
+
+  function onWheelResult(seg){
+    if(seg.type === "bankrupt"){
+      playSound("bankrupt");
+      players[currentPlayerIndex].score = 0;
+      setInfo("¡BANCARROTA! " + players[currentPlayerIndex].name + " pierde todos sus puntos y el turno.");
+      renderScoreboard();
+      nextTurn();
+      return;
+    }
+    if(seg.type === "lose_turn"){
+      playSound("loseturn");
+      setInfo("¡Pierde turno! Le toca a " + nextPlayerName() + ".");
+      nextTurn();
+      return;
+    }
+    playSound("land");
+    lastSpinValue = seg.value;
+    canGuessConsonant = true;
+    setInfo(players[currentPlayerIndex].name + " sacó " + seg.value + " puntos. Elige una consonante (10 segundos).");
+    updateLetterButtonsState();
+    startActionTimer(onActionTimeout);
+  }
+
+  // ---------- Puzzle / board ----------
+  function pickPuzzleIndex(){
+    var puzzles = DATA.puzzles;
+    if(puzzles.length === 0) return -1;
+    if(usedPuzzleIndexes.length >= puzzles.length) usedPuzzleIndexes = [];
+    var available = [];
+    for(var i=0;i<puzzles.length;i++){
+      if(usedPuzzleIndexes.indexOf(i) === -1) available.push(i);
+    }
+    var choice = available[Math.floor(Math.random()*available.length)];
+    usedPuzzleIndexes.push(choice);
+    return choice;
+  }
+
+  function normalize(str){ return str.toUpperCase(); }
+
+  function loadNextPuzzle(){
+    var idx = pickPuzzleIndex();
+    if(idx === -1){
+      setInfo("No hay frases cargadas. Agrega algunas desde el panel de edición.");
+      categoryLabel.textContent = "—";
+      boardEl.innerHTML = "";
+      return;
+    }
+    currentPuzzleIndex = idx;
+    currentPuzzle = {
+      category: DATA.puzzles[idx].category,
+      phrase: normalize(DATA.puzzles[idx].phrase)
+    };
+    guessedLetters = new Set();
+    lastSpinValue = null;
+    canGuessConsonant = false;
+    vowelPurchasedThisTurn = false;
+    categoryLabel.textContent = currentPuzzle.category;
+    nextPuzzleBtn.style.display = "none";
+    spinBtn.disabled = false;
+    renderBoard();
+    renderLetters();
+    updateLetterButtonsState();
+    setInfo("Nueva frase cargada. Turno de " + players[currentPlayerIndex].name + ". Gira la ruleta para comenzar.");
+    startActionTimer(onActionTimeout);
+  }
+  nextPuzzleBtn.addEventListener("click", loadNextPuzzle);
+
+  function renderBoard(){
+    boardEl.innerHTML = "";
+    var words = currentPuzzle.phrase.split(" ");
+    var row = document.createElement("div");
+    row.className = "board-row";
+    words.forEach(function(word, wi){
+      for(var i=0;i<word.length;i++){
+        var ch = word[i];
+        var tile = document.createElement("div");
+        var isLetter = /[A-ZÑÁÉÍÓÚÜ]/.test(ch);
+        if(!isLetter){
+          tile.className = "tile hidden";
+          tile.textContent = ch;
+        } else if(guessedLetters.has(deaccent(ch))){
+          tile.className = "tile";
+          tile.textContent = ch;
+        } else {
+          tile.className = "tile hidden";
+          tile.textContent = "";
+        }
+        row.appendChild(tile);
+      }
+      if(wi < words.length-1){
+        var space = document.createElement("div");
+        space.className = "tile space";
+        row.appendChild(space);
+      }
+    });
+    boardEl.appendChild(row);
+  }
+
+  function deaccent(ch){
+    var map = {"Á":"A","É":"E","Í":"I","Ó":"O","Ú":"U","Ü":"U"};
+    return map[ch] || ch;
+  }
+
+  function renderLetters(){
+    lettersEl.innerHTML = "";
+    var rowCons = document.createElement("div");
+    rowCons.className = "row";
+    CONSONANTS.forEach(function(letter){
+      var btn = document.createElement("button");
+      btn.className = "letter-btn";
+      btn.textContent = letter;
+      btn.dataset.letter = letter;
+      btn.addEventListener("click", function(){ guessConsonant(letter); });
+      rowCons.appendChild(btn);
+    });
+    var rowVowels = document.createElement("div");
+    rowVowels.className = "row";
+    VOWELS.forEach(function(letter){
+      var btn = document.createElement("button");
+      btn.className = "letter-btn vowel";
+      btn.textContent = letter;
+      btn.dataset.letter = letter;
+      btn.addEventListener("click", function(){ guessVowel(letter); });
+      rowVowels.appendChild(btn);
+    });
+    lettersEl.appendChild(rowCons);
+    lettersEl.appendChild(rowVowels);
+  }
+
+  function updateLetterButtonsState(){
+    var buttons = lettersEl.querySelectorAll(".letter-btn");
+    buttons.forEach(function(btn){
+      var letter = btn.dataset.letter;
+      var isVowel = VOWELS.indexOf(letter) !== -1;
+      var already = guessedLetters.has(letter);
+      if(already){ btn.disabled = true; return; }
+      if(isVowel){
+        btn.disabled = !(players[currentPlayerIndex].score >= DATA.vowelCost);
+      } else {
+        btn.disabled = !canGuessConsonant;
+      }
+    });
+    buyVowelBtn.disabled = !(players[currentPlayerIndex].score >= DATA.vowelCost);
+  }
+
+  function countLetterInPhrase(letter){
+    var count = 0;
+    for(var i=0;i<currentPuzzle.phrase.length;i++){
+      if(deaccent(currentPuzzle.phrase[i]) === letter) count++;
+    }
+    return count;
+  }
+
+  function guessConsonant(letter){
+    if(!canGuessConsonant || guessedLetters.has(letter)) return;
+    clearTimer();
+    guessedLetters.add(letter);
+    canGuessConsonant = false;
+    var count = countLetterInPhrase(letter);
+    if(count > 0){
+      var earned = count * lastSpinValue;
+      players[currentPlayerIndex].score += earned;
+      playSound("correct");
+      setInfo("¡Correcto! La letra " + letter + " aparece " + count + " vez(es). +" + earned + " puntos.");
+      renderScoreboard();
+      renderBoard();
+      var solved = checkIfSolved();
+      updateLetterButtonsState();
+      if(!solved) startActionTimer(onActionTimeout);
+    } else {
+      playSound("wrong");
+      setInfo("La letra " + letter + " no está en la frase. Turno de " + nextPlayerName() + ".");
+      nextTurn();
+    }
+  }
+
+  buyVowelBtn.addEventListener("click", function(){
+    if(players[currentPlayerIndex].score < DATA.vowelCost) return;
+    setInfo("Elige una vocal para comprar por " + DATA.vowelCost + " puntos (10 segundos).");
+    vowelPurchasedThisTurn = true;
+    var buttons = lettersEl.querySelectorAll(".letter-btn.vowel");
+    buttons.forEach(function(btn){
+      if(!guessedLetters.has(btn.dataset.letter)) btn.disabled = false;
+    });
+    startActionTimer(onActionTimeout);
+  });
+
+  function guessVowel(letter){
+    if(guessedLetters.has(letter)) return;
+    if(players[currentPlayerIndex].score < DATA.vowelCost) return;
+    clearTimer();
+    players[currentPlayerIndex].score -= DATA.vowelCost;
+    guessedLetters.add(letter);
+    var count = countLetterInPhrase(letter);
+    renderScoreboard();
+    if(count > 0){
+      playSound("correct");
+      setInfo("La vocal " + letter + " aparece " + count + " vez(es).");
+      renderBoard();
+      var solved = checkIfSolved();
+      updateLetterButtonsState();
+      if(!solved) startActionTimer(onActionTimeout);
+      return;
+    } else {
+      playSound("wrong");
+      setInfo("La vocal " + letter + " no está en la frase. Turno de " + nextPlayerName() + ".");
+      nextTurn();
+      return;
+    }
+  }
+
+  resolveBtn.addEventListener("click", function(){
+    var guess = prompt("¿Cuál es la frase completa?");
+    if(guess === null) return;
+    clearTimer();
+    var normalized = normalize(guess.trim());
+    if(normalized === currentPuzzle.phrase){
+      playSound("win");
+      setInfo("🎉 ¡" + players[currentPlayerIndex].name + " resolvió el panel! Frase: \"" + currentPuzzle.phrase + "\"");
+      revealAll();
+      players[currentPlayerIndex].score += 500;
+      renderScoreboard();
+      endRound();
+    } else {
+      playSound("wrong");
+      setInfo("Respuesta incorrecta. Turno de " + nextPlayerName() + ".");
+      nextTurn();
+    }
+  });
+
+  function revealAll(){
+    for(var i=0;i<currentPuzzle.phrase.length;i++){
+      var ch = currentPuzzle.phrase[i];
+      if(/[A-ZÑÁÉÍÓÚÜ]/.test(ch)) guessedLetters.add(deaccent(ch));
+    }
+    renderBoard();
+  }
+
+  function checkIfSolved(){
+    var allRevealed = true;
+    for(var i=0;i<currentPuzzle.phrase.length;i++){
+      var ch = currentPuzzle.phrase[i];
+      if(/[A-ZÑÁÉÍÓÚÜ]/.test(ch) && !guessedLetters.has(deaccent(ch))){
+        allRevealed = false; break;
+      }
+    }
+    if(allRevealed){
+      setInfo("¡Frase completa! " + players[currentPlayerIndex].name + " gana la ronda.");
+      endRound();
+      return true;
+    }
+    return false;
+  }
+
+  function endRound(){
+    clearTimer();
+    canGuessConsonant = false;
+    var buttons = lettersEl.querySelectorAll(".letter-btn");
+    buttons.forEach(function(b){ b.disabled = true; });
+    buyVowelBtn.disabled = true;
+    spinBtn.disabled = true;
+    nextPuzzleBtn.style.display = "inline-block";
+  }
+
+  function nextTurn(){
+    clearTimer();
+    canGuessConsonant = false;
+    vowelPurchasedThisTurn = false;
+    lastSpinValue = null;
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    renderScoreboard();
+    updateLetterButtonsState();
+    spinBtn.disabled = false;
+    startActionTimer(onActionTimeout);
+  }
+
+  function nextPlayerName(){
+    return players[(currentPlayerIndex+1) % players.length].name;
+  }
+
+  function renderScoreboard(){
+    scoreboardEl.innerHTML = "";
+    players.forEach(function(p, i){
+      var card = document.createElement("div");
+      card.className = "score-card" + (i===currentPlayerIndex ? " active" : "");
+      var name = document.createElement("div");
+      name.className = "pname";
+      name.textContent = p.name;
+      var score = document.createElement("div");
+      score.className = "pscore";
+      score.textContent = p.score;
+      card.appendChild(name);
+      card.appendChild(score);
+      scoreboardEl.appendChild(card);
+    });
+  }
+
+  function setInfo(msg){ infoBar.textContent = msg; }
+
+  // ---------- Admin panel ----------
+  var adminOverlay = $("adminOverlay");
+  var ADMIN_PASSWORD = "elimlldm";
+
+  $("openAdminBtn").addEventListener("click", function(){
+    var pass = prompt("Ingresa la clave para editar (nota: es una protección básica, no de alta seguridad):");
+    if(pass === null) return;
+    if(pass !== ADMIN_PASSWORD){
+      alert("Clave incorrecta.");
+      return;
+    }
+    adminOverlay.classList.add("active");
+    renderPhraseList();
+    renderWheelList();
+    $("vowelCostInput").value = DATA.vowelCost;
+  });
+  $("closeAdminBtn").addEventListener("click", function(){
+    adminOverlay.classList.remove("active");
+  });
+
+  document.querySelectorAll(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".tab-content").forEach(function(c){ c.classList.remove("active"); });
+      btn.classList.add("active");
+      $(btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  function renderPhraseList(){
+    var wrap = $("phraseList");
+    wrap.innerHTML = "";
+    DATA.puzzles.forEach(function(p, idx){
+      var row = document.createElement("div");
+      row.className = "item-row";
+      var catInput = document.createElement("input");
+      catInput.className = "flex1";
+      catInput.value = p.category;
+      var phraseInput = document.createElement("input");
+      phraseInput.className = "flex1";
+      phraseInput.value = p.phrase;
+      var saveBtn = document.createElement("button");
+      saveBtn.className = "btn-gold btn-small";
+      saveBtn.textContent = "Guardar";
+      saveBtn.addEventListener("click", function(){
+        DATA.puzzles[idx].category = catInput.value.trim() || p.category;
+        DATA.puzzles[idx].phrase = phraseInput.value.trim().toUpperCase() || p.phrase;
+        saveData();
+        alert("Guardado.");
+      });
+      var delBtn = document.createElement("button");
+      delBtn.className = "btn-danger btn-small";
+      delBtn.textContent = "Borrar";
+      delBtn.addEventListener("click", function(){
+        if(!confirm("¿Borrar esta frase?")) return;
+        DATA.puzzles.splice(idx,1);
+        saveData();
+        renderPhraseList();
+      });
+      row.appendChild(catInput);
+      row.appendChild(phraseInput);
+      row.appendChild(saveBtn);
+      row.appendChild(delBtn);
+      wrap.appendChild(row);
+    });
+  }
+
+  $("addPhraseBtn").addEventListener("click", function(){
+    var cat = $("newCategory").value.trim();
+    var phrase = $("newPhrase").value.trim();
+    if(!cat || !phrase){ alert("Completa categoría y frase."); return; }
+    DATA.puzzles.push({ category: cat, phrase: phrase.toUpperCase() });
+    saveData();
+    $("newCategory").value = "";
+    $("newPhrase").value = "";
+    renderPhraseList();
+  });
+
+  function renderWheelList(){
+    var wrap = $("wheelList");
+    wrap.innerHTML = "";
+    DATA.wheel.forEach(function(seg, idx){
+      var row = document.createElement("div");
+      row.className = "item-row";
+      var labelInput = document.createElement("input");
+      labelInput.value = seg.label;
+      labelInput.style.width = "110px";
+      var typeSelect = document.createElement("select");
+      ["points","bankrupt","lose_turn"].forEach(function(t){
+        var opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t === "points" ? "Puntos" : (t==="bankrupt" ? "Bancarrota" : "Pierde turno");
+        if(seg.type === t) opt.selected = true;
+        typeSelect.appendChild(opt);
+      });
+      var valueInput = document.createElement("input");
+      valueInput.type = "number";
+      valueInput.value = seg.value;
+      valueInput.style.width = "90px";
+      var saveBtn = document.createElement("button");
+      saveBtn.className = "btn-gold btn-small";
+      saveBtn.textContent = "Guardar";
+      saveBtn.addEventListener("click", function(){
+        seg.label = labelInput.value.trim() || seg.label;
+        seg.type = typeSelect.value;
+        seg.value = seg.type === "points" ? (parseInt(valueInput.value,10) || 0) : 0;
+        saveData();
+        buildWheel();
+        alert("Guardado.");
+      });
+      var delBtn = document.createElement("button");
+      delBtn.className = "btn-danger btn-small";
+      delBtn.textContent = "Borrar";
+      delBtn.addEventListener("click", function(){
+        if(DATA.wheel.length <= 4){ alert("Debe haber al menos 4 casillas."); return; }
+        if(!confirm("¿Borrar esta casilla?")) return;
+        DATA.wheel.splice(idx,1);
+        saveData();
+        buildWheel();
+        renderWheelList();
+      });
+      row.appendChild(labelInput);
+      row.appendChild(typeSelect);
+      row.appendChild(valueInput);
+      row.appendChild(saveBtn);
+      row.appendChild(delBtn);
+      wrap.appendChild(row);
+    });
+  }
+
+  $("addSegBtn").addEventListener("click", function(){
+    var label = $("newSegLabel").value.trim();
+    var type = $("newSegType").value;
+    var value = parseInt($("newSegValue").value,10) || 0;
+    if(!label){ alert("Escribe una etiqueta."); return; }
+    DATA.wheel.push({ label: label, type: type, value: type==="points" ? value : 0 });
+    saveData();
+    $("newSegLabel").value = "";
+    $("newSegValue").value = "";
+    buildWheel();
+    renderWheelList();
+  });
+
+  $("vowelCostInput").addEventListener("change", function(){
+    var v = parseInt(this.value,10);
+    if(!isNaN(v) && v >= 0){
+      DATA.vowelCost = v;
+      saveData();
+      buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
+      updateLetterButtonsState();
+    }
+  });
+
+  $("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "ruleta-elimlldm-datos.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        var parsed = JSON.parse(evt.target.result);
+        if(!parsed.puzzles || !parsed.wheel){ throw new Error("Formato inválido"); }
+        DATA = parsed;
+        saveData();
+        buildWheel();
+        renderPhraseList();
+        renderWheelList();
+        $("vowelCostInput").value = DATA.vowelCost;
+        buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
+        alert("Datos importados correctamente.");
+      }catch(err){
+        alert("El archivo no es válido: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  $("resetDefaultsBtn").addEventListener("click", function(){
+    if(!confirm("Esto restaura las frases y la ruleta a los valores originales de ejemplo. ¿Continuar?")) return;
+    DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    saveData();
+    buildWheel();
+    renderPhraseList();
+    renderWheelList();
+    $("vowelCostInput").value = DATA.vowelCost;
+    buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
+  });
+
+})();
+</script>
+</body>
+</html>

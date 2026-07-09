@@ -280,3 +280,4 @@ export interface ArenaBroadcastEvent {
   type: "QUESTION_START" | "GAME_FINISHED";
   payload: Record<string, unknown>;
 }
+
