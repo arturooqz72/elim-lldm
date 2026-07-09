@@ -222,7 +222,8 @@
   </header>
 
   <div class="top-actions">
-    <button class="btn-outline" id="openAdminBtn">⚙ Editar preguntas y ruleta</button>
+    <a class="btn-outline" id="backBtn" href="/juegos" style="text-decoration:none;display:inline-flex;align-items:center;">← Volver a Juegos</a>
+    <button class="btn-outline" id="openAdminBtn" style="display:none;">⚙ Editar preguntas y ruleta</button>
     <button class="btn-outline" id="restartBtn" style="display:none;">↺ Nueva partida</button>
   </div>
 
@@ -913,16 +914,17 @@
   function setInfo(msg){ infoBar.textContent = msg; }
 
   // ---------- Admin panel ----------
+  // El botón de edición solo se muestra si se llega desde el panel de
+  // administración del sitio (enlace con ?admin=1); esa página ya
+  // verifica el rol de administrador en el servidor, así que aquí no
+  // se vuelve a pedir clave.
   var adminOverlay = $("adminOverlay");
-  var ADMIN_PASSWORD = "elimlldm";
+  var isAdminEntry = new URLSearchParams(window.location.search).get("admin") === "1";
+  if(isAdminEntry){
+    $("openAdminBtn").style.display = "inline-block";
+  }
 
   $("openAdminBtn").addEventListener("click", function(){
-    var pass = prompt("Ingresa la clave para editar (nota: es una protección básica, no de alta seguridad):");
-    if(pass === null) return;
-    if(pass !== ADMIN_PASSWORD){
-      alert("Clave incorrecta.");
-      return;
-    }
     adminOverlay.classList.add("active");
     renderPhraseList();
     renderWheelList();
