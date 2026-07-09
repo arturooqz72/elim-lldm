@@ -212,6 +212,55 @@
   .modal-footer{display:flex;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:10px;}
   #importFile{display:none;}
   .hint{font-size:.78rem;color:#8a7a55;margin-top:4px;}
+
+  /* Round indicator */
+  .round-badge{
+    display:inline-block;margin:0 auto 14px;padding:6px 16px;
+    background:#0f0b06;border:1.5px solid var(--gold-dark);border-radius:999px;
+    color:var(--gold);font-size:.85rem;font-weight:700;letter-spacing:.5px;
+    text-align:center;
+  }
+  .round-badge-wrap{display:flex;justify-content:center;}
+
+  /* Match end screen */
+  .match-end-screen{display:none;}
+  .match-end-screen.active{display:block;}
+  .match-end-card{
+    background:var(--panel);border:1px solid #3a2c14;border-radius:20px;
+    padding:36px 28px;max-width:560px;margin:0 auto;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    position:relative;overflow:hidden;
+  }
+  .match-end-trophy{font-size:4rem;line-height:1;margin-bottom:6px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));}
+  .match-end-card h2{
+    color:var(--gold);font-size:1.5rem;margin:0 0 4px;letter-spacing:.5px;
+  }
+  .match-end-winner{
+    font-size:1.6rem;font-weight:800;color:#fff;margin:10px 0 4px;
+    text-shadow:0 2px 8px rgba(232,184,75,.4);
+  }
+  .match-end-winner .wname{color:var(--gold);}
+  .match-end-sub{color:#cbb98a;font-size:.9rem;margin-bottom:22px;}
+  .podium-list{display:flex;flex-direction:column;gap:8px;margin-bottom:26px;}
+  .podium-row{
+    display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;
+    background:#0f0b06;border:1px solid #3a2c14;text-align:left;
+  }
+  .podium-row.first{border-color:var(--gold);box-shadow:0 0 14px rgba(232,184,75,.35);}
+  .podium-rank{font-size:1.3rem;width:30px;text-align:center;}
+  .podium-name{flex:1;font-weight:600;color:#f0e6cf;}
+  .podium-score{font-weight:800;color:var(--gold);font-size:1.05rem;}
+  .match-end-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+  .confetti-piece{
+    position:fixed;top:-20px;width:9px;height:16px;z-index:60;pointer-events:none;
+    animation:confetti-fall linear forwards;
+    border-radius:2px;
+  }
+  @keyframes confetti-fall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1;}
+    100%{transform:translateY(105vh) rotate(540deg);opacity:.85;}
+  }
 </style>
 </head>
 <body>
@@ -233,6 +282,8 @@
     <label for="numPlayers">Número de jugadores</label>
     <input type="number" id="numPlayers" min="1" max="4" value="2">
     <div id="playerNamesWrap"></div>
+    <label for="numRounds">Rondas para ganar la partida</label>
+    <input type="number" id="numRounds" min="1" max="15" value="5">
     <label>
       <input type="checkbox" id="soundToggle" checked style="width:auto;"> Sonidos activados
     </label>
@@ -250,10 +301,13 @@
         <div class="hub"></div>
       </div>
       <button class="btn-gold" id="spinBtn">GIRAR LA RULETA</button>
-      <div class="timer-badge" id="timerBadge" style="display:none;">⏱ 10</div>
+      <div class="timer-badge" id="timerBadge" style="display:none;">⏱ 15</div>
       <div class="scoreboard" id="scoreboard"></div>
     </div>
     <div class="right-col">
+      <div class="round-badge-wrap">
+        <div class="round-badge" id="roundBadge">Ronda 1 de 5</div>
+      </div>
       <div class="info-bar" id="infoBar">Bienvenido. Presiona "Girar la ruleta" para comenzar.</div>
       <div class="category-bar">
         <div class="label">Categoría</div>
@@ -265,6 +319,21 @@
         <button class="btn-gold" id="buyVowelBtn" disabled>Comprar Vocal (700)</button>
         <button class="btn-gold" id="resolveBtn">Resolver Panel</button>
         <button class="btn-outline" id="nextPuzzleBtn" style="display:none;">Siguiente frase →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATCH END SCREEN -->
+  <div class="match-end-screen" id="matchEndScreen">
+    <div class="match-end-card">
+      <div class="match-end-trophy">🏆</div>
+      <h2>¡Partida terminada!</h2>
+      <div class="match-end-winner" id="matchEndWinner">—</div>
+      <div class="match-end-sub" id="matchEndSub"></div>
+      <div class="podium-list" id="podiumList"></div>
+      <div class="match-end-actions">
+        <button class="btn-gold" id="playAgainBtn">🔁 Jugar de nuevo</button>
+        <a class="btn-outline" href="/juegos" style="text-decoration:none;display:inline-flex;align-items:center;padding:10px 16px;border-radius:8px;font-weight:600;">🏠 Volver a Juegos</a>
       </div>
     </div>
   </div>
@@ -304,6 +373,8 @@
       </div>
       <label style="display:block;margin-top:14px;color:#e6d9b8;font-size:.9rem;">Costo de comprar vocal</label>
       <input type="number" id="vowelCostInput" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
+      <label style="display:block;margin-top:14px;color:#e6d9b8;font-size:.9rem;">Rondas por partida (valor por defecto)</label>
+      <input type="number" id="roundsPerMatchInput" min="1" max="15" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
     </div>
 
     <div class="modal-footer">
@@ -328,6 +399,7 @@
 
   var DEFAULT_DATA = {
     vowelCost: 700,
+    roundsPerMatch: 5,
     puzzles: [
       { category: "Saludo Cristiano", phrase: "LA PAZ DE CRISTO SEA CON USTEDES" },
       { category: "Versiculo Biblico", phrase: "DIOS ES AMOR" },
@@ -386,7 +458,10 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if(raw){
         var parsed = JSON.parse(raw);
-        if(parsed && parsed.puzzles && parsed.wheel) return parsed;
+        if(parsed && parsed.puzzles && parsed.wheel){
+          if(typeof parsed.roundsPerMatch !== "number") parsed.roundsPerMatch = DEFAULT_DATA.roundsPerMatch;
+          return parsed;
+        }
       }
     }catch(e){ console.warn("No se pudo leer localStorage", e); }
     return JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -416,6 +491,8 @@
   // ---------- Game state ----------
   var players = [];
   var currentPlayerIndex = 0;
+  var totalRounds = 5;
+  var currentRoundNumber = 1;
   var currentPuzzleIndex = -1;
   var usedPhrases = loadUsedPhrases();
   var lastCategory = null;
@@ -450,6 +527,13 @@
   var buyVowelBtn = $("buyVowelBtn");
   var resolveBtn = $("resolveBtn");
   var nextPuzzleBtn = $("nextPuzzleBtn");
+  var numRoundsInput = $("numRounds");
+  var roundBadge = $("roundBadge");
+  var matchEndScreen = $("matchEndScreen");
+  var matchEndWinner = $("matchEndWinner");
+  var matchEndSub = $("matchEndSub");
+  var podiumList = $("podiumList");
+  var playAgainBtn = $("playAgainBtn");
 
   // ---------- Sound (Web Audio API — fully synthesized, no external files) ----------
   var masterGain = null;
@@ -679,6 +763,15 @@
   }
   numPlayersInput.addEventListener("input", renderPlayerNameFields);
   renderPlayerNameFields();
+  numRoundsInput.value = DATA.roundsPerMatch;
+
+  function showSetupScreen(){
+    matchEndScreen.classList.remove("active");
+    gameWrap.classList.remove("active");
+    restartBtn.style.display = "none";
+    numRoundsInput.value = DATA.roundsPerMatch;
+    setupScreen.style.display = "block";
+  }
 
   startGameBtn.addEventListener("click", function(){
     var n = parseInt(numPlayersInput.value,10) || 2;
@@ -689,6 +782,8 @@
       players.push({ name: val, score: 0 });
     }
     currentPlayerIndex = 0;
+    totalRounds = Math.max(1, Math.min(15, parseInt(numRoundsInput.value,10) || DATA.roundsPerMatch || 5));
+    currentRoundNumber = 1;
     // Nota: usedPhrases NO se reinicia aquí a propósito — así "Nueva partida"
     // no repite de inmediato las frases/temas ya vistos en la partida anterior.
     soundEnabled = $("soundToggle").checked;
@@ -698,16 +793,22 @@
     restartBtn.style.display = "inline-block";
     buildWheel();
     renderScoreboard();
+    updateRoundBadge();
     loadNextPuzzle();
   });
 
   restartBtn.addEventListener("click", function(){
     if(!confirm("¿Iniciar una nueva partida? Se perderá el progreso actual.")) return;
     clearTimer();
-    gameWrap.classList.remove("active");
-    setupScreen.style.display = "block";
-    restartBtn.style.display = "none";
+    stopSpinTicking();
+    showSetupScreen();
   });
+
+  playAgainBtn.addEventListener("click", showSetupScreen);
+
+  function updateRoundBadge(){
+    roundBadge.textContent = "Ronda " + currentRoundNumber + " de " + totalRounds;
+  }
 
   // ---------- Wheel rendering ----------
   function buildWheel(){
@@ -841,6 +942,7 @@
     canGuessConsonant = false;
     vowelPurchasedThisTurn = false;
     categoryLabel.textContent = currentPuzzle.category;
+    updateRoundBadge();
     nextPuzzleBtn.style.display = "none";
     spinBtn.disabled = false;
     renderBoard();
@@ -849,7 +951,15 @@
     setInfo("Nueva frase cargada. Turno de " + players[currentPlayerIndex].name + ". Gira la ruleta para comenzar.");
     startActionTimer(onActionTimeout);
   }
-  nextPuzzleBtn.addEventListener("click", loadNextPuzzle);
+
+  nextPuzzleBtn.addEventListener("click", function(){
+    if(currentRoundNumber >= totalRounds){
+      endMatch();
+    } else {
+      currentRoundNumber++;
+      loadNextPuzzle();
+    }
+  });
 
   function renderBoard(){
     boardEl.innerHTML = "";
@@ -1045,7 +1155,77 @@
     buttons.forEach(function(b){ b.disabled = true; });
     buyVowelBtn.disabled = true;
     spinBtn.disabled = true;
+    nextPuzzleBtn.textContent = currentRoundNumber >= totalRounds ? "Ver resultado final 🏆" : "Siguiente frase →";
     nextPuzzleBtn.style.display = "inline-block";
+  }
+
+  // ---------- Match end (overall winner) ----------
+  function endMatch(){
+    clearTimer();
+    stopSpinTicking();
+    gameWrap.classList.remove("active");
+    restartBtn.style.display = "none";
+
+    var ranked = players.slice().sort(function(a,b){ return b.score - a.score; });
+    var topScore = ranked[0].score;
+    var winners = ranked.filter(function(p){ return p.score === topScore; });
+
+    if(winners.length > 1){
+      matchEndWinner.innerHTML = "🤝 Empate entre " + winners.map(function(p){ return "<span class=\"wname\">" + escapeHtml(p.name) + "</span>"; }).join(" y ");
+      matchEndSub.textContent = "Ambos terminaron con " + topScore + " puntos tras " + totalRounds + " ronda" + (totalRounds===1?"":"s") + ".";
+    } else {
+      matchEndWinner.innerHTML = "<span class=\"wname\">" + escapeHtml(winners[0].name) + "</span> gana la partida";
+      matchEndSub.textContent = topScore + " puntos en " + totalRounds + " ronda" + (totalRounds===1?"":"s") + ".";
+    }
+
+    podiumList.innerHTML = "";
+    var medals = ["🥇","🥈","🥉"];
+    ranked.forEach(function(p, i){
+      var row = document.createElement("div");
+      row.className = "podium-row" + (p.score === topScore ? " first" : "");
+      var rank = document.createElement("div");
+      rank.className = "podium-rank";
+      rank.textContent = medals[i] || (i+1) + ".";
+      var name = document.createElement("div");
+      name.className = "podium-name";
+      name.textContent = p.name;
+      var score = document.createElement("div");
+      score.className = "podium-score";
+      score.textContent = p.score;
+      row.appendChild(rank);
+      row.appendChild(name);
+      row.appendChild(score);
+      podiumList.appendChild(row);
+    });
+
+    matchEndScreen.classList.add("active");
+    playSound("win");
+    launchConfetti();
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function launchConfetti(){
+    var colors = ["#e8b84b","#f6d37a","#4ADE80","#60A5FA","#F87171","#ffffff"];
+    var count = 60;
+    for(var i=0;i<count;i++){
+      (function(){
+        var piece = document.createElement("div");
+        piece.className = "confetti-piece";
+        piece.style.left = (Math.random()*100) + "vw";
+        piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+        var duration = 2.6 + Math.random()*1.8;
+        var delay = Math.random()*0.5;
+        piece.style.animationDuration = duration + "s";
+        piece.style.animationDelay = delay + "s";
+        document.body.appendChild(piece);
+        setTimeout(function(){ piece.remove(); }, (duration+delay)*1000 + 200);
+      })();
+    }
   }
 
   function nextTurn(){
@@ -1099,6 +1279,7 @@
     renderPhraseList();
     renderWheelList();
     $("vowelCostInput").value = DATA.vowelCost;
+    $("roundsPerMatchInput").value = DATA.roundsPerMatch;
   });
   $("closeAdminBtn").addEventListener("click", function(){
     adminOverlay.classList.remove("active");
@@ -1237,6 +1418,15 @@
     }
   });
 
+  $("roundsPerMatchInput").addEventListener("change", function(){
+    var v = parseInt(this.value,10);
+    if(!isNaN(v) && v >= 1 && v <= 15){
+      DATA.roundsPerMatch = v;
+      saveData();
+      numRoundsInput.value = v;
+    }
+  });
+
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
     var url = URL.createObjectURL(blob);
@@ -1256,12 +1446,14 @@
       try{
         var parsed = JSON.parse(evt.target.result);
         if(!parsed.puzzles || !parsed.wheel){ throw new Error("Formato inválido"); }
+        if(typeof parsed.roundsPerMatch !== "number") parsed.roundsPerMatch = DEFAULT_DATA.roundsPerMatch;
         DATA = parsed;
         saveData();
         buildWheel();
         renderPhraseList();
         renderWheelList();
         $("vowelCostInput").value = DATA.vowelCost;
+        $("roundsPerMatchInput").value = DATA.roundsPerMatch;
         buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
         alert("Datos importados correctamente.");
       }catch(err){
@@ -1280,6 +1472,7 @@
     renderPhraseList();
     renderWheelList();
     $("vowelCostInput").value = DATA.vowelCost;
+    $("roundsPerMatchInput").value = DATA.roundsPerMatch;
     buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
   });
 
