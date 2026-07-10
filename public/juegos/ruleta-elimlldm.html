@@ -147,14 +147,22 @@
     color:#dbe9ff;font-size:.95rem;
   }
 
-  /* Category */
-  .category-bar{
+  /* Round + category combined status bar */
+  .status-bar{
     background:linear-gradient(180deg,#2b1f8c,#1a1256);
     border:2px solid #4436c9;border-radius:10px;
-    text-align:center;padding:10px;margin-bottom:14px;
+    text-align:center;padding:8px 12px;margin-bottom:10px;
+    display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
   }
-  .category-bar .label{font-size:.75rem;color:#b9b0ff;text-transform:uppercase;letter-spacing:1px;}
-  .category-bar .value{font-size:1.3rem;font-weight:700;color:#fff;}
+  .status-bar .round-tag{
+    font-size:.68rem;font-weight:700;color:#b9b0ff;text-transform:uppercase;letter-spacing:.5px;
+    background:rgba(255,255,255,.08);border-radius:999px;padding:3px 10px;white-space:nowrap;
+  }
+  .status-bar .category-value{font-size:1.15rem;font-weight:700;color:#fff;}
+
+  /* Spin button + timer side by side */
+  .spin-row{display:flex;align-items:center;gap:10px;width:100%;}
+  .spin-row #spinBtn{flex:1;}
 
   /* Board */
   .board{
@@ -213,15 +221,6 @@
   #importFile{display:none;}
   .hint{font-size:.78rem;color:#8a7a55;margin-top:4px;}
 
-  /* Round indicator */
-  .round-badge{
-    display:inline-block;margin:0 auto 14px;padding:6px 16px;
-    background:#0f0b06;border:1.5px solid var(--gold-dark);border-radius:999px;
-    color:var(--gold);font-size:.85rem;font-weight:700;letter-spacing:.5px;
-    text-align:center;
-  }
-  .round-badge-wrap{display:flex;justify-content:center;}
-
   /* Match end screen */
   .match-end-screen{display:none;}
   .match-end-screen.active{display:block;}
@@ -262,24 +261,62 @@
     100%{transform:translateY(105vh) rotate(540deg);opacity:.85;}
   }
 
-  /* ---------- Mobile ---------- */
+  /* ---------- Mobile: compact everything so a full round fits without scrolling ---------- */
   @media (max-width: 700px){
-    body{padding:14px;}
-    header h1{font-size:1.7rem;}
-    header p{font-size:.85rem;}
-    .game-wrap.active{flex-direction:column;align-items:center;}
-    .left-col{width:100%;max-width:300px;margin:0 auto;}
+    body{padding:8px;}
+    header{margin-bottom:8px;}
+    header h1{font-size:1.3rem;line-height:1.15;}
+    header p{font-size:.7rem;margin:3px 0 0;}
+    /* The title/subtitle are only useful before a match starts — hide them once
+       playing so that space goes to the game itself instead of to chrome. */
+    body:has(.game-wrap.active) header p{display:none;}
+    body:has(.game-wrap.active) header h1{font-size:1rem;}
+    body:has(.game-wrap.active) header{margin-bottom:6px;}
+
+    .top-actions{margin-bottom:8px;gap:8px;}
+    .top-actions button, .top-actions a{padding:6px 10px;font-size:.72rem;}
+
+    .game-wrap.active{flex-direction:column;align-items:center;gap:8px;}
+    .left-col{width:100%;max-width:300px;margin:0 auto;gap:8px;}
     .right-col{flex:none;min-width:0;width:100%;max-width:480px;margin:0 auto;}
-    .match-end-card{padding:26px 18px;}
-    .match-end-trophy{font-size:3rem;}
-    .match-end-winner{font-size:1.3rem;}
+
+    .wheel-wrap{width:150px;height:150px;}
+    #wheel{width:150px;height:150px;border-width:4px;}
+    .hub{width:22px;height:22px;}
+    .pointer{border-left-width:9px;border-right-width:9px;border-top-width:16px;top:-4px;}
+
+    #spinBtn{padding:9px;font-size:.85rem;}
+    .timer-badge{font-size:.95rem;padding:5px 10px;white-space:nowrap;}
+
+    .scoreboard{gap:6px;}
+    .score-card{padding:5px;min-width:60px;}
+    .score-card .pname{font-size:.65rem;}
+    .score-card .pscore{font-size:1rem;}
+
+    .status-bar{padding:6px 10px;margin-bottom:6px;}
+    .status-bar .round-tag{font-size:.6rem;padding:2px 8px;}
+    .status-bar .category-value{font-size:.9rem;}
+
+    .info-bar{padding:7px 10px;margin-bottom:6px;min-height:0;font-size:.78rem;}
+
+    .board{padding:8px;gap:4px;margin-bottom:8px;}
+    .board-row{gap:3px;}
+    .tile{width:20px;height:26px;font-size:.75rem;}
+    .tile.space{width:9px;}
+
+    .letters{gap:4px;margin-bottom:8px;}
+    .letters .row{gap:3px;}
+    .letter-btn{width:24px;height:24px;font-size:.7rem;border-radius:4px;}
+
+    .controls-row{gap:6px;margin-top:2px;}
+    .controls-row button{padding:7px 10px;font-size:.72rem;}
+
+    .match-end-card{padding:22px 16px;}
+    .match-end-trophy{font-size:2.6rem;}
+    .match-end-winner{font-size:1.2rem;}
     .item-row{flex-direction:column;align-items:stretch;}
     .item-row .flex1{width:100%;}
     .item-row input, .item-row select{width:100%;}
-  }
-  @media (max-width: 360px){
-    .letter-btn{width:30px;height:30px;font-size:.85rem;}
-    .tile{width:26px;height:32px;}
   }
 </style>
 </head>
@@ -320,19 +357,18 @@
         <div id="wheel"></div>
         <div class="hub"></div>
       </div>
-      <button class="btn-gold" id="spinBtn">GIRAR LA RULETA</button>
-      <div class="timer-badge" id="timerBadge" style="display:none;">⏱ 15</div>
+      <div class="spin-row">
+        <button class="btn-gold" id="spinBtn">GIRAR LA RULETA</button>
+        <div class="timer-badge" id="timerBadge" style="display:none;">⏱ 15</div>
+      </div>
       <div class="scoreboard" id="scoreboard"></div>
     </div>
     <div class="right-col">
-      <div class="round-badge-wrap">
-        <div class="round-badge" id="roundBadge">Ronda 1 de 5</div>
+      <div class="status-bar">
+        <span class="round-tag" id="roundBadge">Ronda 1 de 5</span>
+        <span class="category-value" id="categoryLabel">—</span>
       </div>
       <div class="info-bar" id="infoBar">Bienvenido. Presiona "Girar la ruleta" para comenzar.</div>
-      <div class="category-bar">
-        <div class="label">Categoría</div>
-        <div class="value" id="categoryLabel">—</div>
-      </div>
       <div class="board" id="board"></div>
       <div class="letters" id="letters"></div>
       <div class="controls-row">
@@ -415,6 +451,7 @@
   var STORAGE_KEY = "ruletaElimLLDM_data_v3";
   var VOWELS = ["A","E","I","O","U"];
   var CONSONANTS = "BCDFGHJKLMNÑPQRSTVWXYZ".split("");
+  var ALPHABET = "ABCDFGHIJKLMNÑOPQRSTUVWXYZ".split("");
   var TURN_SECONDS = 15;
 
   var DEFAULT_DATA = {
@@ -844,12 +881,21 @@
     }
     wheelEl.style.background = "conic-gradient(" + gradientParts.join(",") + ")";
 
+    // Label radius/size scale with the wheel's actual rendered size, so it can be
+    // shrunk on mobile (via CSS) without the JS-positioned labels drifting off-center.
+    var size = wheelEl.clientWidth || 280;
+    var radius = size/2 - Math.max(16, size*0.11);
+    var labelFontSize = Math.max(8, size*0.043);
+    var labelWidth = Math.max(28, size*0.22);
+
     for(var j=0;j<segs.length;j++){
       var mid = j*segAngle + segAngle/2;
       var lbl = document.createElement("div");
       lbl.className = "seg-label";
       lbl.textContent = segs[j].label;
-      lbl.style.transform = "rotate(" + mid + "deg) translate(60px, -6px)";
+      lbl.style.width = labelWidth + "px";
+      lbl.style.fontSize = labelFontSize + "px";
+      lbl.style.transform = "rotate(" + mid + "deg) translate(" + radius + "px, -6px)";
       wheelEl.appendChild(lbl);
     }
     currentRotation = 0;
@@ -1019,28 +1065,20 @@
 
   function renderLetters(){
     lettersEl.innerHTML = "";
-    var rowCons = document.createElement("div");
-    rowCons.className = "row";
-    CONSONANTS.forEach(function(letter){
+    var row = document.createElement("div");
+    row.className = "row";
+    ALPHABET.forEach(function(letter){
+      var isVowel = VOWELS.indexOf(letter) !== -1;
       var btn = document.createElement("button");
-      btn.className = "letter-btn";
+      btn.className = "letter-btn" + (isVowel ? " vowel" : "");
       btn.textContent = letter;
       btn.dataset.letter = letter;
-      btn.addEventListener("click", function(){ guessConsonant(letter); });
-      rowCons.appendChild(btn);
+      btn.addEventListener("click", function(){
+        if(isVowel) guessVowel(letter); else guessConsonant(letter);
+      });
+      row.appendChild(btn);
     });
-    var rowVowels = document.createElement("div");
-    rowVowels.className = "row";
-    VOWELS.forEach(function(letter){
-      var btn = document.createElement("button");
-      btn.className = "letter-btn vowel";
-      btn.textContent = letter;
-      btn.dataset.letter = letter;
-      btn.addEventListener("click", function(){ guessVowel(letter); });
-      rowVowels.appendChild(btn);
-    });
-    lettersEl.appendChild(rowCons);
-    lettersEl.appendChild(rowVowels);
+    lettersEl.appendChild(row);
   }
 
   function updateLetterButtonsState(){
