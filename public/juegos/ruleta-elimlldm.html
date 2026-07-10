@@ -261,6 +261,26 @@
     0%{transform:translateY(0) rotate(0deg);opacity:1;}
     100%{transform:translateY(105vh) rotate(540deg);opacity:.85;}
   }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 700px){
+    body{padding:14px;}
+    header h1{font-size:1.7rem;}
+    header p{font-size:.85rem;}
+    .game-wrap.active{flex-direction:column;align-items:center;}
+    .left-col{width:100%;max-width:300px;margin:0 auto;}
+    .right-col{flex:none;min-width:0;width:100%;max-width:480px;margin:0 auto;}
+    .match-end-card{padding:26px 18px;}
+    .match-end-trophy{font-size:3rem;}
+    .match-end-winner{font-size:1.3rem;}
+    .item-row{flex-direction:column;align-items:stretch;}
+    .item-row .flex1{width:100%;}
+    .item-row input, .item-row select{width:100%;}
+  }
+  @media (max-width: 360px){
+    .letter-btn{width:30px;height:30px;font-size:.85rem;}
+    .tile{width:26px;height:32px;}
+  }
 </style>
 </head>
 <body>
