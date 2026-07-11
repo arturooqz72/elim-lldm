@@ -478,35 +478,134 @@
   var TURN_SECONDS = 15;
 
   var DEFAULT_DATA = {
+    version: 2,
     vowelCost: 700,
     roundsPerMatch: 5,
     puzzles: [
       { category: "Saludo Cristiano", phrase: "LA PAZ DE CRISTO SEA CON USTEDES" },
+      { category: "Saludo Cristiano", phrase: "LA GRACIA DE DIOS SEA CON TODOS" },
+      { category: "Saludo Cristiano", phrase: "BENDICIONES PARA TODA LA FAMILIA" },
+      { category: "Saludo Cristiano", phrase: "QUE DIOS TE BENDIGA HOY Y SIEMPRE" },
+      { category: "Saludo Cristiano", phrase: "LA GLORIA SEA PARA DIOS" },
+      { category: "Saludo Cristiano", phrase: "SALUDOS EN EL NOMBRE DE CRISTO" },
+      { category: "Saludo Cristiano", phrase: "QUE LA PAZ MORE EN TU CORAZON" },
+      { category: "Saludo Cristiano", phrase: "DIOS TE GUARDE EN TU CAMINO" },
+      { category: "Saludo Cristiano", phrase: "GLORIA A DIOS EN LAS ALTURAS" },
+      { category: "Saludo Cristiano", phrase: "QUE EL SEÑOR TE ACOMPAÑE SIEMPRE" },
       { category: "Versiculo Biblico", phrase: "DIOS ES AMOR" },
       { category: "Versiculo Biblico", phrase: "EL SEÑOR ES MI PASTOR NADA ME FALTARA" },
       { category: "Versiculo Biblico", phrase: "DE TAL MANERA AMO DIOS AL MUNDO" },
+      { category: "Versiculo Biblico", phrase: "BUSCAD PRIMERAMENTE EL REINO DE DIOS" },
+      { category: "Versiculo Biblico", phrase: "EL QUE CREE EN MI TIENE VIDA ETERNA" },
+      { category: "Versiculo Biblico", phrase: "DIOS ES FIEL Y VERDADERO" },
+      { category: "Versiculo Biblico", phrase: "TODO TIENE SU TIEMPO BAJO EL CIELO" },
+      { category: "Versiculo Biblico", phrase: "EL SEÑOR ES MI LUZ Y MI SALVACION" },
+      { category: "Versiculo Biblico", phrase: "CLAMA A MI Y YO TE RESPONDERE" },
+      { category: "Versiculo Biblico", phrase: "EL AMOR NUNCA DEJA DE SER" },
+      { category: "Versiculo Biblico", phrase: "EN EL PRINCIPIO ERA EL VERBO" },
+      { category: "Versiculo Biblico", phrase: "PORQUE POR GRACIA SOIS SALVOS" },
+      { category: "Versiculo Biblico", phrase: "MIS OVEJAS OYEN MI VOZ" },
+      { category: "Versiculo Biblico", phrase: "NO SOLO DE PAN VIVIRA EL HOMBRE" },
       { category: "Mandamiento", phrase: "AMARAS A TU PROJIMO COMO A TI MISMO" },
       { category: "Mandamiento", phrase: "HONRA A TU PADRE Y A TU MADRE" },
       { category: "Mandamiento", phrase: "NO TOMARAS EL NOMBRE DE DIOS EN VANO" },
+      { category: "Mandamiento", phrase: "NO HURTARAS" },
+      { category: "Mandamiento", phrase: "NO MATARAS" },
+      { category: "Mandamiento", phrase: "NO CODICIARAS LOS BIENES AJENOS" },
+      { category: "Mandamiento", phrase: "NO ADULTERARAS" },
+      { category: "Mandamiento", phrase: "NO LEVANTARAS FALSO TESTIMONIO" },
+      { category: "Mandamiento", phrase: "ACUERDATE DEL DIA DE REPOSO" },
+      { category: "Mandamiento", phrase: "AMARAS AL SEÑOR TU DIOS" },
+      { category: "Mandamiento", phrase: "NO TENDRAS DIOSES AJENOS" },
+      { category: "Mandamiento", phrase: "NO HARAS IMAGEN NI ESCULTURA" },
       { category: "Fruto del Espiritu", phrase: "AMOR GOZO PAZ PACIENCIA" },
       { category: "Fruto del Espiritu", phrase: "BENIGNIDAD BONDAD FE MANSEDUMBRE" },
+      { category: "Fruto del Espiritu", phrase: "GOZO Y PAZ EN EL ESPIRITU" },
+      { category: "Fruto del Espiritu", phrase: "TEMPLANZA Y DOMINIO PROPIO" },
+      { category: "Fruto del Espiritu", phrase: "MANSEDUMBRE Y HUMILDAD" },
+      { category: "Fruto del Espiritu", phrase: "FIDELIDAD Y BONDAD" },
+      { category: "Fruto del Espiritu", phrase: "PACIENCIA EN LA TRIBULACION" },
+      { category: "Fruto del Espiritu", phrase: "AMOR SIN HIPOCRESIA" },
+      { category: "Fruto del Espiritu", phrase: "BENIGNIDAD PARA TODOS" },
       { category: "Personaje Biblico", phrase: "MOISES LIBERTADOR DE ISRAEL" },
       { category: "Personaje Biblico", phrase: "DAVID EL REY PASTOR" },
       { category: "Personaje Biblico", phrase: "NOE Y EL DILUVIO" },
       { category: "Personaje Biblico", phrase: "ABRAHAM PADRE DE LA FE" },
+      { category: "Personaje Biblico", phrase: "JOSE EL SOÑADOR DE EGIPTO" },
+      { category: "Personaje Biblico", phrase: "SANSON EL HOMBRE FUERTE" },
+      { category: "Personaje Biblico", phrase: "DANIEL EN EL FOSO DE LOS LEONES" },
+      { category: "Personaje Biblico", phrase: "JONAS Y EL GRAN PEZ" },
+      { category: "Personaje Biblico", phrase: "PABLO EL APOSTOL DE LOS GENTILES" },
+      { category: "Personaje Biblico", phrase: "PEDRO EL PESCADOR DE HOMBRES" },
+      { category: "Personaje Biblico", phrase: "MARIA MADRE DE JESUS" },
+      { category: "Personaje Biblico", phrase: "SALOMON EL REY SABIO" },
+      { category: "Personaje Biblico", phrase: "ELIAS EL PROFETA DE FUEGO" },
+      { category: "Personaje Biblico", phrase: "RUT LA MUJER FIEL" },
       { category: "Libro de la Biblia", phrase: "EL LIBRO DE LOS SALMOS" },
       { category: "Libro de la Biblia", phrase: "EL APOCALIPSIS DE JUAN" },
+      { category: "Libro de la Biblia", phrase: "EL GENESIS PRINCIPIO DE TODO" },
+      { category: "Libro de la Biblia", phrase: "EL EXODO DE ISRAEL" },
+      { category: "Libro de la Biblia", phrase: "LOS PROVERBIOS DE SALOMON" },
+      { category: "Libro de la Biblia", phrase: "EL EVANGELIO DE JUAN" },
+      { category: "Libro de la Biblia", phrase: "LOS HECHOS DE LOS APOSTOLES" },
+      { category: "Libro de la Biblia", phrase: "LA EPISTOLA A LOS ROMANOS" },
+      { category: "Libro de la Biblia", phrase: "EL LIBRO DE ISAIAS" },
+      { category: "Libro de la Biblia", phrase: "EL LIBRO DE JOB" },
+      { category: "Libro de la Biblia", phrase: "EL CANTAR DE LOS CANTARES" },
+      { category: "Libro de la Biblia", phrase: "EL LIBRO DE RUT" },
       { category: "Enseñanza de Jesus", phrase: "BIENAVENTURADOS LOS MANSOS" },
       { category: "Enseñanza de Jesus", phrase: "YO SOY EL CAMINO LA VERDAD Y LA VIDA" },
       { category: "Enseñanza de Jesus", phrase: "PEDID Y SE OS DARA" },
+      { category: "Enseñanza de Jesus", phrase: "AMAD A VUESTROS ENEMIGOS" },
+      { category: "Enseñanza de Jesus", phrase: "EL QUE SIRVE A LOS DEMAS ES GRANDE" },
+      { category: "Enseñanza de Jesus", phrase: "NO JUZGUEIS PARA QUE NO SEAIS JUZGADOS" },
+      { category: "Enseñanza de Jesus", phrase: "VELAD Y ORAD" },
+      { category: "Enseñanza de Jesus", phrase: "YO SOY LA LUZ DEL MUNDO" },
+      { category: "Enseñanza de Jesus", phrase: "VENID A MI TODOS LOS QUE ESTAN CANSADOS" },
+      { category: "Enseñanza de Jesus", phrase: "EL QUE PERSEVERE HASTA EL FIN SERA SALVO" },
+      { category: "Enseñanza de Jesus", phrase: "DEJAD QUE LOS NIÑOS VENGAN A MI" },
+      { category: "Enseñanza de Jesus", phrase: "MAS BIENAVENTURADO ES DAR QUE RECIBIR" },
       { category: "Historia Biblica", phrase: "EL ARCA DE NOE" },
       { category: "Historia Biblica", phrase: "DAVID Y GOLIAT" },
       { category: "Historia Biblica", phrase: "LA CREACION DEL MUNDO" },
+      { category: "Historia Biblica", phrase: "LA TORRE DE BABEL" },
+      { category: "Historia Biblica", phrase: "EL CRUCE DEL MAR ROJO" },
+      { category: "Historia Biblica", phrase: "LOS DIEZ MANDAMIENTOS EN EL SINAI" },
+      { category: "Historia Biblica", phrase: "LA CAIDA DE JERICO" },
+      { category: "Historia Biblica", phrase: "EL NACIMIENTO DE JESUS EN BELEN" },
+      { category: "Historia Biblica", phrase: "LA RESURRECCION DE CRISTO" },
+      { category: "Historia Biblica", phrase: "LA MULTIPLICACION DE LOS PANES" },
+      { category: "Historia Biblica", phrase: "LA CENA DEL SEÑOR" },
+      { category: "Historia Biblica", phrase: "EL BAUTISMO DE JESUS EN EL JORDAN" },
       { category: "Frase de Fe", phrase: "TODO LO PUEDO EN CRISTO QUE ME FORTALECE" },
       { category: "Frase de Fe", phrase: "LA FE ES LA CERTEZA DE LO QUE SE ESPERA" },
+      { category: "Frase de Fe", phrase: "SIN FE ES IMPOSIBLE AGRADAR A DIOS" },
+      { category: "Frase de Fe", phrase: "ANDAMOS POR FE Y NO POR VISTA" },
+      { category: "Frase de Fe", phrase: "LA FE VIENE POR EL OIR LA PALABRA" },
+      { category: "Frase de Fe", phrase: "CON DIOS TODO ES POSIBLE" },
+      { category: "Frase de Fe", phrase: "EL JUSTO POR SU FE VIVIRA" },
+      { category: "Frase de Fe", phrase: "PEDID CON FE SIN DUDAR" },
+      { category: "Frase de Fe", phrase: "MAYOR ES EL QUE ESTA EN NOSOTROS" },
+      { category: "Frase de Fe", phrase: "DIOS PROVEERA TODO LO QUE NECESITAS" },
+      { category: "Frase de Fe", phrase: "EL SEÑOR PELEARA POR TI" },
       { category: "Nombre de Dios", phrase: "EL ALFA Y LA OMEGA" },
       { category: "Nombre de Dios", phrase: "EL BUEN PASTOR" },
-      { category: "Oracion", phrase: "PADRE NUESTRO QUE ESTAS EN LOS CIELOS" }
+      { category: "Nombre de Dios", phrase: "JEHOVA JIREH MI PROVEEDOR" },
+      { category: "Nombre de Dios", phrase: "EL DIOS TODOPODEROSO" },
+      { category: "Nombre de Dios", phrase: "EL PRINCIPE DE PAZ" },
+      { category: "Nombre de Dios", phrase: "EL REY DE REYES" },
+      { category: "Nombre de Dios", phrase: "EMANUEL DIOS CON NOSOTROS" },
+      { category: "Nombre de Dios", phrase: "EL CORDERO DE DIOS" },
+      { category: "Nombre de Dios", phrase: "EL GRAN YO SOY" },
+      { category: "Nombre de Dios", phrase: "EL SANTO DE ISRAEL" },
+      { category: "Oracion", phrase: "PADRE NUESTRO QUE ESTAS EN LOS CIELOS" },
+      { category: "Oracion", phrase: "SEÑOR TEN MISERICORDIA DE MI" },
+      { category: "Oracion", phrase: "GRACIAS SEÑOR POR TUS BENDICIONES" },
+      { category: "Oracion", phrase: "AYUDAME SEÑOR EN ESTE DIA" },
+      { category: "Oracion", phrase: "GUIAME POR TU CAMINO SEÑOR" },
+      { category: "Oracion", phrase: "EN TUS MANOS ENCOMIENDO MI ESPIRITU" },
+      { category: "Oracion", phrase: "DIOS MIO NO ME DESAMPARES" },
+      { category: "Oracion", phrase: "OH SEÑOR ESCUCHA MI ORACION" }
     ],
     wheel: [
       { label:"300", type:"points", value:300 },
@@ -533,6 +632,25 @@
   // ---------- Data / storage ----------
   var HISTORY_KEY = "ruletaElimLLDM_history_v1";
 
+  // Adds any new default phrases the player doesn't already have (matched by
+  // category+phrase) without touching their custom edits/additions, and bumps
+  // the stored version so this only runs once per new default-data release.
+  function mergeNewDefaultPuzzles(data){
+    var storedVersion = typeof data.version === "number" ? data.version : 1;
+    if(storedVersion >= DEFAULT_DATA.version) return data;
+    var existingKeys = {};
+    data.puzzles.forEach(function(p){ existingKeys[p.category + "||" + p.phrase] = true; });
+    DEFAULT_DATA.puzzles.forEach(function(p){
+      var key = p.category + "||" + p.phrase;
+      if(!existingKeys[key]){
+        data.puzzles.push(p);
+        existingKeys[key] = true;
+      }
+    });
+    data.version = DEFAULT_DATA.version;
+    return data;
+  }
+
   function loadData(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -540,7 +658,7 @@
         var parsed = JSON.parse(raw);
         if(parsed && parsed.puzzles && parsed.wheel){
           if(typeof parsed.roundsPerMatch !== "number") parsed.roundsPerMatch = DEFAULT_DATA.roundsPerMatch;
-          return parsed;
+          return mergeNewDefaultPuzzles(parsed);
         }
       }
     }catch(e){ console.warn("No se pudo leer localStorage", e); }
@@ -567,6 +685,7 @@
   }
 
   var DATA = loadData();
+  saveData();
 
   // ---------- Game state ----------
   var players = [];
