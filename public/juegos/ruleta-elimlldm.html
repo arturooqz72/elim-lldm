@@ -86,8 +86,19 @@
   #playerNamesWrap div{margin-bottom:8px;}
 
   /* Game layout */
-  .game-wrap{display:none;gap:20px;flex-wrap:wrap;justify-content:center;}
+  .game-wrap{display:none;gap:20px;flex-wrap:wrap;justify-content:center;position:relative;}
   .game-wrap.active{display:flex;}
+
+  /* Round start / pause gate */
+  .round-gate-overlay{
+    display:none;position:absolute;inset:0;z-index:45;
+    background:rgba(10,8,4,.88);border-radius:16px;
+    align-items:center;justify-content:center;padding:16px;
+  }
+  .round-gate-overlay.active{display:flex;}
+  .round-gate-card{text-align:center;}
+  .round-gate-title{color:var(--gold);font-weight:700;font-size:1.15rem;margin-bottom:14px;text-shadow:0 2px 6px rgba(0,0,0,.6);}
+  #roundGateBtn{font-size:1.05rem;padding:12px 28px;}
   .left-col{display:flex;flex-direction:column;align-items:center;gap:14px;width:300px;}
   .right-col{flex:1;min-width:340px;}
 
@@ -311,6 +322,9 @@
     .controls-row{gap:6px;margin-top:2px;}
     .controls-row button{padding:7px 10px;font-size:.72rem;}
 
+    .round-gate-title{font-size:.95rem;margin-bottom:10px;}
+    #roundGateBtn{font-size:.85rem;padding:9px 20px;}
+
     .match-end-card{padding:22px 16px;}
     .match-end-trophy{font-size:2.6rem;}
     .match-end-winner{font-size:1.2rem;}
@@ -329,6 +343,7 @@
 
   <div class="top-actions">
     <a class="btn-outline" id="backBtn" href="/juegos" style="text-decoration:none;display:inline-flex;align-items:center;">← Volver a Juegos</a>
+    <button class="btn-outline" id="pauseBtn" style="display:none;">⏸ Pausar</button>
     <button class="btn-outline" id="openAdminBtn" style="display:none;">⚙ Editar preguntas y ruleta</button>
     <button class="btn-outline" id="restartBtn" style="display:none;">↺ Nueva partida</button>
   </div>
@@ -375,6 +390,14 @@
         <button class="btn-gold" id="buyVowelBtn" disabled>Comprar Vocal (700)</button>
         <button class="btn-gold" id="resolveBtn">Resolver Panel</button>
         <button class="btn-outline" id="nextPuzzleBtn" style="display:none;">Siguiente frase →</button>
+      </div>
+    </div>
+
+    <!-- ROUND GATE / PAUSE OVERLAY -->
+    <div class="round-gate-overlay" id="roundGateOverlay">
+      <div class="round-gate-card">
+        <div class="round-gate-title" id="roundGateTitle">Listo para jugar</div>
+        <button class="btn-gold" id="roundGateBtn">▶ Comenzar</button>
       </div>
     </div>
   </div>
@@ -564,6 +587,8 @@
   var audioCtx = null;
   var actionTimer = null;
   var timeLeft = 0;
+  var currentTimerCallback = null;
+  var isPaused = false;
 
   // ---------- DOM refs ----------
   var $ = function(id){ return document.getElementById(id); };
@@ -591,6 +616,10 @@
   var matchEndSub = $("matchEndSub");
   var podiumList = $("podiumList");
   var playAgainBtn = $("playAgainBtn");
+  var pauseBtn = $("pauseBtn");
+  var roundGateOverlay = $("roundGateOverlay");
+  var roundGateTitle = $("roundGateTitle");
+  var roundGateBtn = $("roundGateBtn");
 
   // ---------- Sound (Web Audio API — fully synthesized, no external files) ----------
   var masterGain = null;
@@ -774,30 +803,81 @@
     if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
     timerBadge.style.display = "none";
     timerBadge.classList.remove("urgent");
+    currentTimerCallback = null;
+  }
+  function tickTimer(){
+    timeLeft--;
+    if(timeLeft <= 0){
+      var cb = currentTimerCallback;
+      clearTimer();
+      if(cb) cb();
+    } else {
+      timerBadge.textContent = "⏱ " + timeLeft;
+      var urgent = timeLeft <= 3;
+      if(urgent) timerBadge.classList.add("urgent"); else timerBadge.classList.remove("urgent");
+      playCountdownTick(urgent);
+    }
   }
   function startActionTimer(onExpire){
-    clearTimer();
+    if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
     timeLeft = TURN_SECONDS;
+    currentTimerCallback = onExpire;
     timerBadge.style.display = "block";
+    timerBadge.classList.remove("urgent");
     timerBadge.textContent = "⏱ " + timeLeft;
-    actionTimer = setInterval(function(){
-      timeLeft--;
-      if(timeLeft <= 0){
-        clearTimer();
-        onExpire();
-      } else {
-        timerBadge.textContent = "⏱ " + timeLeft;
-        var urgent = timeLeft <= 3;
-        if(urgent) timerBadge.classList.add("urgent");
-        playCountdownTick(urgent);
-      }
-    }, 1000);
+    actionTimer = setInterval(tickTimer, 1000);
   }
   function onActionTimeout(){
     playSound("timeout");
     setInfo("⏱ Se acabó el tiempo. Turno de " + nextPlayerName() + ".");
     nextTurn();
   }
+
+  // ---------- Turn gate: host controls exactly when each player's timed
+  // turn begins (spin phase) — built for live streams where the host waits
+  // for the on-screen participant to be ready before starting their clock. ----------
+  var pendingStartCallback = null;
+
+  function requestTurnStart(onExpire){
+    pendingStartCallback = onExpire;
+    spinBtn.disabled = true;
+    pauseBtn.style.display = "none";
+    roundGateTitle.textContent = "Turno de " + players[currentPlayerIndex].name;
+    roundGateBtn.textContent = "▶ Comenzar";
+    roundGateOverlay.classList.add("active");
+  }
+
+  function hideGateOverlay(){
+    roundGateOverlay.classList.remove("active");
+    pauseBtn.style.display = "inline-block";
+    pauseBtn.disabled = false;
+  }
+
+  roundGateBtn.addEventListener("click", function(){
+    if(pendingStartCallback){
+      var cb = pendingStartCallback;
+      pendingStartCallback = null;
+      hideGateOverlay();
+      spinBtn.disabled = false;
+      startActionTimer(cb);
+    } else if(isPaused){
+      isPaused = false;
+      hideGateOverlay();
+      if(currentTimerCallback && timeLeft > 0 && !actionTimer){
+        actionTimer = setInterval(tickTimer, 1000);
+      }
+    }
+  });
+
+  pauseBtn.addEventListener("click", function(){
+    if(spinning || pendingStartCallback) return;
+    isPaused = true;
+    if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
+    pauseBtn.style.display = "none";
+    roundGateTitle.textContent = "⏸ Juego en pausa";
+    roundGateBtn.textContent = "▶ Reanudar";
+    roundGateOverlay.classList.add("active");
+  });
 
   // ---------- Setup screen: player name fields ----------
   function renderPlayerNameFields(){
@@ -826,6 +906,10 @@
     matchEndScreen.classList.remove("active");
     gameWrap.classList.remove("active");
     restartBtn.style.display = "none";
+    pauseBtn.style.display = "none";
+    roundGateOverlay.classList.remove("active");
+    pendingStartCallback = null;
+    isPaused = false;
     numRoundsInput.value = DATA.roundsPerMatch;
     setupScreen.style.display = "block";
   }
@@ -909,6 +993,7 @@
     spinning = true;
     spinBtn.disabled = true;
     buyVowelBtn.disabled = true;
+    pauseBtn.disabled = true;
     startSpinTicking(4200);
     setInfo("Girando la ruleta...");
     var segs = DATA.wheel;
@@ -934,6 +1019,7 @@
   spinBtn.addEventListener("click", spinWheel);
 
   function onWheelResult(seg){
+    pauseBtn.disabled = false;
     if(seg.type === "bankrupt"){
       playSound("bankrupt");
       players[currentPlayerIndex].score = 0;
@@ -1010,12 +1096,11 @@
     categoryLabel.textContent = currentPuzzle.category;
     updateRoundBadge();
     nextPuzzleBtn.style.display = "none";
-    spinBtn.disabled = false;
     renderBoard();
     renderLetters();
     updateLetterButtonsState();
-    setInfo("Nueva frase cargada. Turno de " + players[currentPlayerIndex].name + ". Gira la ruleta para comenzar.");
-    startActionTimer(onActionTimeout);
+    setInfo("Nueva frase cargada. Turno de " + players[currentPlayerIndex].name + ".");
+    requestTurnStart(onActionTimeout);
   }
 
   nextPuzzleBtn.addEventListener("click", function(){
@@ -1213,6 +1298,7 @@
     buttons.forEach(function(b){ b.disabled = true; });
     buyVowelBtn.disabled = true;
     spinBtn.disabled = true;
+    pauseBtn.style.display = "none";
     nextPuzzleBtn.textContent = currentRoundNumber >= totalRounds ? "Ver resultado final 🏆" : "Siguiente frase →";
     nextPuzzleBtn.style.display = "inline-block";
   }
@@ -1294,8 +1380,7 @@
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     renderScoreboard();
     updateLetterButtonsState();
-    spinBtn.disabled = false;
-    startActionTimer(onActionTimeout);
+    requestTurnStart(onActionTimeout);
   }
 
   function nextPlayerName(){
