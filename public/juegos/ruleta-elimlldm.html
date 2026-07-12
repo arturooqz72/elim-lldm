@@ -454,6 +454,8 @@
       <input type="number" id="vowelCostInput" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
       <label style="display:block;margin-top:14px;color:#e6d9b8;font-size:.9rem;">Rondas por partida (valor por defecto)</label>
       <input type="number" id="roundsPerMatchInput" min="1" max="15" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
+      <label style="display:block;margin-top:14px;color:#e6d9b8;font-size:.9rem;">Segundos por turno</label>
+      <input type="number" id="turnSecondsInput" min="5" max="60" style="width:120px;padding:6px 8px;border-radius:6px;background:#0f0b06;color:#fff;border:1px solid #4a3a1c;">
     </div>
 
     <div class="modal-footer">
@@ -475,10 +477,10 @@
   var VOWELS = ["A","E","I","O","U"];
   var CONSONANTS = "BCDFGHJKLMNÑPQRSTVWXYZ".split("");
   var ALPHABET = "ABCDFGHIJKLMNÑOPQRSTUVWXYZ".split("");
-  var TURN_SECONDS = 15;
 
   var DEFAULT_DATA = {
-    version: 2,
+    version: 3,
+    turnSeconds: 15,
     vowelCost: 700,
     roundsPerMatch: 5,
     puzzles: [
@@ -658,6 +660,7 @@
         var parsed = JSON.parse(raw);
         if(parsed && parsed.puzzles && parsed.wheel){
           if(typeof parsed.roundsPerMatch !== "number") parsed.roundsPerMatch = DEFAULT_DATA.roundsPerMatch;
+          if(typeof parsed.turnSeconds !== "number") parsed.turnSeconds = DEFAULT_DATA.turnSeconds;
           return mergeNewDefaultPuzzles(parsed);
         }
       }
@@ -939,7 +942,7 @@
   }
   function startActionTimer(onExpire){
     if(actionTimer){ clearInterval(actionTimer); actionTimer = null; }
-    timeLeft = TURN_SECONDS;
+    timeLeft = DATA.turnSeconds;
     currentTimerCallback = onExpire;
     timerBadge.style.display = "block";
     timerBadge.classList.remove("urgent");
@@ -1156,7 +1159,7 @@
     playSound("land");
     lastSpinValue = seg.value;
     canGuessConsonant = true;
-    setInfo(players[currentPlayerIndex].name + " sacó " + seg.value + " puntos. Elige una consonante (" + TURN_SECONDS + " segundos).");
+    setInfo(players[currentPlayerIndex].name + " sacó " + seg.value + " puntos. Elige una consonante (" + DATA.turnSeconds + " segundos).");
     updateLetterButtonsState();
     startActionTimer(onActionTimeout);
   }
@@ -1334,7 +1337,7 @@
 
   buyVowelBtn.addEventListener("click", function(){
     if(players[currentPlayerIndex].score < DATA.vowelCost) return;
-    setInfo("Elige una vocal para comprar por " + DATA.vowelCost + " puntos (" + TURN_SECONDS + " segundos).");
+    setInfo("Elige una vocal para comprar por " + DATA.vowelCost + " puntos (" + DATA.turnSeconds + " segundos).");
     vowelPurchasedThisTurn = true;
     var buttons = lettersEl.querySelectorAll(".letter-btn.vowel");
     buttons.forEach(function(btn){
@@ -1542,6 +1545,7 @@
     renderWheelList();
     $("vowelCostInput").value = DATA.vowelCost;
     $("roundsPerMatchInput").value = DATA.roundsPerMatch;
+    $("turnSecondsInput").value = DATA.turnSeconds;
   });
   $("closeAdminBtn").addEventListener("click", function(){
     adminOverlay.classList.remove("active");
@@ -1689,6 +1693,14 @@
     }
   });
 
+  $("turnSecondsInput").addEventListener("change", function(){
+    var v = parseInt(this.value,10);
+    if(!isNaN(v) && v >= 5 && v <= 60){
+      DATA.turnSeconds = v;
+      saveData();
+    }
+  });
+
   $("exportBtn").addEventListener("click", function(){
     var blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
     var url = URL.createObjectURL(blob);
@@ -1709,6 +1721,7 @@
         var parsed = JSON.parse(evt.target.result);
         if(!parsed.puzzles || !parsed.wheel){ throw new Error("Formato inválido"); }
         if(typeof parsed.roundsPerMatch !== "number") parsed.roundsPerMatch = DEFAULT_DATA.roundsPerMatch;
+        if(typeof parsed.turnSeconds !== "number") parsed.turnSeconds = DEFAULT_DATA.turnSeconds;
         DATA = parsed;
         saveData();
         buildWheel();
@@ -1716,6 +1729,7 @@
         renderWheelList();
         $("vowelCostInput").value = DATA.vowelCost;
         $("roundsPerMatchInput").value = DATA.roundsPerMatch;
+        $("turnSecondsInput").value = DATA.turnSeconds;
         buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
         alert("Datos importados correctamente.");
       }catch(err){
@@ -1735,6 +1749,7 @@
     renderWheelList();
     $("vowelCostInput").value = DATA.vowelCost;
     $("roundsPerMatchInput").value = DATA.roundsPerMatch;
+    $("turnSecondsInput").value = DATA.turnSeconds;
     buyVowelBtn.textContent = "Comprar Vocal (" + DATA.vowelCost + ")";
   });
 
