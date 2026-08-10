@@ -29,8 +29,8 @@ CREATE POLICY "saludos_insert_public" ON saludos FOR INSERT
 GRANT INSERT ON saludos TO anon, authenticated;
 
 -- Bucket privado para los archivos de audio
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('saludos', 'saludos', FALSE)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('saludos', 'saludos', FALSE, 10485760, ARRAY['audio/webm','audio/ogg','audio/mp4','audio/mpeg'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Solo INSERT público en el bucket — sin SELECT para anon/authenticated.
