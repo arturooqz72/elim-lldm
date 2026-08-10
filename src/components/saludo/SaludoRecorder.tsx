@@ -106,11 +106,7 @@ export function SaludoRecorder() {
     setStatus("recording");
 
     timerRef.current = setInterval(() => {
-      setElapsed((prev) => {
-        const next = prev + 1;
-        if (next >= MAX_SECONDS) stopRecording();
-        return next;
-      });
+      setElapsed((prev) => prev + 1);
     }, 1000);
   }
 
@@ -118,6 +114,13 @@ export function SaludoRecorder() {
     stopTimer();
     mediaRecorderRef.current?.stop();
   }
+
+  useEffect(() => {
+    if (status === "recording" && elapsed >= MAX_SECONDS) {
+      stopRecording();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, status]);
 
   function discardRecording() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
