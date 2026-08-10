@@ -39,12 +39,12 @@ Estados: `idle → nombre-y-grabando → grabado (preview) → enviando → succ
    - Botón **"Grabar de nuevo"** (descarta el blob actual y vuelve al paso 2).
    - Botón **"Enviar saludo"**.
 5. Al enviar:
-   - Sube el `Blob` al bucket `saludos` en una ruta única (ej. `${Date.now()}-${crypto.randomUUID()}.webm`) usando el cliente browser de Supabase (`createClient()`, anon key) — mismo mecanismo de `supabase.storage.from(bucket).upload()` que usa `AudioUploadForm.tsx`, pero con la key anónima en vez de un token de sesión admin.
+   - Sube el `Blob` al bucket `saludos` en una ruta única (ej. `${Date.now()}-${crypto.randomUUID()}.<ext>`, donde `<ext>` se deriva del `mimeType` real que reportó `MediaRecorder` — `audio/webm` → `webm`, `audio/ogg` → `ogg` — para que la extensión del archivo nunca mienta sobre su formato real entre navegadores) usando el cliente browser de Supabase (`createClient()`, anon key) — mismo mecanismo de `supabase.storage.from(bucket).upload()` que usa `AudioUploadForm.tsx`, pero con la key anónima en vez de un token de sesión admin.
    - Inserta una fila en la tabla `saludos` con `nombre`, `audio_path` (la ruta, no una URL pública — el bucket es privado) y `duration_seconds`.
    - Si cualquiera de los dos pasos falla, se muestra un mensaje de error con opción de **reintentar sin perder la grabación** (el blob se mantiene en el estado del componente).
 6. Éxito: tarjeta de confirmación igual en estilo a la de `ContactForm.tsx`, con opción de grabar otro saludo.
 
-El `<form>` (si se usa uno para el campo nombre) debe llevar `noValidate`, siguiendo la lección aprendida en `ContactForm.tsx`: el input de nombre no debe depender de validación nativa del navegador para que los mensajes de error personalizados siempre se muestren.
+El campo nombre y el flujo de envío van dentro de un `<form>` con `noValidate`, siguiendo la lección aprendida en `ContactForm.tsx`: no debe depender de validación nativa del navegador para que los mensajes de error personalizados siempre se muestren.
 
 ## Datos
 
