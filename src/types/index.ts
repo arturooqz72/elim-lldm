@@ -21,6 +21,22 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Sugerencia {
+  id: string;
+  nombre: string;
+  correo: string;
+  mensaje: string;
+  created_at: string;
+}
+
+export interface Saludo {
+  id: string;
+  nombre: string;
+  audio_path: string;
+  duration_seconds: number;
+  created_at: string;
+}
+
 export interface Pláticas {
   id: string;
   title: string;
