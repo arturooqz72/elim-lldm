@@ -1,34 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, Send, CheckCircle2, AlertCircle, RotateCcw } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Mic, Square, Loader2, Send, AlertCircle, RotateCcw } from "lucide-react";
+import { createFreshClient } from "@/lib/supabase/client";
+import { pickMimeType, extensionForMimeType, formatTime } from "@/lib/audio-recording";
+import { SaludoSuccessCard } from "@/components/saludo/SaludoSuccessCard";
 
 const NOMBRE_MAX = 120;
 const MAX_SECONDS = 60;
 
 type Status = "idle" | "recording" | "recorded" | "submitting" | "success";
-
-function pickMimeType(): string {
-  if (typeof MediaRecorder === "undefined") return "";
-  const candidates = ["audio/webm", "audio/ogg", "audio/mp4"];
-  for (const type of candidates) {
-    if (MediaRecorder.isTypeSupported(type)) return type;
-  }
-  return "";
-}
-
-function extensionForMimeType(mimeType: string): string {
-  if (mimeType.includes("ogg")) return "ogg";
-  if (mimeType.includes("mp4")) return "m4a";
-  return "webm";
-}
-
-function formatTime(totalSeconds: number): string {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const s = Math.floor(totalSeconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
-}
 
 export function SaludoRecorder() {
   const [nombre, setNombre] = useState("");
@@ -44,6 +25,7 @@ export function SaludoRecorder() {
   const audioBlobRef = useRef<Blob | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mimeTypeRef = useRef<string>("");
+  const audioUrlRef = useRef<string | null>(null);
 
   const nombreOk = nombre.trim().length > 0 && nombre.trim().length <= NOMBRE_MAX;
 
@@ -51,6 +33,7 @@ export function SaludoRecorder() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
     };
   }, []);
 
@@ -95,7 +78,9 @@ export function SaludoRecorder() {
     recorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current || "audio/webm" });
       audioBlobRef.current = blob;
-      setAudioUrl(URL.createObjectURL(blob));
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      setAudioUrl(url);
       setStatus("recorded");
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -124,6 +109,7 @@ export function SaludoRecorder() {
 
   function discardRecording() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrlRef.current = null;
     audioBlobRef.current = null;
     setAudioUrl(null);
     setElapsed(0);
@@ -142,7 +128,7 @@ export function SaludoRecorder() {
     const ext = extensionForMimeType(mimeTypeRef.current);
     const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-    const supabase = createClient();
+    const supabase = createFreshClient();
     const { error: uploadError } = await supabase.storage.from("saludos").upload(path, blob, {
       contentType: mimeTypeRef.current || "audio/webm",
     });
@@ -170,6 +156,7 @@ export function SaludoRecorder() {
 
   function recordAnother() {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrlRef.current = null;
     audioBlobRef.current = null;
     setAudioUrl(null);
     setElapsed(0);
@@ -186,35 +173,7 @@ export function SaludoRecorder() {
   };
 
   if (status === "success") {
-    return (
-      <div
-        className="rounded-2xl p-8 flex flex-col items-center text-center gap-3"
-        style={{
-          background: "var(--color-surface)",
-          border: "1px solid rgba(74,222,128,0.3)",
-        }}
-      >
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(74,222,128,0.12)" }}
-        >
-          <CheckCircle2 size={24} style={{ color: "var(--color-success)" }} />
-        </div>
-        <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-          ¡Gracias por tu saludo!
-        </p>
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Lo recibimos y podría sonar pronto en la radio.
-        </p>
-        <button
-          onClick={recordAnother}
-          className="mt-2 text-sm font-medium"
-          style={{ color: "var(--color-primary)" }}
-        >
-          Grabar otro saludo
-        </button>
-      </div>
-    );
+    return <SaludoSuccessCard onRecordAnother={recordAnother} />;
   }
 
   const recording = status === "recording";
