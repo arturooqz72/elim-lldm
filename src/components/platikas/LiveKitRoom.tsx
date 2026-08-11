@@ -14,7 +14,6 @@ interface LiveKitRoomProps {
   isHost: boolean;
   isSpeaker: boolean;
   currentUserId: string | null;
-  radioOutputActive: boolean;
 }
 
 type TokenState =
@@ -28,7 +27,6 @@ export function LiveKitRoom({
   isHost,
   isSpeaker,
   currentUserId,
-  radioOutputActive,
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
   const [isLive, setIsLive] = useState(true);
@@ -41,9 +39,6 @@ export function LiveKitRoom({
 
     const role = isHost ? "host" : isSpeaker ? "speaker" : "viewer";
 
-    // TEMP DEBUG — remover después de diagnosticar
-    console.log("[LiveKitRoom] requesting token...", { roomName, role });
-
     fetch("/api/livekit/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,21 +47,12 @@ export function LiveKitRoom({
       .then((res) => res.json())
       .then((data) => {
         if (data.token) {
-          // TEMP DEBUG — remover después de diagnosticar (no se imprime el valor del token)
-          console.log("[LiveKitRoom] token received OK", {
-            hasToken: true,
-            wsUrl: data.wsUrl,
-          });
           setTokenState({ status: "ready", token: data.token, wsUrl: data.wsUrl });
         } else {
-          // TEMP DEBUG — remover después de diagnosticar
-          console.error("[LiveKitRoom] token error response:", data.error);
           setTokenState({ status: "error", message: data.error ?? "Error al conectar" });
         }
       })
-      .catch((err) => {
-        // TEMP DEBUG — remover después de diagnosticar
-        console.error("[LiveKitRoom] fetch token error:", err);
+      .catch(() => {
         setTokenState({ status: "error", message: "No se pudo obtener el token LiveKit" });
       });
   }, [roomName, currentUserId, isHost, isSpeaker]);
@@ -83,7 +69,6 @@ export function LiveKitRoom({
         <HostControls
           platikaId={platikaId}
           isLive={isLive}
-          radioOutputActive={radioOutputActive}
           onGoLive={() => setIsLive(true)}
           onEnd={() => setIsLive(false)}
           onSpeakerApproved={handleSpeakerApproved}
@@ -199,43 +184,17 @@ export function LiveKitRoom({
     );
   }
 
-  // TEMP DEBUG — remover después de diagnosticar
-  console.log("[LiveKitRoom] attempting to connect...", {
-    roomName,
-    wsUrl: tokenState.wsUrl ?? defaultLkUrl,
-  });
-
   return (
-    <RoomLayout
-      stage={
-        <LKRoom
-          token={tokenState.token}
-          serverUrl={tokenState.wsUrl ?? defaultLkUrl}
-          connect
-          audio
-          video={isHost || isSpeaker}
-          className="w-full h-full"
-          onConnected={() => {
-            // TEMP DEBUG — remover después de diagnosticar
-            console.log("[LiveKitRoom] connected to room", {
-              roomName,
-              wsUrl: tokenState.wsUrl ?? defaultLkUrl,
-            });
-          }}
-          onError={(error) => {
-            // TEMP DEBUG — remover después de diagnosticar
-            console.error("[LiveKitRoom] room connection error:", error);
-          }}
-          onDisconnected={(reason) => {
-            // TEMP DEBUG — remover después de diagnosticar
-            console.log("[LiveKitRoom] disconnected from room", { reason });
-          }}
-        >
-          <StagePanel />
-        </LKRoom>
-      }
-      sidebar={sidebar}
-    />
+    <LKRoom
+      token={tokenState.token}
+      serverUrl={tokenState.wsUrl ?? defaultLkUrl}
+      connect
+      audio
+      video={isHost || isSpeaker}
+      className="contents"
+    >
+      <RoomLayout stage={<StagePanel />} sidebar={sidebar} />
+    </LKRoom>
   );
 }
 

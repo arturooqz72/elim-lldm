@@ -244,7 +244,6 @@ export default async function PlatikaRoomPage({ params }: Props) {
               isHost={isHost}
               isSpeaker={isSpeaker}
               currentUserId={currentUserId}
-              radioOutputActive={p.radio_output_active}
             />
           ) : isScheduled ? (
             <ScheduledState scheduledAt={p.scheduled_at} />
