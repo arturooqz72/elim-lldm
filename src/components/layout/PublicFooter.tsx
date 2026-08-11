@@ -28,6 +28,8 @@ export function PublicFooter() {
             { href: "/platikas", label: "Estudio en Vivo" },
             { href: "/juegos", label: "Juegos" },
             { href: "/archivo", label: "Archivo" },
+            { href: "/contacto", label: "Contáctanos" },
+            { href: "/saludo", label: "Saludo en audio" },
           ].map(({ href, label }) => (
             <Link
               key={href}
