@@ -67,22 +67,6 @@ export async function POST(
     }
   }
 
-  // Stop relay if active
-  if (pláticas.radio_output_active && process.env.RELAY_SERVICE_URL) {
-    try {
-      await fetch(`${process.env.RELAY_SERVICE_URL}/stop`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.RELAY_SERVICE_SECRET}`,
-        },
-        body: JSON.stringify({ roomName: pláticas.livekit_room_name }),
-      });
-    } catch {
-      // Best effort
-    }
-  }
-
   await supabase
     .from("platikas")
     .update({
