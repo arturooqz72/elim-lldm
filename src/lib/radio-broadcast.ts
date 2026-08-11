@@ -7,9 +7,11 @@ export function connectRadioBridge(wsUrl: string, key: string): Promise<WebSocke
         const msg = JSON.parse(event.data) as { type: string; message?: string };
         if (msg.type === "ready") {
           ws.removeEventListener("message", onMessage);
+          ws.removeEventListener("close", onClose);
           resolve(ws);
         } else if (msg.type === "error") {
           ws.removeEventListener("message", onMessage);
+          ws.removeEventListener("close", onClose);
           reject(new Error(msg.message ?? "El bridge de radio rechazó la conexión"));
           ws.close();
         }
@@ -18,8 +20,14 @@ export function connectRadioBridge(wsUrl: string, key: string): Promise<WebSocke
       }
     };
 
+    const onClose = () => reject(new Error("La conexión se cerró antes de confirmarse"));
+
     ws.addEventListener("message", onMessage);
-    ws.addEventListener("error", () => reject(new Error("No se pudo conectar al bridge de radio")));
+    ws.addEventListener("close", onClose);
+    ws.addEventListener("error", () => {
+      reject(new Error("No se pudo conectar al bridge de radio"));
+      ws.close();
+    });
     ws.addEventListener("open", () => {
       ws.send(JSON.stringify({ type: "hello", key }));
     });
@@ -34,10 +42,15 @@ export class AudioMixer {
   constructor() {
     this.context = new AudioContext();
     this.destination = this.context.createMediaStreamDestination();
+    void this.context.resume();
   }
 
   connect(key: string, stream: MediaStream) {
-    if (this.sources.has(key)) return;
+    const existing = this.sources.get(key);
+    if (existing) {
+      if (existing.mediaStream === stream) return;
+      existing.disconnect();
+    }
     const source = this.context.createMediaStreamSource(stream);
     source.connect(this.destination);
     this.sources.set(key, source);
@@ -57,7 +70,7 @@ export class AudioMixer {
   close() {
     this.sources.forEach((source) => source.disconnect());
     this.sources.clear();
-    void this.context.close();
+    this.context.close().catch(() => {});
   }
 }
 
@@ -89,6 +102,10 @@ export function startStreamingToBridge(stream: MediaStream, ws: WebSocket): Medi
     if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
       ws.send(e.data);
     }
+  };
+
+  recorder.onerror = (event) => {
+    console.error("MediaRecorder error:", event);
   };
 
   recorder.start(250);
