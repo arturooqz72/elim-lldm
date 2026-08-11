@@ -13,11 +13,15 @@ export default async function AdminSaludosPage() {
   if (!profile || profile.role !== "admin") redirect("/");
 
   const service = await createServiceClient();
-  const { data: saludos } = await service
+  const { data: saludos, error: saludosError } = await service
     .from("saludos")
     .select("id, nombre, audio_path, duration_seconds, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
+
+  if (saludosError) {
+    console.error("Error loading saludos:", saludosError.message);
+  }
 
   const items = (saludos ?? []) as Saludo[];
 
