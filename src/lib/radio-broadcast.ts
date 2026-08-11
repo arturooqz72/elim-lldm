@@ -47,8 +47,10 @@ export class AudioMixer {
 
   connect(key: string, stream: MediaStream) {
     const existing = this.sources.get(key);
+    const newTrack = stream.getAudioTracks()[0];
     if (existing) {
-      if (existing.mediaStream === stream) return;
+      const existingTrack = existing.mediaStream.getAudioTracks()[0];
+      if (existingTrack === newTrack) return;
       existing.disconnect();
     }
     const source = this.context.createMediaStreamSource(stream);
