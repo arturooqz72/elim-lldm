@@ -122,6 +122,11 @@ export function SaludoRecorder() {
     const blob = audioBlobRef.current;
     if (!blob) return;
 
+    if (elapsed < 1) {
+      setErrorMsg("Tu grabación es muy corta, intenta de nuevo.");
+      return;
+    }
+
     setStatus("submitting");
     setErrorMsg("");
 
@@ -146,6 +151,7 @@ export function SaludoRecorder() {
     });
 
     if (insertError) {
+      await supabase.storage.from("saludos").remove([path]);
       setStatus("recorded");
       setErrorMsg("No pudimos guardar tu saludo. Intenta de nuevo en unos minutos.");
       return;
