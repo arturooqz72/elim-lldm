@@ -68,9 +68,9 @@ export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
       const key = `livekit-${ref.participant.sid}`;
       const shouldBeOn = ref.participant.isLocal ? micOn : roomOn;
 
-      if (shouldBeOn && !mixer.has(key)) {
+      if (shouldBeOn) {
         mixer.connect(key, new MediaStream([mediaTrack]));
-      } else if (!shouldBeOn && mixer.has(key)) {
+      } else if (mixer.has(key)) {
         mixer.disconnect(key);
       }
     }
@@ -106,6 +106,8 @@ export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
       const supabase = createClient();
       await supabase.from("platikas").update({ radio_output_active: true }).eq("id", platikaId);
     } catch (err) {
+      wsRef.current?.close();
+      cleanup();
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "No se pudo conectar con la radio");
     }
@@ -121,6 +123,7 @@ export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
   async function togglePc() {
     const mixer = mixerRef.current;
     if (!mixer) return;
+    setErrorMsg("");
 
     if (pcOn) {
       mixer.disconnect("pc-audio");
@@ -208,7 +211,12 @@ export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
           <Radio size={13} />
           En vivo en la radio
         </span>
-        <button type="button" onClick={stopBroadcast} style={{ color: "var(--color-destructive)" }}>
+        <button
+          type="button"
+          onClick={stopBroadcast}
+          aria-label="Detener transmisión"
+          style={{ color: "var(--color-destructive)" }}
+        >
           <Square size={14} />
         </button>
       </div>
