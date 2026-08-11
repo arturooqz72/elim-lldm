@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Radio, StopCircle, Mic, MicOff, Loader2, PlaySquare, Globe, Music2 } from "lucide-react";
+import { StopCircle, Mic, Loader2, PlaySquare, Globe, Music2 } from "lucide-react";
 import { RequestQueue } from "./RequestQueue";
 import { PlatformStreamCard } from "./PlatformStreamCard";
+import { RadioBroadcastPanel } from "./RadioBroadcastPanel";
 import { createClient } from "@/lib/supabase/client";
 
 type StreamPlatform = "youtube" | "facebook" | "tiktok";
@@ -41,7 +42,6 @@ const STREAM_PLATFORMS: {
 interface HostControlsProps {
   platikaId: string;
   isLive: boolean;
-  radioOutputActive: boolean;
   onGoLive?: () => void;
   onEnd?: () => void;
   onSpeakerApproved?: (token: string, wsUrl: string) => void;
@@ -50,13 +50,11 @@ interface HostControlsProps {
 export function HostControls({
   platikaId,
   isLive,
-  radioOutputActive,
   onGoLive,
   onEnd,
   onSpeakerApproved,
 }: HostControlsProps) {
   const [loading, setLoading] = useState<string | null>(null);
-  const [radioActive, setRadioActive] = useState(radioOutputActive);
   const [streamEgressIds, setStreamEgressIds] = useState<Record<StreamPlatform, string | null>>({
     youtube: null,
     facebook: null,
@@ -122,19 +120,6 @@ export function HostControls({
     try {
       await fetch(`/api/platikas/${platikaId}/end`, { method: "POST" });
       onEnd?.();
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  async function toggleRadio() {
-    setLoading("radio");
-    try {
-      const res = await fetch(`/api/platikas/${platikaId}/radio-toggle`, { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setRadioActive(data.radio_output_active);
-      }
     } finally {
       setLoading(null);
     }
@@ -212,27 +197,7 @@ export function HostControls({
             </button>
           )}
 
-          {isLive && (
-            <button
-              onClick={toggleRadio}
-              disabled={loading === "radio"}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all"
-              style={{
-                background: radioActive ? "rgba(212,160,23,0.15)" : "var(--color-surface-elevated)",
-                border: `1px solid ${radioActive ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
-                color: radioActive ? "var(--color-primary)" : "var(--color-text-muted)",
-              }}
-            >
-              {loading === "radio" ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : radioActive ? (
-                <Radio size={14} />
-              ) : (
-                <MicOff size={14} />
-              )}
-              {radioActive ? "Salida a radio: ON" : "Salida a radio: OFF"}
-            </button>
-          )}
+          {isLive && <RadioBroadcastPanel platikaId={platikaId} />}
         </div>
       </div>
 
