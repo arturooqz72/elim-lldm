@@ -1,7 +1,8 @@
 import { createServiceClient, getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Mic, Download } from "lucide-react";
+import { Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { DownloadSaludoButton } from "@/components/saludo/DownloadSaludoButton";
 import type { Profile, Saludo } from "@/types";
 
 export const metadata = { title: "Saludos — Admin" };
@@ -69,17 +70,10 @@ export default async function AdminSaludosPage() {
                 <>
                   {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                   <audio controls src={item.signedUrl} className="flex-1 min-w-0 h-9" />
-                  <a
-                    href={item.signedUrl}
-                    download={`saludo-${item.nombre}.${item.audio_path.split(".").pop()}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold shrink-0"
-                    style={{ background: "var(--color-primary)", color: "#000" }}
-                  >
-                    <Download size={13} />
-                    Descargar
-                  </a>
+                  <DownloadSaludoButton
+                    url={item.signedUrl}
+                    filename={`saludo-${item.nombre}.${item.audio_path.split(".").pop()}`}
+                  />
                 </>
               ) : (
                 <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
