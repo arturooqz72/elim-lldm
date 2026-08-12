@@ -24,6 +24,7 @@ export async function generateLiveKitToken({
     canPublish: role === "speaker" || role === "host",
     canSubscribe: true,
     canPublishData: role === "host",
+    canUpdateOwnMetadata: role === "speaker" || role === "host",
     roomAdmin: role === "host",
   };
 

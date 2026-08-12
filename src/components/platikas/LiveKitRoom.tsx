@@ -193,7 +193,7 @@ export function LiveKitRoom({
       video={isHost || isSpeaker}
       className="contents"
     >
-      <RoomLayout stage={<StagePanel />} sidebar={sidebar} />
+      <RoomLayout stage={<StagePanel isHost={isHost} isSpeaker={isSpeaker} />} sidebar={sidebar} />
     </LKRoom>
   );
 }
