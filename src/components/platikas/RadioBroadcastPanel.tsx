@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTracks } from "@livekit/components-react";
+import { useMaybeRoomContext, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square } from "lucide-react";
 import {
@@ -18,7 +18,18 @@ interface RadioBroadcastPanelProps {
   platikaId: string;
 }
 
+// LiveKitRoom.tsx renders the sidebar (and this component inside it) both
+// before a room connection exists (loading/error states) and after. useTracks
+// throws if called outside a Room context, which would crash the whole page
+// during those pre-connection states. useMaybeRoomContext never throws, so it
+// gates whether the real panel (and its useTracks call) mounts at all.
 export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
+  const room = useMaybeRoomContext();
+  if (!room) return null;
+  return <ConnectedRadioBroadcastPanel platikaId={platikaId} />;
+}
+
+function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [micOn, setMicOn] = useState(false);
