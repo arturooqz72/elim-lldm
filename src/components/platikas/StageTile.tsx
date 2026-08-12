@@ -10,7 +10,7 @@ import {
 } from "@livekit/components-react";
 import type { Participant } from "livekit-client";
 import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_IMAGE = "/icons/icon-512.png";
@@ -137,7 +137,7 @@ function CameraControls({
 
     setUploading(true);
     try {
-      const supabase = createClient();
+      const supabase = createFreshClient();
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${participantIdentity}/${Date.now()}.${ext}`;
 
