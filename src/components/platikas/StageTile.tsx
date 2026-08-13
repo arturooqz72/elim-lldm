@@ -9,7 +9,7 @@ import {
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import type { Participant } from "livekit-client";
-import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2 } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2, MonitorUp, MonitorX } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -104,13 +104,22 @@ function CameraControls({
   cameraOffImageUrl: string | null;
   participantIdentity: string;
 }) {
-  const { localParticipant, isCameraEnabled } = useLocalParticipant();
+  const { localParticipant, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function toggleCamera() {
     await localParticipant.setCameraEnabled(!isCameraEnabled);
+  }
+
+  async function toggleScreenShare() {
+    setError("");
+    try {
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, { audio: true });
+    } catch {
+      // El usuario canceló el selector de pantalla/pestaña — no es un error real
+    }
   }
 
   async function setCameraOffImage(url: string | null) {
@@ -176,6 +185,20 @@ function CameraControls({
           <Video size={13} style={{ color: "var(--color-text)" }} />
         ) : (
           <VideoOff size={13} style={{ color: "var(--color-destructive)" }} />
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={toggleScreenShare}
+        aria-label={isScreenShareEnabled ? "Dejar de compartir pantalla" : "Compartir pantalla"}
+        className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+        style={{ background: "rgba(10,10,18,0.75)" }}
+      >
+        {isScreenShareEnabled ? (
+          <MonitorX size={13} style={{ color: "var(--color-primary)" }} />
+        ) : (
+          <MonitorUp size={13} style={{ color: "var(--color-text)" }} />
         )}
       </button>
 
