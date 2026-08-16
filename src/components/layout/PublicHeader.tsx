@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, Fragment } from "react";
 import { Menu, X, Radio, Mic, Gamepad2, Archive, Sparkles, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Trophy, Mail, AudioLines } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import type { Profile } from "@/types";
 
@@ -24,6 +24,7 @@ const NAV_LINKS = [
 
 export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(initialProfile);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -48,9 +49,11 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
   }, []);
 
   async function handleSignOut() {
-    const supabase = createClient();
+    const supabase = createFreshClient();
     await supabase.auth.signOut();
+    setProfile(null);
     setUserMenuOpen(false);
+    router.refresh();
   }
 
   return (

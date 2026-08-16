@@ -18,7 +18,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const NAV = [
@@ -41,7 +41,7 @@ export function AdminSidebar() {
   const router = useRouter();
 
   async function signOut() {
-    const supabase = createClient();
+    const supabase = createFreshClient();
     await supabase.auth.signOut();
     router.push("/");
   }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { DownloadSaludoButton } from "@/components/saludo/DownloadSaludoButton";
+import { DeleteSaludoButton } from "@/components/saludo/DeleteSaludoButton";
 import type { Profile, Saludo } from "@/types";
 
 export const metadata = { title: "Saludos — Admin" };
@@ -76,10 +77,11 @@ export default async function AdminSaludosPage() {
                   />
                 </>
               ) : (
-                <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
+                <p className="flex-1 text-xs" style={{ color: "var(--color-destructive)" }}>
                   No se pudo generar el link de audio.
                 </p>
               )}
+              <DeleteSaludoButton id={item.id} nombre={item.nombre} />
             </div>
           ))}
         </div>
