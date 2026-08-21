@@ -34,6 +34,7 @@ export interface Saludo {
   nombre: string;
   audio_path: string;
   duration_seconds: number;
+  contacto: string | null;
   created_at: string;
 }
 

@@ -1,6 +1,6 @@
 import { createServiceClient, getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Mic } from "lucide-react";
+import { Mic, MessageCircleHeart } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { DownloadSaludoButton } from "@/components/saludo/DownloadSaludoButton";
 import { DeleteSaludoButton } from "@/components/saludo/DeleteSaludoButton";
@@ -10,6 +10,23 @@ export const metadata = { title: "Saludos — Admin" };
 
 const SIGNED_URL_TTL_SECONDS = 3600;
 
+function buildReplyHref(contacto: string | null, nombre: string): string | null {
+  if (!contacto) return null;
+  const trimmed = contacto.trim();
+  if (!trimmed) return null;
+
+  const message = `Hola ${nombre}, gracias por tu saludo, lo escuchamos con mucho cariño en Elim LLDM. Bendiciones.`;
+
+  if (trimmed.includes("@")) {
+    const subject = encodeURIComponent("Gracias por tu saludo — Elim LLDM");
+    return `mailto:${trimmed}?subject=${subject}&body=${encodeURIComponent(message)}`;
+  }
+
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return null;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
 export default async function AdminSaludosPage() {
   const profile = (await getProfile()) as Profile | null;
   if (!profile || profile.role !== "admin") redirect("/");
@@ -17,7 +34,7 @@ export default async function AdminSaludosPage() {
   const service = await createServiceClient();
   const { data: saludos, error: saludosError } = await service
     .from("saludos")
-    .select("id, nombre, audio_path, duration_seconds, created_at")
+    .select("id, nombre, audio_path, duration_seconds, contacto, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -81,6 +98,34 @@ export default async function AdminSaludosPage() {
                   No se pudo generar el link de audio.
                 </p>
               )}
+              {(() => {
+                const replyHref = buildReplyHref(item.contacto, item.nombre);
+                return replyHref ? (
+                  <a
+                    href={replyHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold shrink-0 transition-colors"
+                    style={{
+                      background: "rgba(212,160,23,0.12)",
+                      border: "1px solid rgba(212,160,23,0.3)",
+                      color: "var(--color-primary)",
+                    }}
+                    title={`Responder a ${item.nombre} (${item.contacto})`}
+                  >
+                    <MessageCircleHeart size={13} />
+                    Responder
+                  </a>
+                ) : (
+                  <span
+                    className="px-3 py-2 rounded-xl text-xs shrink-0"
+                    style={{ color: "var(--color-text-muted)" }}
+                    title="No dejó un correo o WhatsApp para contactarlo"
+                  >
+                    Sin contacto
+                  </span>
+                );
+              })()}
               <DeleteSaludoButton id={item.id} nombre={item.nombre} />
             </div>
           ))}

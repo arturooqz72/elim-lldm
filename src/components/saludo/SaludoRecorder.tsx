@@ -13,6 +13,7 @@ type Status = "idle" | "recording" | "recorded" | "submitting" | "success";
 
 export function SaludoRecorder() {
   const [nombre, setNombre] = useState("");
+  const [contacto, setContacto] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [touched, setTouched] = useState(false);
@@ -148,6 +149,7 @@ export function SaludoRecorder() {
       nombre: nombre.trim(),
       audio_path: path,
       duration_seconds: elapsed,
+      contacto: contacto.trim() || null,
     });
 
     if (insertError) {
@@ -167,6 +169,7 @@ export function SaludoRecorder() {
     setAudioUrl(null);
     setElapsed(0);
     setNombre("");
+    setContacto("");
     setTouched(false);
     setErrorMsg("");
     setStatus("idle");
@@ -206,6 +209,28 @@ export function SaludoRecorder() {
           onBlur={(e) => {
             e.currentTarget.style.borderColor = touched && !nombreOk ? "var(--color-destructive)" : "var(--color-border)";
           }}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+          Correo o WhatsApp (opcional)
+        </label>
+        <input
+          type="text"
+          value={contacto}
+          onChange={(e) => setContacto(e.target.value)}
+          disabled={recording || hasRecording}
+          maxLength={200}
+          placeholder="Para poder agradecerte tu saludo"
+          className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+          style={{
+            background: "var(--color-surface-elevated)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text)",
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--color-primary)"; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; }}
         />
       </div>
 
