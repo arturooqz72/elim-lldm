@@ -5,6 +5,7 @@ import { StopCircle, Mic, Loader2, PlaySquare, Globe, Music2 } from "lucide-reac
 import { RequestQueue } from "./RequestQueue";
 import { PlatformStreamCard } from "./PlatformStreamCard";
 import { RadioBroadcastPanel } from "./RadioBroadcastPanel";
+import { SpeakerControls } from "./SpeakerControls";
 import { createClient } from "@/lib/supabase/client";
 
 type StreamPlatform = "youtube" | "facebook" | "tiktok";
@@ -230,6 +231,9 @@ export function HostControls({
           </div>
         </div>
       )}
+
+      {/* Speakers on stage — mute/remove guests — only visible when live */}
+      {isLive && <SpeakerControls platikaId={platikaId} />}
 
       {/* Request queue — only visible when live */}
       {isLive && (
