@@ -11,6 +11,7 @@ import {
 import type { Participant } from "livekit-client";
 import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2, MonitorUp, MonitorX } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
+import { AudioLevelMeter } from "./AudioLevelMeter";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_IMAGE = "/icons/icon-512.png";
@@ -104,13 +105,18 @@ function CameraControls({
   cameraOffImageUrl: string | null;
   participantIdentity: string;
 }) {
-  const { localParticipant, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { localParticipant, isCameraEnabled, isScreenShareEnabled, isMicrophoneEnabled, microphoneTrack } =
+    useLocalParticipant();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function toggleCamera() {
     await localParticipant.setCameraEnabled(!isCameraEnabled);
+  }
+
+  async function toggleMic() {
+    await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
   }
 
   async function toggleScreenShare() {
@@ -173,6 +179,29 @@ function CameraControls({
         className="hidden"
         onChange={handleFileSelected}
       />
+
+      <button
+        type="button"
+        onClick={toggleMic}
+        aria-label={isMicrophoneEnabled ? "Apagar micrófono" : "Encender micrófono"}
+        className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+        style={{ background: "rgba(10,10,18,0.75)" }}
+      >
+        {isMicrophoneEnabled ? (
+          <Mic size={13} style={{ color: "var(--color-text)" }} />
+        ) : (
+          <MicOff size={13} style={{ color: "var(--color-destructive)" }} />
+        )}
+      </button>
+
+      {isMicrophoneEnabled && (
+        <div
+          className="h-7 px-1.5 rounded-full flex items-center backdrop-blur-sm"
+          style={{ background: "rgba(10,10,18,0.75)" }}
+        >
+          <AudioLevelMeter track={microphoneTrack?.track?.mediaStreamTrack} height={10} />
+        </div>
+      )}
 
       <button
         type="button"

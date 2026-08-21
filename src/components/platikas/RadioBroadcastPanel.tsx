@@ -11,6 +11,7 @@ import {
   startStreamingToBridge,
 } from "@/lib/radio-broadcast";
 import { createClient } from "@/lib/supabase/client";
+import { AudioLevelMeter } from "./AudioLevelMeter";
 
 type Status = "idle" | "connecting" | "live" | "error";
 
@@ -43,6 +44,7 @@ function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
   const pcTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const micTracks = useTracks([{ source: Track.Source.Microphone, withPlaceholder: false }]);
+  const localMicTrack = micTracks.find((t) => t.participant.isLocal)?.publication?.track?.mediaStreamTrack;
 
   function cleanup() {
     recorderRef.current?.stop();
@@ -232,7 +234,13 @@ function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
         </button>
       </div>
 
-      <SourceToggle icon={Mic} label="Mi micrófono" active={micOn} onToggle={() => setMicOn((v) => !v)} />
+      <SourceToggle
+        icon={Mic}
+        label="Mi micrófono"
+        active={micOn}
+        onToggle={() => setMicOn((v) => !v)}
+        meterTrack={micOn ? localMicTrack : null}
+      />
       <SourceToggle icon={Users} label="Sala completa" active={roomOn} onToggle={() => setRoomOn((v) => !v)} />
       <SourceToggle
         icon={MonitorSpeaker}
@@ -240,6 +248,7 @@ function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
         active={pcOn}
         loading={pcLoading}
         onToggle={togglePc}
+        meterTrack={pcOn ? pcTrackRef.current : null}
       />
 
       {errorMsg && (
@@ -257,12 +266,14 @@ function SourceToggle({
   active,
   loading,
   onToggle,
+  meterTrack,
 }: {
   icon: React.ComponentType<{ size?: number }>;
   label: string;
   active: boolean;
   loading?: boolean;
   onToggle: () => void;
+  meterTrack?: MediaStreamTrack | null;
 }) {
   return (
     <button
@@ -280,19 +291,24 @@ function SourceToggle({
         <Icon size={13} />
         {label}
       </span>
-      {loading ? (
-        <Loader2 size={12} className="animate-spin" />
-      ) : (
-        <span
-          className="w-8 h-4 rounded-full relative transition-colors"
-          style={{ background: active ? "var(--color-primary)" : "var(--color-border)" }}
-        >
+      <span className="flex items-center gap-2">
+        {meterTrack !== undefined && meterTrack !== null && (
+          <AudioLevelMeter track={meterTrack} height={11} activeColor="var(--color-primary)" />
+        )}
+        {loading ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : (
           <span
-            className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform"
-            style={{ left: active ? "18px" : "2px" }}
-          />
-        </span>
-      )}
+            className="w-8 h-4 rounded-full relative transition-colors shrink-0"
+            style={{ background: active ? "var(--color-primary)" : "var(--color-border)" }}
+          >
+            <span
+              className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform"
+              style={{ left: active ? "18px" : "2px" }}
+            />
+          </span>
+        )}
+      </span>
     </button>
   );
 }
