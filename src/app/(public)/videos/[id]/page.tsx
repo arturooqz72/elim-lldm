@@ -33,7 +33,7 @@ export default async function VideoDetailPage({ params }: Props) {
 
   const { data: item } = await supabase
     .from("videos")
-    .select("*, video_categories(id, name, slug)")
+    .select("*, video_categories(id, name, slug), profiles!videos_created_by_fkey(display_name, avatar_url)")
     .eq("id", id)
     .single();
 
@@ -52,6 +52,7 @@ export default async function VideoDetailPage({ params }: Props) {
     published_at: string | null;
     tags: string[];
     video_categories: { id: string; name: string; slug: string } | null;
+    profiles: { display_name: string; avatar_url: string | null } | null;
   };
 
   // Increment view count in the background (no-op if not approved yet)
@@ -123,6 +124,30 @@ export default async function VideoDetailPage({ params }: Props) {
           <h1 className="text-2xl md:text-3xl font-bold" style={{ color: "var(--color-text)" }}>
             {record.title}
           </h1>
+
+          {/* Uploader */}
+          {record.profiles && (
+            <div className="flex items-center gap-2">
+              {record.profiles.avatar_url ? (
+                <img
+                  src={record.profiles.avatar_url}
+                  alt={record.profiles.display_name}
+                  className="w-6 h-6 rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ background: "var(--color-primary)", color: "#000" }}
+                >
+                  {record.profiles.display_name?.[0]?.toUpperCase() ?? "?"}
+                </div>
+              )}
+              <span className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                Compartido por{" "}
+                <span style={{ color: "var(--color-text)" }}>{record.profiles.display_name}</span>
+              </span>
+            </div>
+          )}
 
           {/* Stats row */}
           <div className="flex flex-wrap items-center gap-4">

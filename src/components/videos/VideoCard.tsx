@@ -13,6 +13,7 @@ interface VideoListItem {
   view_count: number;
   tags: string[];
   video_categories: { id: string; name: string; slug: string } | null;
+  profiles: { display_name: string; avatar_url: string | null } | null;
 }
 
 export function VideoCard({
@@ -100,6 +101,28 @@ export function VideoCard({
           <p className="text-xs line-clamp-2" style={{ color: "var(--color-text-muted)" }}>
             {item.description}
           </p>
+        )}
+
+        {item.profiles && (
+          <div className="flex items-center gap-1.5">
+            {item.profiles.avatar_url ? (
+              <img
+                src={item.profiles.avatar_url}
+                alt={item.profiles.display_name}
+                className="w-4 h-4 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                style={{ background: "var(--color-primary)", color: "#000" }}
+              >
+                {item.profiles.display_name?.[0]?.toUpperCase() ?? "?"}
+              </div>
+            )}
+            <span className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
+              Compartido por {item.profiles.display_name}
+            </span>
+          </div>
         )}
 
         <div className="flex items-center justify-between mt-auto pt-1">
