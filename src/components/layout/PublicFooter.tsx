@@ -29,17 +29,24 @@ export function PublicFooter() {
             { href: "/juegos", label: "Juegos" },
             { href: "/archivo", label: "Archivo" },
             { href: "/contacto", label: "Contáctanos" },
-            { href: "/saludo", label: "Saludo en audio" },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-sm transition-colors"
-              style={{ color: "var(--color-text-muted)" }}
-            >
-              {label}
-            </Link>
-          ))}
+            { href: "/saludo", label: "Saludos para la radio en audio" },
+          ].map(({ href, label }) => {
+            const isSaludo = href === "/saludo";
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="text-sm transition-colors"
+                style={{
+                  color: isSaludo ? "var(--color-primary)" : "var(--color-text-muted)",
+                  fontWeight: isSaludo ? 700 : 400,
+                  textShadow: isSaludo ? "0 0 14px rgba(212,160,23,0.55)" : "none",
+                }}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </nav>
 
         <p style={{ color: "var(--color-text-muted)", fontSize: "12px" }}>

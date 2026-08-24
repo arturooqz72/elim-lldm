@@ -19,7 +19,7 @@ const NAV_LINKS = [
   { href: "/videos", label: "Videos", icon: Video },
   { href: "/elim-ia", label: "Elim IA", icon: Bot },
   { href: "/contacto", label: "Contáctanos", icon: Mail },
-  { href: "/saludo", label: "Saludo en audio", icon: AudioLines },
+  { href: "/saludo", label: "Saludos para la radio en audio", icon: AudioLines },
 ];
 
 export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
@@ -79,14 +79,17 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
         <nav className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
+            const isSaludo = href === "/saludo";
             return (
               <Fragment key={href}>
                 <Link
                   href={href}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
                   style={{
-                    color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                    color: isSaludo || active ? "var(--color-primary)" : "var(--color-text-muted)",
                     background: active ? "rgba(212,160,23,0.1)" : "transparent",
+                    fontWeight: isSaludo ? 700 : 500,
+                    textShadow: isSaludo ? "0 0 14px rgba(212,160,23,0.55)" : "none",
                   }}
                 >
                   <Icon size={15} />
@@ -213,14 +216,17 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
         >
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
+            const isSaludo = href === "/saludo";
             return (
               <div key={href} className="flex items-center gap-2">
                 <Link
                   href={href}
-                  className="flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
+                  className="flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm"
                   style={{
-                    color: active ? "var(--color-primary)" : "var(--color-text)",
+                    color: isSaludo || active ? "var(--color-primary)" : "var(--color-text)",
                     background: active ? "rgba(212,160,23,0.1)" : "transparent",
+                    fontWeight: isSaludo ? 700 : 500,
+                    textShadow: isSaludo ? "0 0 14px rgba(212,160,23,0.55)" : "none",
                   }}
                   onClick={() => setMobileOpen(false)}
                 >
