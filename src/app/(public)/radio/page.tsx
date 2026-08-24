@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { getNowPlaying } from "@/lib/azuracast/api";
 import { RadioPlayer } from "@/components/radio/RadioPlayer";
-import { Radio, Wifi } from "lucide-react";
+import { Radio, Wifi, AudioLines, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -96,6 +97,31 @@ export default async function RadioPage() {
               </p>
             </div>
           )}
+
+          {/* Saludos promo */}
+          <Link
+            href="/saludo"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200"
+            style={{
+              background: "rgba(212,160,23,0.1)",
+              border: "1px solid rgba(212,160,23,0.35)",
+            }}
+          >
+            <AudioLines size={18} style={{ color: "var(--color-primary)" }} className="shrink-0" />
+            <p className="text-sm flex-1" style={{ color: "var(--color-text)" }}>
+              <span
+                style={{
+                  color: "var(--color-primary)",
+                  fontWeight: 700,
+                  textShadow: "0 0 12px rgba(212,160,23,0.5)",
+                }}
+              >
+                Saludos para la Radio
+              </span>{" "}
+              — graba un saludo en audio y podría sonar aquí
+            </p>
+            <ChevronRight size={16} style={{ color: "var(--color-primary)" }} className="shrink-0" />
+          </Link>
         </div>
       </div>
 

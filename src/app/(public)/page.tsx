@@ -74,10 +74,7 @@ export default async function LandingPage() {
         .archive-play-overlay { opacity: 0; transition: opacity 0.2s ease; }
         .platika-row { transition: background 0.15s ease; }
         .platika-row:hover { background: rgba(212,160,23,0.05) !important; }
-        .saludo-promo { transition: border-color 0.2s ease, transform 0.2s ease; }
-        .saludo-promo:hover { border-color: rgba(212,160,23,0.65) !important; transform: translateY(-2px); }
-        .saludo-promo-btn { transition: box-shadow 0.2s ease; }
-        .saludo-promo:hover .saludo-promo-btn { box-shadow: 0 0 20px rgba(212,160,23,0.45); }
+        .feature-card-highlight:hover { box-shadow: 0 0 28px rgba(212,160,23,0.25) !important; }
       `}</style>
 
       <div style={{ background: "var(--color-bg)" }}>
@@ -239,7 +236,7 @@ export default async function LandingPage() {
         {/* ── FEATURE CARDS ────────────────────────────────────────── */}
         <section className="px-4 py-14">
           <div className="max-w-5xl mx-auto">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
                 {
                   icon: Radio,
@@ -248,6 +245,15 @@ export default async function LandingPage() {
                     "Transmisión continua 24/7 de música cristiana y mensajes espirituales desde cualquier parte del mundo.",
                   href: "/radio",
                   cta: "Escuchar",
+                },
+                {
+                  icon: AudioLines,
+                  title: "Saludos para la Radio",
+                  description:
+                    "Graba un saludo en audio desde tu navegador y podría sonar en Elim LLDM Radio.",
+                  href: "/saludo",
+                  cta: "Grabar mi saludo",
+                  highlight: true,
                 },
                 {
                   icon: Mic,
@@ -273,24 +279,30 @@ export default async function LandingPage() {
                   href: "/archivo",
                   cta: "Explorar",
                 },
-              ].map(({ icon: Icon, title, description, href, cta }) => (
+              ].map(({ icon: Icon, title, description, href, cta, highlight }) => (
                 <Link
                   key={href}
                   href={href}
-                  className="feature-card group rounded-2xl p-6 flex flex-col gap-4"
+                  className={`feature-card group rounded-2xl p-6 flex flex-col gap-4 ${highlight ? "feature-card-highlight" : ""}`}
                   style={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
+                    background: highlight ? "rgba(212,160,23,0.08)" : "var(--color-surface)",
+                    border: `1px solid ${highlight ? "rgba(212,160,23,0.45)" : "var(--color-border)"}`,
                   }}
                 >
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(212,160,23,0.1)" }}
+                    style={{ background: highlight ? "rgba(212,160,23,0.22)" : "rgba(212,160,23,0.1)" }}
                   >
                     <Icon size={20} style={{ color: "var(--color-primary)" }} />
                   </div>
                   <div className="flex flex-col gap-2 flex-1">
-                    <h3 className="font-semibold" style={{ color: "var(--color-text)" }}>
+                    <h3
+                      className="font-semibold"
+                      style={{
+                        color: highlight ? "var(--color-primary)" : "var(--color-text)",
+                        textShadow: highlight ? "0 0 14px rgba(212,160,23,0.5)" : "none",
+                      }}
+                    >
                       {title}
                     </h3>
                     <p
@@ -310,61 +322,6 @@ export default async function LandingPage() {
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* ── SALUDOS PROMO ────────────────────────────────────────── */}
-        <section className="px-4 pb-14">
-          <div className="max-w-5xl mx-auto">
-            <Link
-              href="/saludo"
-              className="saludo-promo relative flex flex-col sm:flex-row items-center gap-5 rounded-2xl px-6 py-6 sm:py-7 overflow-hidden"
-              style={{
-                background: "rgba(212,160,23,0.06)",
-                border: "1px solid rgba(212,160,23,0.35)",
-              }}
-            >
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 60% 90% at 0% 50%, rgba(212,160,23,0.15) 0%, transparent 70%)",
-                }}
-              />
-              <div
-                className="relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-                style={{
-                  background: "rgba(212,160,23,0.15)",
-                  border: "1px solid rgba(212,160,23,0.3)",
-                }}
-              >
-                <AudioLines size={26} style={{ color: "var(--color-primary)" }} />
-              </div>
-
-              <div className="relative z-10 flex-1 min-w-0 text-center sm:text-left">
-                <h3
-                  className="text-xl md:text-2xl font-bold"
-                  style={{
-                    color: "var(--color-primary)",
-                    textShadow: "0 0 16px rgba(212,160,23,0.5)",
-                  }}
-                >
-                  Saludos para la radio en audio
-                </h3>
-                <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
-                  Graba un saludo de hasta 60 segundos desde tu navegador y podría sonar en
-                  Elim LLDM Radio.
-                </p>
-              </div>
-
-              <span
-                className="saludo-promo-btn relative z-10 shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm"
-                style={{ background: "var(--color-primary)", color: "#000" }}
-              >
-                Grabar mi saludo
-                <ChevronRight size={15} />
-              </span>
-            </Link>
           </div>
         </section>
 
