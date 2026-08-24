@@ -19,7 +19,7 @@ const NAV_LINKS = [
   { href: "/videos", label: "Videos", icon: Video },
   { href: "/elim-ia", label: "Elim IA", icon: Bot },
   { href: "/contacto", label: "Contáctanos", icon: Mail },
-  { href: "/saludo", label: "Saludos para la radio en audio", icon: AudioLines },
+  { href: "/saludo", label: "Saludos", icon: AudioLines },
 ];
 
 export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
