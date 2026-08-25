@@ -37,6 +37,8 @@ interface FileItem {
 const ACCEPTED_EXTENSIONS = [".mp3", ".m4a", ".wav", ".ogg", ".aac", ".flac", ".opus"];
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(",");
 const MAX_CONCURRENT_UPLOADS = 3;
+const MAX_FILE_SIZE_MB = 500;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 function isAudioFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -72,39 +74,38 @@ function getAudioDuration(file: File): Promise<number> {
   });
 }
 
-function storagePath(path: string): string {
-  return path.split("/").map(encodeURIComponent).join("/");
+async function sha1Hex(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-1", buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-function uploadWithProgress(
-  url: string,
-  formData: FormData,
-  headers: Record<string, string>,
+function uploadToB2WithProgress(
+  uploadUrl: string,
+  authorizationToken: string,
+  file: File,
+  fileName: string,
+  sha1: string,
   onProgress: (pct: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("Authorization", authorizationToken);
+    xhr.setRequestHeader("X-Bz-File-Name", encodeURIComponent(fileName));
+    xhr.setRequestHeader("Content-Type", file.type || "b2/x-auto");
+    xhr.setRequestHeader("X-Bz-Content-Sha1", sha1);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-        return;
-      }
-      let message = `Error ${xhr.status} al subir el archivo`;
-      try {
-        const body = JSON.parse(xhr.responseText) as { message?: string; error?: string };
-        message = body.message || body.error || message;
-      } catch {
-        // respuesta no es JSON, usar mensaje genérico
-      }
-      reject(new Error(message));
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Error ${xhr.status} al subir el archivo a Backblaze`));
     };
     xhr.onerror = () => reject(new Error("Error de red al subir el archivo"));
-    xhr.send(formData);
+    xhr.send(file);
   });
 }
 
@@ -179,8 +180,9 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   function addFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
     const incoming = Array.from(fileList);
-    const accepted = incoming.filter(isAudioFile);
-    const rejected = incoming.length - accepted.length;
+    const wrongFormat = incoming.filter((f) => !isAudioFile(f)).length;
+    const tooLarge = incoming.filter((f) => isAudioFile(f) && f.size > MAX_FILE_SIZE_BYTES).length;
+    const accepted = incoming.filter((f) => isAudioFile(f) && f.size <= MAX_FILE_SIZE_BYTES);
 
     if (accepted.length > 0) {
       const newItems: FileItem[] = accepted.map((file) => ({
@@ -193,11 +195,16 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
       setItems((prev) => [...prev, ...newItems]);
     }
 
-    setFormError(
-      rejected > 0
-        ? `Se ignoraron ${rejected} archivo${rejected === 1 ? "" : "s"} con formato no permitido. Formatos aceptados: ${ACCEPTED_EXTENSIONS.join(", ")}`
-        : null
-    );
+    const problems: string[] = [];
+    if (wrongFormat > 0) {
+      problems.push(
+        `${wrongFormat} archivo${wrongFormat === 1 ? "" : "s"} con formato no permitido. Formatos aceptados: ${ACCEPTED_EXTENSIONS.join(", ")}`
+      );
+    }
+    if (tooLarge > 0) {
+      problems.push(`${tooLarge} archivo${tooLarge === 1 ? "" : "s"} supera el máximo de ${MAX_FILE_SIZE_MB} MB`);
+    }
+    setFormError(problems.length > 0 ? `Se ignoraron algunos archivos: ${problems.join("; ")}` : null);
   }
 
   function updateTitle(id: string, title: string) {
@@ -297,9 +304,6 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   async function uploadOne(
     item: FileItem,
     ctx: {
-      accessToken: string;
-      anonKey: string;
-      storageUrl: string;
       singleFile: boolean;
       artistId: string | null;
       categoryId: string | null;
@@ -309,24 +313,42 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     try {
       const duration_seconds = await getAudioDuration(item.file);
 
-      const path = `tracks/${Date.now()}-${item.file.name}`;
-      const formData = new FormData();
-      formData.append("cacheControl", "3600");
-      formData.append("", item.file);
+      const initRes = await fetch("/api/elimplay/b2-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: item.file.name }),
+      });
+      const initData = (await initRes.json()) as {
+        uploadUrl?: string;
+        authorizationToken?: string;
+        fileName?: string;
+        publicUrl?: string;
+        error?: string;
+      };
+      if (
+        !initRes.ok ||
+        !initData.uploadUrl ||
+        !initData.authorizationToken ||
+        !initData.fileName ||
+        !initData.publicUrl
+      ) {
+        throw new Error(initData.error || "No se pudo iniciar la subida del audio.");
+      }
 
-      await uploadWithProgress(
-        `${ctx.storageUrl}/object/audio-tracks/${storagePath(path)}`,
-        formData,
-        {
-          Authorization: `Bearer ${ctx.accessToken}`,
-          apikey: ctx.anonKey,
-          "x-upsert": "false",
-        },
+      const sha1 = await sha1Hex(item.file);
+
+      await uploadToB2WithProgress(
+        initData.uploadUrl,
+        initData.authorizationToken,
+        item.file,
+        initData.fileName,
+        sha1,
         (pct) => patchItem(item.id, { progress: pct })
       );
 
+      const audioUrl = initData.publicUrl;
+
       const supabase = createClient();
-      const { data: urlData } = supabase.storage.from("audio-tracks").getPublicUrl(path);
 
       let cover_url: string | null = null;
       if (ctx.singleFile && coverFile) {
@@ -345,7 +367,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
         title: item.title.trim() || item.file.name,
         artist_id: ctx.artistId,
         description: null,
-        audio_url: urlData.publicUrl,
+        audio_url: audioUrl,
         cover_url,
         duration_seconds: duration_seconds || null,
         category_id: ctx.categoryId,
@@ -374,13 +396,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1`
-      : undefined;
-
-    if (!accessToken || !anonKey || !storageUrl) {
+    if (!session) {
       setFormError("No se pudo iniciar la subida: sesión inválida.");
       setIsUploading(false);
       return;
@@ -398,9 +414,6 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     }
 
     const ctx = {
-      accessToken,
-      anonKey,
-      storageUrl,
       singleFile: items.length === 1,
       artistId: resolvedArtistId,
       categoryId: resolvedCategoryId,
@@ -477,7 +490,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
             : "Arrastra audios aquí o haz clic para seleccionar (varios a la vez)"}
         </span>
         <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          Formatos: {ACCEPTED_EXTENSIONS.join(", ")}
+          Formatos: {ACCEPTED_EXTENSIONS.join(", ")} · máximo {MAX_FILE_SIZE_MB} MB
         </span>
         <input
           ref={fileInputRef}
