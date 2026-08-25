@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-export const CATEGORY_NEW = "__new__";
+import { CATEGORY_NEW } from "./newEntitySentinels";
 
 const inputStyle = {
   background: "var(--color-surface-elevated)",

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import type { Artist } from "@/types";
-
-export const ARTIST_NEW = "__new__";
+import { ARTIST_NEW } from "./newEntitySentinels";
 
 const inputStyle = {
   background: "var(--color-surface-elevated)",
