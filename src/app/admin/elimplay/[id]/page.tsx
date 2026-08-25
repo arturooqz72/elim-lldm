@@ -63,8 +63,12 @@ export default async function EditAudioTrackPage({ params }: Props) {
     "use server";
     const service = await createServiceClient();
 
+    const rawCategoryId = formData.get("category_id");
     const debugInfo = JSON.stringify({
-      category_id: formData.get("category_id"),
+      category_id: rawCategoryId,
+      CATEGORY_NEW_value: CATEGORY_NEW,
+      CATEGORY_NEW_type: typeof CATEGORY_NEW,
+      strictEqual: rawCategoryId === CATEGORY_NEW,
       new_category_name: formData.get("new_category_name"),
       artist_id: formData.get("artist_id"),
       new_artist_name: formData.get("new_artist_name"),
