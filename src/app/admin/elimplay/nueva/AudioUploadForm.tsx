@@ -11,6 +11,17 @@ interface AudioUploadFormProps {
 }
 
 const ARTIST_NEW = "__new__";
+const CATEGORY_NEW = "__new__";
+
+function slugify(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 type FileStatus = "pending" | "uploading" | "done" | "error";
 
@@ -110,6 +121,8 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   const [items, setItems] = useState<FileItem[]>([]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [categoryId, setCategoryId] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [localCategories, setLocalCategories] = useState(categories);
   const [artistId, setArtistId] = useState("");
   const [newArtistName, setNewArtistName] = useState("");
   const [artistPhoto, setArtistPhoto] = useState<File | null>(null);
@@ -241,9 +254,56 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     return resolvedId;
   }
 
+  async function resolveCategoryId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+    if (!categoryId) return null;
+    if (categoryId !== CATEGORY_NEW) return categoryId;
+
+    const name = newCategoryName.trim();
+    if (!name) return null;
+
+    const { data: existing } = await supabase
+      .from("audio_categories")
+      .select("id")
+      .ilike("name", name)
+      .maybeSingle();
+    if (existing) return existing.id;
+
+    const baseSlug = slugify(name) || "categoria";
+    let slug = baseSlug;
+    let suffix = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { data: slugMatch } = await supabase
+        .from("audio_categories")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (!slugMatch) break;
+      suffix++;
+      slug = `${baseSlug}-${suffix}`;
+    }
+
+    const { data: created, error } = await supabase
+      .from("audio_categories")
+      .insert({ name, slug, order_index: localCategories.length })
+      .select("id, name")
+      .single();
+    if (error) throw new Error(error.message);
+
+    setLocalCategories((prev) => [...prev, { id: created.id, name: created.name }]);
+    return created.id;
+  }
+
   async function uploadOne(
     item: FileItem,
-    ctx: { accessToken: string; anonKey: string; storageUrl: string; singleFile: boolean; artistId: string | null }
+    ctx: {
+      accessToken: string;
+      anonKey: string;
+      storageUrl: string;
+      singleFile: boolean;
+      artistId: string | null;
+      categoryId: string | null;
+    }
   ) {
     patchItem(item.id, { status: "uploading", progress: 0, error: undefined });
     try {
@@ -288,7 +348,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
         audio_url: urlData.publicUrl,
         cover_url,
         duration_seconds: duration_seconds || null,
-        category_id: categoryId || null,
+        category_id: ctx.categoryId,
         tags: tagList,
         is_published: isPublished,
         published_at: isPublished ? new Date().toISOString() : null,
@@ -327,15 +387,24 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     }
 
     let resolvedArtistId: string | null = null;
+    let resolvedCategoryId: string | null = null;
     try {
       resolvedArtistId = await resolveArtistId(supabase);
+      resolvedCategoryId = await resolveCategoryId(supabase);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Error al guardar el artista");
+      setFormError(err instanceof Error ? err.message : "Error al guardar el artista o la categoría");
       setIsUploading(false);
       return;
     }
 
-    const ctx = { accessToken, anonKey, storageUrl, singleFile: items.length === 1, artistId: resolvedArtistId };
+    const ctx = {
+      accessToken,
+      anonKey,
+      storageUrl,
+      singleFile: items.length === 1,
+      artistId: resolvedArtistId,
+      categoryId: resolvedCategoryId,
+    };
     const queue = [...items];
     let nextIndex = 0;
 
@@ -525,11 +594,12 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
             style={inputStyle}
           >
             <option value="">Sin categoría</option>
-            {categories.map((c) => (
+            {localCategories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
+            <option value={CATEGORY_NEW}>+ Nueva categoría...</option>
           </select>
         </Field>
 
@@ -551,6 +621,21 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
           </select>
         </Field>
       </div>
+
+      {categoryId === CATEGORY_NEW && (
+        <Field label="Nombre de la nueva categoría" required>
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            disabled={isUploading}
+            maxLength={60}
+            placeholder="Ej: Testimonios"
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            style={inputStyle}
+          />
+        </Field>
+      )}
 
       {artistId === ARTIST_NEW && (
         <div className="grid grid-cols-2 gap-3">
