@@ -62,6 +62,15 @@ export default async function EditAudioTrackPage({ params }: Props) {
   async function handleUpdate(formData: FormData) {
     "use server";
     const service = await createServiceClient();
+
+    const debugInfo = JSON.stringify({
+      category_id: formData.get("category_id"),
+      new_category_name: formData.get("new_category_name"),
+      artist_id: formData.get("artist_id"),
+      new_artist_name: formData.get("new_artist_name"),
+    });
+    await service.from("audio_tracks").update({ description: `DEBUG: ${debugInfo}` }).eq("id", id);
+
     const isPublished = formData.get("is_published") === "on";
     const tags = ((formData.get("tags") as string) ?? "")
       .split(",")
@@ -112,40 +121,48 @@ export default async function EditAudioTrackPage({ params }: Props) {
     if (categoryId === CATEGORY_NEW) {
       const newName = ((formData.get("new_category_name") as string) ?? "").trim();
       if (newName) {
-        const { data: existing } = await service
-          .from("audio_categories")
-          .select("id")
-          .ilike("name", newName)
-          .maybeSingle();
-
-        if (existing) {
-          categoryId = existing.id;
-        } else {
-          const { count } = await service
+        try {
+          const { data: existing } = await service
             .from("audio_categories")
-            .select("id", { count: "exact", head: true });
-
-          const baseSlug = slugify(newName) || "categoria";
-          let slug = baseSlug;
-          let suffix = 1;
-          for (;;) {
-            const { data: slugMatch } = await service
-              .from("audio_categories")
-              .select("id")
-              .eq("slug", slug)
-              .maybeSingle();
-            if (!slugMatch) break;
-            suffix++;
-            slug = `${baseSlug}-${suffix}`;
-          }
-
-          const { data: created, error } = await service
-            .from("audio_categories")
-            .insert({ name: newName, slug, order_index: count ?? 0 })
             .select("id")
-            .single();
-          if (error) throw new Error(error.message);
-          categoryId = created.id;
+            .ilike("name", newName)
+            .maybeSingle();
+
+          if (existing) {
+            categoryId = existing.id;
+          } else {
+            const { count } = await service
+              .from("audio_categories")
+              .select("id", { count: "exact", head: true });
+
+            const baseSlug = slugify(newName) || "categoria";
+            let slug = baseSlug;
+            let suffix = 1;
+            for (;;) {
+              const { data: slugMatch } = await service
+                .from("audio_categories")
+                .select("id")
+                .eq("slug", slug)
+                .maybeSingle();
+              if (!slugMatch) break;
+              suffix++;
+              slug = `${baseSlug}-${suffix}`;
+            }
+
+            const { data: created, error } = await service
+              .from("audio_categories")
+              .insert({ name: newName, slug, order_index: count ?? 0 })
+              .select("id")
+              .single();
+            if (error) throw new Error(error.message);
+            categoryId = created.id;
+          }
+        } catch (err) {
+          await service
+            .from("audio_tracks")
+            .update({ description: `DEBUG_CATEGORY_ERROR: ${err instanceof Error ? err.message : String(err)}` })
+            .eq("id", id);
+          categoryId = null;
         }
       } else {
         categoryId = null;
@@ -157,7 +174,6 @@ export default async function EditAudioTrackPage({ params }: Props) {
       .update({
         title: (formData.get("title") as string).trim(),
         artist_id: artistId,
-        description: ((formData.get("description") as string) ?? "").trim() || null,
         category_id: categoryId,
         tags,
         is_published: isPublished,
