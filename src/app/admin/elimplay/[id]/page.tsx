@@ -122,38 +122,33 @@ export default async function EditAudioTrackPage({ params }: Props) {
       const newName = ((formData.get("new_category_name") as string) ?? "").trim();
       if (newName) {
         try {
-          const { data: existing } = await service
+          await service.from("audio_tracks").update({ description: "DEBUG_STEP: before existing check" }).eq("id", id);
+          const { data: existing, error: existingErr } = await service
             .from("audio_categories")
             .select("id")
             .ilike("name", newName)
             .maybeSingle();
+          await service
+            .from("audio_tracks")
+            .update({ description: `DEBUG_STEP: existing=${JSON.stringify(existing)} err=${JSON.stringify(existingErr)}` })
+            .eq("id", id);
 
           if (existing) {
             categoryId = existing.id;
           } else {
-            const { count } = await service
-              .from("audio_categories")
-              .select("id", { count: "exact", head: true });
-
             const baseSlug = slugify(newName) || "categoria";
-            let slug = baseSlug;
-            let suffix = 1;
-            for (;;) {
-              const { data: slugMatch } = await service
-                .from("audio_categories")
-                .select("id")
-                .eq("slug", slug)
-                .maybeSingle();
-              if (!slugMatch) break;
-              suffix++;
-              slug = `${baseSlug}-${suffix}`;
-            }
 
             const { data: created, error } = await service
               .from("audio_categories")
-              .insert({ name: newName, slug, order_index: count ?? 0 })
+              .insert({ name: newName, slug: baseSlug })
               .select("id")
               .single();
+
+            await service
+              .from("audio_tracks")
+              .update({ description: `DEBUG_STEP: created=${JSON.stringify(created)} err=${JSON.stringify(error)}` })
+              .eq("id", id);
+
             if (error) throw new Error(error.message);
             categoryId = created.id;
           }
