@@ -4,9 +4,20 @@ import { revalidatePath } from "next/cache";
 import { ArrowLeft, Music, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { ArtistPicker, ARTIST_NEW } from "./ArtistPicker";
+import { CategoryPicker, CATEGORY_NEW } from "./CategoryPicker";
 import type { Artist } from "@/types";
 
 export const metadata = { title: "Editar audio — Admin" };
+
+function slugify(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -96,13 +107,58 @@ export default async function EditAudioTrackPage({ params }: Props) {
       }
     }
 
+    let categoryId = (formData.get("category_id") as string) || null;
+
+    if (categoryId === CATEGORY_NEW) {
+      const newName = ((formData.get("new_category_name") as string) ?? "").trim();
+      if (newName) {
+        const { data: existing } = await service
+          .from("audio_categories")
+          .select("id")
+          .ilike("name", newName)
+          .maybeSingle();
+
+        if (existing) {
+          categoryId = existing.id;
+        } else {
+          const { count } = await service
+            .from("audio_categories")
+            .select("id", { count: "exact", head: true });
+
+          const baseSlug = slugify(newName) || "categoria";
+          let slug = baseSlug;
+          let suffix = 1;
+          for (;;) {
+            const { data: slugMatch } = await service
+              .from("audio_categories")
+              .select("id")
+              .eq("slug", slug)
+              .maybeSingle();
+            if (!slugMatch) break;
+            suffix++;
+            slug = `${baseSlug}-${suffix}`;
+          }
+
+          const { data: created, error } = await service
+            .from("audio_categories")
+            .insert({ name: newName, slug, order_index: count ?? 0 })
+            .select("id")
+            .single();
+          if (error) throw new Error(error.message);
+          categoryId = created.id;
+        }
+      } else {
+        categoryId = null;
+      }
+    }
+
     await service
       .from("audio_tracks")
       .update({
         title: (formData.get("title") as string).trim(),
         artist_id: artistId,
         description: ((formData.get("description") as string) ?? "").trim() || null,
-        category_id: (formData.get("category_id") as string) || null,
+        category_id: categoryId,
         tags,
         is_published: isPublished,
         published_at: isPublished ? new Date().toISOString() : null,
@@ -198,24 +254,7 @@ export default async function EditAudioTrackPage({ params }: Props) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
-            Categoría
-          </label>
-          <select
-            name="category_id"
-            defaultValue={a.category_id ?? ""}
-            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-            style={inputStyle}
-          >
-            <option value="">Sin categoría</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CategoryPicker categories={categories} defaultCategoryId={a.category_id ?? ""} />
 
         <div>
           <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
