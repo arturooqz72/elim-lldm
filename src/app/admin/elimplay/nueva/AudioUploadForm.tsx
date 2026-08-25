@@ -63,14 +63,37 @@ function formatFileSize(bytes: number): string {
 
 function getAudioDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
+    let settled = false;
     const audio = document.createElement("audio");
-    audio.preload = "metadata";
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(audio.src);
-      resolve(Math.round(audio.duration) || 0);
+    const objectUrl = URL.createObjectURL(file);
+    const finish = (value: number) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(objectUrl);
+      resolve(value);
     };
-    audio.onerror = () => resolve(0);
-    audio.src = URL.createObjectURL(file);
+    const timer = setTimeout(() => finish(0), 15000);
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => finish(Math.round(audio.duration) || 0);
+    audio.onerror = () => finish(0);
+    audio.src = objectUrl;
+  });
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Tiempo de espera agotado en: ${label} (${ms}ms)`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
   });
 }
 
@@ -133,6 +156,13 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [debugLines, setDebugLines] = useState<string[]>([]);
+
+  function log(msg: string) {
+    const line = `${new Date().toLocaleTimeString()} — ${msg}`;
+    console.log("[AudioUpload]", line);
+    setDebugLines((prev) => [...prev, line]);
+  }
 
   // Manejo de drag & drop a nivel documento (fase de captura): por defecto el
   // navegador abre el archivo soltado en una pestaña nueva. Capturamos el
@@ -311,13 +341,21 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
   ) {
     patchItem(item.id, { status: "uploading", progress: 0, error: undefined });
     try {
+      log(`[${item.file.name}] Calculando duración...`);
       const duration_seconds = await getAudioDuration(item.file);
+      log(`[${item.file.name}] Duración: ${duration_seconds}s`);
 
-      const initRes = await fetch("/api/elimplay/b2-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: item.file.name }),
-      });
+      log(`[${item.file.name}] Preparando subida (b2-upload)...`);
+      const initRes = await withTimeout(
+        fetch("/api/elimplay/b2-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName: item.file.name }),
+        }),
+        15000,
+        "preparar subida (b2-upload)"
+      );
+      log(`[${item.file.name}] b2-upload respondió con status ${initRes.status}`);
       const initData = (await initRes.json()) as {
         uploadUrl?: string;
         authorizationToken?: string;
@@ -335,16 +373,23 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
         throw new Error(initData.error || "No se pudo iniciar la subida del audio.");
       }
 
+      log(`[${item.file.name}] Calculando SHA-1 (${formatFileSize(item.file.size)})...`);
       const sha1 = await sha1Hex(item.file);
+      log(`[${item.file.name}] SHA-1 listo`);
 
+      log(`[${item.file.name}] Subiendo a Backblaze...`);
       await uploadToB2WithProgress(
         initData.uploadUrl,
         initData.authorizationToken,
         item.file,
         initData.fileName,
         sha1,
-        (pct) => patchItem(item.id, { progress: pct })
+        (pct) => {
+          patchItem(item.id, { progress: pct });
+          if (pct === 0 || pct === 100 || pct % 20 === 0) log(`[${item.file.name}] Progreso: ${pct}%`);
+        }
       );
+      log(`[${item.file.name}] Subida a Backblaze completada`);
 
       const audioUrl = initData.publicUrl;
 
@@ -363,6 +408,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
 
       const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
 
+      log(`[${item.file.name}] Guardando registro en la base de datos...`);
       const { error: insertErr } = await supabase.from("audio_tracks").insert({
         title: item.title.trim() || item.file.name,
         artist_id: ctx.artistId,
@@ -376,13 +422,13 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
         published_at: isPublished ? new Date().toISOString() : null,
       });
       if (insertErr) throw new Error(insertErr.message);
+      log(`[${item.file.name}] Listo`);
 
       patchItem(item.id, { status: "done", progress: 100 });
     } catch (err) {
-      patchItem(item.id, {
-        status: "error",
-        error: err instanceof Error ? err.message : "Error desconocido",
-      });
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      log(`[${item.file.name}] ERROR: ${message}`);
+      patchItem(item.id, { status: "error", error: message });
     }
   }
 
@@ -391,6 +437,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     if (items.length === 0 || isUploading) return;
     setFormError(null);
     setIsUploading(true);
+    setDebugLines([]);
 
     const supabase = createClient();
     const {
@@ -714,6 +761,15 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
           {formError}
         </p>
+      )}
+
+      {debugLines.length > 0 && (
+        <pre
+          className="text-[10px] leading-relaxed p-3 rounded-xl overflow-x-auto whitespace-pre-wrap break-all"
+          style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+        >
+          {debugLines.join("\n")}
+        </pre>
       )}
 
       <button
