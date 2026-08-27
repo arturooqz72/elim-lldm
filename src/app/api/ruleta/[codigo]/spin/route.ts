@@ -53,6 +53,7 @@ export async function POST(
       })
       .eq("id", sala.id)
       .eq("giro_usado", false)
+      .eq("turno_jugador_id", body.jugador_id)
       .select("id");
 
     if (updateError) {
@@ -105,6 +106,7 @@ export async function POST(
     })
     .eq("id", sala.id)
     .eq("giro_usado", false)
+    .eq("turno_jugador_id", body.jugador_id)
     .select("id");
 
   if (updateError) {
