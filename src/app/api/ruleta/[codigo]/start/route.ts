@@ -40,18 +40,21 @@ export async function POST(
 
   const service = await createServiceClient();
 
-  const { error: rondaError } = await service.from("ruleta_rondas").insert({
-    sala_id: sala.id,
-    ronda_numero: 1,
-    categoria: puzzle.category,
-    frase,
-    letras_adivinadas: [],
-  });
+  const { error: rondaError } = await service.from("ruleta_rondas").upsert(
+    {
+      sala_id: sala.id,
+      ronda_numero: 1,
+      categoria: puzzle.category,
+      frase,
+      letras_adivinadas: [],
+    },
+    { onConflict: "sala_id,ronda_numero" }
+  );
   if (rondaError) {
     return NextResponse.json({ error: rondaError.message }, { status: 500 });
   }
 
-  await service.from("ruleta_salas").update({
+  const { error: salaUpdateError } = await service.from("ruleta_salas").update({
     status: "playing",
     ronda_actual: 1,
     turno_jugador_id: primerJugador.id,
@@ -62,6 +65,10 @@ export async function POST(
     frases_usadas: usedKeys,
     ultima_categoria: puzzle.category,
   }).eq("id", sala.id);
+
+  if (salaUpdateError) {
+    return NextResponse.json({ error: salaUpdateError.message }, { status: 500 });
+  }
 
   const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
   await channel.send({
