@@ -40,13 +40,16 @@ CREATE TABLE ruleta_jugadores (
   nombre TEXT NOT NULL,
   orden INT NOT NULL,
   puntos INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (sala_id, orden)
 );
 
 -- Ahora que ruleta_jugadores existe, agrega la FK diferida desde ruleta_salas
+-- ON DELETE SET NULL: si un jugador se borra mientras tiene el turno,
+-- la sala se degrada a turno_jugador_id NULL en vez de fallar el delete.
 ALTER TABLE ruleta_salas
   ADD CONSTRAINT ruleta_salas_turno_jugador_fk
-  FOREIGN KEY (turno_jugador_id) REFERENCES ruleta_jugadores(id);
+  FOREIGN KEY (turno_jugador_id) REFERENCES ruleta_jugadores(id) ON DELETE SET NULL;
 
 -- RULETA RONDAS — tabla privada: guarda la frase secreta de cada ronda.
 -- Sin policies públicas ni grants para anon/authenticated a propósito.
