@@ -18,6 +18,7 @@ export function Letters({ letrasProbadas, canGuessConsonant, canAffordVowel, dis
         return (
           <button
             key={letter}
+            type="button"
             onClick={() => onGuess(letter)}
             disabled={!enabled}
             className="rounded-full font-bold transition-transform"
