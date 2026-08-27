@@ -159,6 +159,16 @@ export function SaludoRecorder() {
       return;
     }
 
+    if (contacto.trim()) {
+      fetch("/api/saludos/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nombre.trim(), contacto: contacto.trim() }),
+      }).catch(() => {
+        // Best-effort: el saludo ya se guardó, un correo fallido no debe bloquear al usuario.
+      });
+    }
+
     setStatus("success");
   }
 
