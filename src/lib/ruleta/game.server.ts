@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { RuletaBoardTile } from "@/types";
 
 export const ALPHABET = [

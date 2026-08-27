@@ -1,6 +1,8 @@
+import "server-only";
+
 export interface Puzzle {
-  category: string;
-  phrase: string;
+  readonly category: string;
+  readonly phrase: string;
 }
 
 // Real subset of the puzzle bank already used by the single-device game
@@ -66,5 +68,5 @@ export function pickPuzzle(
   const pool = preferred.length > 0 ? preferred : available;
   const choice = pool[Math.floor(Math.random() * pool.length)];
 
-  return { puzzle: choice, usedKeys: [...baseUsed, phraseKey(choice)] };
+  return { puzzle: { ...choice }, usedKeys: [...baseUsed, phraseKey(choice)] };
 }
