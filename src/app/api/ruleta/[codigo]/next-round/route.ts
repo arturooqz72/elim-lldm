@@ -52,6 +52,30 @@ export async function POST(
   const nuevaRonda = sala.ronda_actual + 1;
   const endsAt = Date.now() + TURN_SECONDS * 1000;
 
+  const { data: updated, error: salaUpdateError } = await service
+    .from("ruleta_salas")
+    .update({
+      status: "playing",
+      ronda_actual: nuevaRonda,
+      turno_termina_en: new Date(endsAt).toISOString(),
+      giro_usado: false,
+      puede_consonante: false,
+      valor_giro_actual: null,
+      frases_usadas: usedKeys,
+      ultima_categoria: puzzle.category,
+    })
+    .eq("id", sala.id)
+    .eq("status", "ronda_fin")
+    .eq("ronda_actual", sala.ronda_actual)
+    .select("id");
+
+  if (salaUpdateError) {
+    return NextResponse.json({ error: salaUpdateError.message }, { status: 500 });
+  }
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: "La ronda ya fue avanzada" }, { status: 409 });
+  }
+
   const { error: rondaError } = await service.from("ruleta_rondas").upsert(
     {
       sala_id: sala.id,
@@ -64,21 +88,6 @@ export async function POST(
   );
   if (rondaError) {
     return NextResponse.json({ error: rondaError.message }, { status: 500 });
-  }
-
-  const { error: salaUpdateError } = await service.from("ruleta_salas").update({
-    status: "playing",
-    ronda_actual: nuevaRonda,
-    turno_termina_en: new Date(endsAt).toISOString(),
-    giro_usado: false,
-    puede_consonante: false,
-    valor_giro_actual: null,
-    frases_usadas: usedKeys,
-    ultima_categoria: puzzle.category,
-  }).eq("id", sala.id);
-
-  if (salaUpdateError) {
-    return NextResponse.json({ error: salaUpdateError.message }, { status: 500 });
   }
 
   await channel.send({
