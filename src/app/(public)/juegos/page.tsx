@@ -1,4 +1,4 @@
-import { Gamepad2, RotateCw, Trophy, ChevronRight } from "lucide-react";
+import { Gamepad2, RotateCw, Trophy, ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -19,6 +19,18 @@ const GAMES = [
     accentBg: "rgba(29,158,117,0.08)",
     accentBorder: "rgba(29,158,117,0.3)",
     accentColor: "#1D9E75",
+  },
+  {
+    href: "/ruleta",
+    external: false,
+    className: "card-ruleta-online",
+    emoji: "📱",
+    icon: Users,
+    title: "La Ruleta en línea",
+    desc: "Juega con hasta 6 amigos, cada quien desde su celular",
+    accentBg: "rgba(59,130,246,0.08)",
+    accentBorder: "rgba(59,130,246,0.3)",
+    accentColor: "#3B82F6",
   },
   {
     href: "/arena",
@@ -46,6 +58,7 @@ export default function JuegosHubPage() {
           box-shadow: 0 10px 36px rgba(0,0,0,.28);
         }
         .card-ruleta:hover  { border-color: rgba(29,158,117,.45) !important; }
+        .card-ruleta-online:hover { border-color: rgba(59,130,246,.45) !important; }
         .card-arena:hover   { border-color: rgba(212,160,23,.45) !important; }
       `}</style>
 
