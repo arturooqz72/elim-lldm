@@ -24,7 +24,7 @@ export async function POST(
     return NextResponse.json({ error: "Respuesta inválida" }, { status: 400 });
   }
 
-  const respuesta = body.respuesta.trim();
+  const respuesta = body.respuesta.trim().replace(/\s+/g, " ");
 
   const { data: sala } = await service
     .from("ruleta_salas")
