@@ -57,20 +57,43 @@ export async function POST(
 
   const count = countLetterInPhrase(ronda.frase, letra);
   const nuevasLetras = [...letrasAdivinadas, letra];
-
-  const { error: rondaUpdateError } = await service
-    .from("ruleta_rondas")
-    .update({ letras_adivinadas: nuevasLetras })
-    .eq("id", ronda.id);
-
-  if (rondaUpdateError) {
-    return NextResponse.json({ error: rondaUpdateError.message }, { status: 500 });
-  }
-
   const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
 
   if (count > 0) {
+    // Letra correcta
     const puntosGanados = count * (sala.valor_giro_actual ?? 0);
+    const resuelto = isPhraseSolved(ronda.frase, nuevasLetras);
+    const endsAt = Date.now() + TURN_SECONDS * 1000;
+
+    // 1) Actualiza primero la sala (con guardia CAS) — nadie más puede tocar la
+    // ronda/jugador hasta que ganemos esta carrera.
+    const { data: updated, error: updateError } = await service
+      .from("ruleta_salas")
+      .update(
+        resuelto
+          ? { status: "ronda_fin", puede_consonante: false, giro_usado: false, turno_termina_en: null }
+          : { puede_consonante: false, giro_usado: false, turno_termina_en: new Date(endsAt).toISOString() }
+      )
+      .eq("id", sala.id)
+      .eq("turno_termina_en", sala.turno_termina_en)
+      .select("id");
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+    if (!updated || updated.length === 0) {
+      return NextResponse.json({ error: "La sala cambió, intenta de nuevo" }, { status: 409 });
+    }
+
+    // 2) Solo ahora, habiendo ganado la carrera, tocamos ronda y jugador.
+    const { error: rondaUpdateError } = await service
+      .from("ruleta_rondas")
+      .update({ letras_adivinadas: nuevasLetras })
+      .eq("id", ronda.id);
+
+    if (rondaUpdateError) {
+      return NextResponse.json({ error: rondaUpdateError.message }, { status: 500 });
+    }
 
     const { data: jugador } = await service
       .from("ruleta_jugadores")
@@ -86,27 +109,6 @@ export async function POST(
       if (jugadorUpdateError) {
         return NextResponse.json({ error: jugadorUpdateError.message }, { status: 500 });
       }
-    }
-
-    const resuelto = isPhraseSolved(ronda.frase, nuevasLetras);
-    const endsAt = Date.now() + TURN_SECONDS * 1000;
-
-    const { data: updated, error: updateError } = await service
-      .from("ruleta_salas")
-      .update(
-        resuelto
-          ? { status: "ronda_fin", puede_consonante: false, turno_termina_en: null }
-          : { puede_consonante: false, turno_termina_en: new Date(endsAt).toISOString() }
-      )
-      .eq("id", sala.id)
-      .eq("turno_termina_en", sala.turno_termina_en)
-      .select("id");
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
-    if (!updated || updated.length === 0) {
-      return NextResponse.json({ error: "La sala cambió, intenta de nuevo" }, { status: 409 });
     }
 
     await channel.send({
@@ -141,6 +143,7 @@ export async function POST(
   const nextId = jugadores ? nextJugadorId(jugadores, body.jugador_id) : body.jugador_id;
   const endsAt = Date.now() + TURN_SECONDS * 1000;
 
+  // 1) Actualiza primero la sala (con guardia CAS).
   const { data: updated, error: updateError } = await service
     .from("ruleta_salas")
     .update({
@@ -158,6 +161,16 @@ export async function POST(
   }
   if (!updated || updated.length === 0) {
     return NextResponse.json({ error: "La sala cambió, intenta de nuevo" }, { status: 409 });
+  }
+
+  // 2) Solo ahora registramos el intento en la ronda.
+  const { error: rondaUpdateError } = await service
+    .from("ruleta_rondas")
+    .update({ letras_adivinadas: nuevasLetras })
+    .eq("id", ronda.id);
+
+  if (rondaUpdateError) {
+    return NextResponse.json({ error: rondaUpdateError.message }, { status: 500 });
   }
 
   await channel.send({
