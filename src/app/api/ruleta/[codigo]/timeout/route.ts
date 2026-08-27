@@ -11,6 +11,13 @@ export async function POST(
   const supabase = await createClient();
   const service = await createServiceClient();
 
+  let body: { force?: boolean } = {};
+  try {
+    body = await request.json();
+  } catch {
+    // Cuerpo vacío es válido — este endpoint normalmente no lleva body.
+  }
+
   const { data: sala } = await service
     .from("ruleta_salas")
     .select("*")
@@ -23,7 +30,17 @@ export async function POST(
     return NextResponse.json({ applied: false });
   }
 
-  if (new Date(sala.turno_termina_en).getTime() > Date.now()) {
+  // El anfitrión puede forzar el avance de turno sin esperar a que venza el
+  // reloj — es la vía de escape manual para cuando ningún cliente conectado
+  // logra reportar el vencimiento automático (p. ej. una pestaña móvil
+  // suspendida en segundo plano).
+  let isHostForce = false;
+  if (body.force === true) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.id === sala.created_by) isHostForce = true;
+  }
+
+  if (!isHostForce && new Date(sala.turno_termina_en).getTime() > Date.now()) {
     return NextResponse.json({ applied: false });
   }
 

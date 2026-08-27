@@ -2,10 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Hash, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Hash, Loader2, LogOut, SkipForward } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { RuletaBoardTile, RuletaJugador, RuletaSala } from "@/types";
-import { playJoinChime } from "@/lib/ruleta/sound.client";
+import {
+  playJoinChime,
+  playLandSound,
+  playCorrectSound,
+  playWrongSound,
+  playWinSound,
+  playBankruptSound,
+  playTimeoutSound,
+} from "@/lib/ruleta/sound.client";
 import { VOWEL_COST } from "@/lib/ruleta/wheel";
 import { JoinForm } from "./JoinForm";
 import { HostLobby } from "./HostLobby";
@@ -48,6 +57,7 @@ function phaseFromStatus(status: RuletaSala["status"]): Phase {
 }
 
 export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
   const [jugadores, setJugadores] = useState<RuletaJugador[]>(jugadoresIniciales);
   const [jugadorId, setJugadorId] = useState<string | null>(null);
@@ -104,6 +114,8 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
             giroUsado: p.tipo === "puntos",
             mensaje: p.mensaje,
           }));
+          if (p.tipo === "bancarrota") playBankruptSound();
+          else playLandSound();
         }
 
         if (event === "LETTER_RESULT" || event === "RESOLVE_RESULT") {
@@ -125,7 +137,14 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
             frase: p.frase ?? prev.frase,
             spinToSegment: prev.spinToSegment,
           }));
-          if (p.resuelto) setPhase("ronda_fin");
+          if (p.resuelto) {
+            playWinSound();
+            setPhase("ronda_fin");
+          } else if (p.acierto === true) {
+            playCorrectSound();
+          } else if (p.acierto === false) {
+            playWrongSound();
+          }
         }
 
         if (event === "TURN_TIMEOUT") {
@@ -134,6 +153,7 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
             ...prev, turnoJugadorId: p.turnoJugadorId, turnoTerminaEn: p.turnoTerminaEn,
             puedeConsonante: false, giroUsado: false, mensaje: p.mensaje,
           }));
+          playTimeoutSound();
         }
 
         if (event === "GAME_FINISHED") setPhase("finished");
@@ -229,6 +249,26 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
     await fetch(`/api/ruleta/${sala.codigo}/timeout`, { method: "POST" });
   }, [sala.codigo]);
 
+  const [forcingSkip, setForcingSkip] = useState(false);
+  async function handleForceSkip() {
+    setForcingSkip(true);
+    await fetch(`/api/ruleta/${sala.codigo}/timeout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force: true }),
+    });
+    setForcingSkip(false);
+  }
+
+  function handleLeaveRoom() {
+    try {
+      localStorage.removeItem(`ruleta_jugador_${sala.codigo}`);
+    } catch {
+      // localStorage no disponible
+    }
+    router.push("/ruleta");
+  }
+
   async function handleNextRound() {
     setAdvancing(true);
     await fetch(`/api/ruleta/${sala.codigo}/next-round`, { method: "POST" });
@@ -243,12 +283,25 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
       <div className="w-full max-w-[480px] mx-auto flex-1 flex flex-col px-4 py-5 gap-4">
         <header className="flex items-center justify-between">
           <Link href="/ruleta" className="text-lg font-bold" style={{ color: "var(--color-primary)" }}>La Ruleta</Link>
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
-            style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.25)", color: "var(--color-primary)" }}
-          >
-            <Hash size={13} />
-            {sala.codigo}
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
+              style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.25)", color: "var(--color-primary)" }}
+            >
+              <Hash size={13} />
+              {sala.codigo}
+            </div>
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              title="Salir de la sala"
+              aria-label="Salir de la sala"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "var(--color-destructive)" }}
+            >
+              <LogOut size={13} />
+              Salir
+            </button>
           </div>
         </header>
 
@@ -272,6 +325,19 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
               </p>
               <TurnTimer endsAt={phase === "playing" ? round.turnoTerminaEn : null} onExpire={handleTimeout} />
             </div>
+
+            {isHost && phase === "playing" && (
+              <button
+                type="button"
+                onClick={handleForceSkip}
+                disabled={forcingSkip}
+                className="self-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+              >
+                <SkipForward size={13} />
+                {forcingSkip ? "Forzando..." : "Forzar siguiente turno"}
+              </button>
+            )}
 
             <p className="text-sm text-center" style={{ color: "var(--color-text)" }}>{round.mensaje}</p>
 
