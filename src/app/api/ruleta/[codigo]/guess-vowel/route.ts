@@ -65,7 +65,6 @@ export async function POST(
 
   const count = countLetterInPhrase(ronda.frase, letra);
   const nuevasLetras = [...letrasAdivinadas, letra];
-  const nuevoPuntaje = jugador.puntos - VOWEL_COST;
   const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
 
   if (count > 0) {
@@ -96,10 +95,23 @@ export async function POST(
     }
 
     // 2) Solo ahora, habiendo ganado la carrera, tocamos jugador y ronda.
+    // Releemos los puntos frescos (en vez de usar la lectura inicial) para no
+    // pisar un cambio concurrente (p. ej. bancarrota en /spin) con un valor
+    // obsoleto.
+    const { data: jugadorFresco } = await service
+      .from("ruleta_jugadores")
+      .select("id, puntos")
+      .eq("id", jugador.id)
+      .single();
+
+    if (!jugadorFresco) {
+      return NextResponse.json({ error: "Jugador no encontrado" }, { status: 500 });
+    }
+
     const { error: jugadorUpdateError } = await service
       .from("ruleta_jugadores")
-      .update({ puntos: nuevoPuntaje })
-      .eq("id", jugador.id);
+      .update({ puntos: jugadorFresco.puntos - VOWEL_COST })
+      .eq("id", jugadorFresco.id);
 
     if (jugadorUpdateError) {
       return NextResponse.json({ error: jugadorUpdateError.message }, { status: 500 });
@@ -168,10 +180,23 @@ export async function POST(
   }
 
   // 2) Solo ahora, habiendo ganado la carrera, tocamos jugador y ronda.
+  // Releemos los puntos frescos (en vez de usar la lectura inicial) para no
+  // pisar un cambio concurrente (p. ej. bancarrota en /spin) con un valor
+  // obsoleto.
+  const { data: jugadorFresco } = await service
+    .from("ruleta_jugadores")
+    .select("id, puntos")
+    .eq("id", jugador.id)
+    .single();
+
+  if (!jugadorFresco) {
+    return NextResponse.json({ error: "Jugador no encontrado" }, { status: 500 });
+  }
+
   const { error: jugadorUpdateError } = await service
     .from("ruleta_jugadores")
-    .update({ puntos: nuevoPuntaje })
-    .eq("id", jugador.id);
+    .update({ puntos: jugadorFresco.puntos - VOWEL_COST })
+    .eq("id", jugadorFresco.id);
 
   if (jugadorUpdateError) {
     return NextResponse.json({ error: jugadorUpdateError.message }, { status: 500 });
