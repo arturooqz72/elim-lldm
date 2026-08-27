@@ -2,12 +2,6 @@ import "server-only";
 
 import type { RuletaBoardTile } from "@/types";
 
-export const ALPHABET = [
-  "A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O",
-  "P","Q","R","S","T","U","V","W","X","Y","Z",
-];
-export const VOWELS = ["A", "E", "I", "O", "U"];
-
 const ACCENT_MAP: Record<string, string> = {
   "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U", "Ü": "U",
 };

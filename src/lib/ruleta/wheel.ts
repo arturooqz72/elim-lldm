@@ -47,3 +47,9 @@ export const ROUNDS_DEFAULT = 5;
 export function pickWheelSegmentIndex(): number {
   return Math.floor(Math.random() * WHEEL_SEGMENTS.length);
 }
+
+export const ALPHABET = [
+  "A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ","O",
+  "P","Q","R","S","T","U","V","W","X","Y","Z",
+];
+export const VOWELS = ["A", "E", "I", "O", "U"];
