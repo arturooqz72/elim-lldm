@@ -45,8 +45,17 @@ export async function POST(
     .select("id")
     .single();
 
-  if (error || !jugador) {
-    return NextResponse.json({ error: error?.message ?? "Error al unirse" }, { status: 500 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "Alguien más se unió justo antes que tú, intenta de nuevo" },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({ error: error.message ?? "Error al unirse" }, { status: 500 });
+  }
+  if (!jugador) {
+    return NextResponse.json({ error: "Error al unirse" }, { status: 500 });
   }
 
   return NextResponse.json({ jugador_id: jugador.id });
