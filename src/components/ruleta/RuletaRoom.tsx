@@ -61,6 +61,7 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
   const [jugadores, setJugadores] = useState<RuletaJugador[]>(jugadoresIniciales);
   const [jugadorId, setJugadorId] = useState<string | null>(null);
+  const [hostWantsToPlay, setHostWantsToPlay] = useState(false);
   const [round, setRound] = useState<RoundState | null>(null);
   const [spinToken, setSpinToken] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -70,16 +71,16 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
   const jugadorCountRef = useRef(jugadoresIniciales.length);
   const isFirstJugadoresLoad = useRef(true);
 
-  // Restaurar identidad del jugador (sin cuenta) desde localStorage
+  // Restaurar identidad del jugador desde localStorage — también aplica al
+  // anfitrión si decidió unirse como jugador además de organizar la sala.
   useEffect(() => {
-    if (isHost) return;
     try {
       const stored = localStorage.getItem(`ruleta_jugador_${sala.codigo}`);
       if (stored) setJugadorId((JSON.parse(stored) as { id: string }).id);
     } catch {
       // localStorage no disponible
     }
-  }, [isHost, sala.codigo]);
+  }, [sala.codigo]);
 
   // Suscripciones realtime
   useEffect(() => {
@@ -307,8 +308,28 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
 
         {phase === "finished" ? (
           <MatchEndScreen jugadores={jugadores} meId={jugadorId} />
+        ) : isHost && phase === "lobby" && hostWantsToPlay && !jugadorId ? (
+          <JoinForm
+            codigo={sala.codigo}
+            onJoined={(id, nombre) => {
+              handleJoined(id, nombre);
+              setHostWantsToPlay(false);
+            }}
+          />
         ) : isHost && phase === "lobby" ? (
-          <HostLobby codigo={sala.codigo} jugadores={jugadores} onStart={handleStart} starting={starting} error={startError} />
+          <>
+            <HostLobby codigo={sala.codigo} jugadores={jugadores} onStart={handleStart} starting={starting} error={startError} />
+            {!jugadorId && (
+              <button
+                type="button"
+                onClick={() => setHostWantsToPlay(true)}
+                className="text-sm font-semibold text-center py-2"
+                style={{ color: "var(--color-primary)" }}
+              >
+                ¿Tú también quieres jugar? Únete como jugador
+              </button>
+            )}
+          </>
         ) : !isHost && !jugadorId ? (
           <JoinForm codigo={sala.codigo} onJoined={handleJoined} />
         ) : phase === "lobby" ? (
