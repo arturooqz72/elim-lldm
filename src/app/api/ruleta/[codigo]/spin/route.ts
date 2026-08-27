@@ -43,12 +43,24 @@ export async function POST(
 
   if (seg.type === "puntos") {
     const endsAt = Date.now() + TURN_SECONDS * 1000;
-    await service.from("ruleta_salas").update({
-      giro_usado: true,
-      puede_consonante: true,
-      valor_giro_actual: seg.value,
-      turno_termina_en: new Date(endsAt).toISOString(),
-    }).eq("id", sala.id);
+    const { data: updated, error: updateError } = await service
+      .from("ruleta_salas")
+      .update({
+        giro_usado: true,
+        puede_consonante: true,
+        valor_giro_actual: seg.value,
+        turno_termina_en: new Date(endsAt).toISOString(),
+      })
+      .eq("id", sala.id)
+      .eq("giro_usado", false)
+      .select("id");
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+    if (!updated || updated.length === 0) {
+      return NextResponse.json({ error: "Ya giraste en este turno" }, { status: 409 });
+    }
 
     await channel.send({
       type: "broadcast",
@@ -69,20 +81,38 @@ export async function POST(
   if (seg.type === "bancarrota" && jugadores) {
     const jugador = jugadores.find((j) => j.id === body.jugador_id);
     if (jugador) {
-      await service.from("ruleta_jugadores").update({ puntos: 0 }).eq("id", jugador.id);
+      const { error: jugadorUpdateError } = await service
+        .from("ruleta_jugadores")
+        .update({ puntos: 0 })
+        .eq("id", jugador.id);
+      if (jugadorUpdateError) {
+        return NextResponse.json({ error: jugadorUpdateError.message }, { status: 500 });
+      }
     }
   }
 
   const nextId = jugadores ? nextJugadorId(jugadores, body.jugador_id) : body.jugador_id;
   const endsAt = Date.now() + TURN_SECONDS * 1000;
 
-  await service.from("ruleta_salas").update({
-    giro_usado: false,
-    puede_consonante: false,
-    valor_giro_actual: null,
-    turno_jugador_id: nextId,
-    turno_termina_en: new Date(endsAt).toISOString(),
-  }).eq("id", sala.id);
+  const { data: updated, error: updateError } = await service
+    .from("ruleta_salas")
+    .update({
+      giro_usado: false,
+      puede_consonante: false,
+      valor_giro_actual: null,
+      turno_jugador_id: nextId,
+      turno_termina_en: new Date(endsAt).toISOString(),
+    })
+    .eq("id", sala.id)
+    .eq("giro_usado", false)
+    .select("id");
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: "Ya giraste en este turno" }, { status: 409 });
+  }
 
   await channel.send({
     type: "broadcast",
