@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Hash, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -111,14 +111,16 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
             board?: RuletaBoardTile[]; letrasProbadas?: string[];
             turnoJugadorId: string; turnoTerminaEn: number | null;
             resuelto: boolean; frase?: string; mensaje: string;
+            esVocal?: boolean; acierto?: boolean;
           };
+          const preserveConsonante = p.esVocal === true && p.acierto === true && !p.resuelto;
           setRound((prev) => prev && ({
             ...prev,
             board: p.board ?? prev.board,
             letrasProbadas: p.letrasProbadas ?? prev.letrasProbadas,
             turnoJugadorId: p.turnoJugadorId,
             turnoTerminaEn: p.turnoTerminaEn,
-            puedeConsonante: false,
+            puedeConsonante: preserveConsonante ? prev.puedeConsonante : false,
             mensaje: p.mensaje,
             frase: p.frase ?? prev.frase,
             spinToSegment: prev.spinToSegment,
@@ -223,9 +225,9 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps
     setResolveText("");
   }
 
-  async function handleTimeout() {
+  const handleTimeout = useCallback(async () => {
     await fetch(`/api/ruleta/${sala.codigo}/timeout`, { method: "POST" });
-  }
+  }, [sala.codigo]);
 
   async function handleNextRound() {
     setAdvancing(true);
