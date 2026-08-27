@@ -6,21 +6,20 @@ import { WHEEL_SEGMENTS, SEG_COLORS } from "@/lib/ruleta/wheel";
 interface WheelProps {
   size?: number;
   spinToSegment: number | null; // set by the parent when a SPIN_RESULT arrives
+  spinToken: number; // increments (or otherwise changes) on every SPIN_RESULT event, even if spinToSegment repeats a prior value
   onSpinClick: () => void;
   canSpin: boolean;
 }
 
 const SEG_ANGLE = 360 / WHEEL_SEGMENTS.length;
 
-export function Wheel({ size = 260, spinToSegment, onSpinClick, canSpin }: WheelProps) {
+export function Wheel({ size = 260, spinToSegment, spinToken, onSpinClick, canSpin }: WheelProps) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const rotationRef = useRef(0);
-  const lastAppliedIndex = useRef<number | null>(null);
 
   useEffect(() => {
-    if (spinToSegment === null || spinToSegment === lastAppliedIndex.current) return;
-    lastAppliedIndex.current = spinToSegment;
+    if (spinToSegment === null) return;
 
     const effectiveAngle = spinToSegment * SEG_ANGLE + SEG_ANGLE / 2;
     const finalMod = (360 - effectiveAngle + 360) % 360;
@@ -32,7 +31,8 @@ export function Wheel({ size = 260, spinToSegment, onSpinClick, canSpin }: Wheel
     setRotation(total);
     const t = setTimeout(() => setSpinning(false), 4000);
     return () => clearTimeout(t);
-  }, [spinToSegment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spinToken]);
 
   const gradient = useMemo(() => {
     const parts = WHEEL_SEGMENTS.map((_, i) => {
@@ -53,15 +53,19 @@ export function Wheel({ size = 260, spinToSegment, onSpinClick, canSpin }: Wheel
 
   const R = size / 2;
   const centerRadius = R * 0.6;
+  const pointerSide = size * 0.054;
+  const pointerHeight = size * 0.092;
+  const pointerTop = size * -0.023;
+  const hubSize = size * 0.13;
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div style={{ position: "relative", width: size, height: size }}>
+      <div style={{ position: "relative", width: size, height: size }} aria-hidden="true">
         <div
           style={{
-            position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)",
-            width: 0, height: 0, borderLeft: "14px solid transparent", borderRight: "14px solid transparent",
-            borderTop: "24px solid var(--color-primary)", zIndex: 6,
+            position: "absolute", top: pointerTop, left: "50%", transform: "translateX(-50%)",
+            width: 0, height: 0, borderLeft: `${pointerSide}px solid transparent`, borderRight: `${pointerSide}px solid transparent`,
+            borderTop: `${pointerHeight}px solid var(--color-primary)`, zIndex: 6,
             filter: "drop-shadow(0 2px 4px rgba(0,0,0,.6))",
           }}
         />
@@ -106,7 +110,7 @@ export function Wheel({ size = 260, spinToSegment, onSpinClick, canSpin }: Wheel
         <div
           style={{
             position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            width: 34, height: 34, borderRadius: "50%",
+            width: hubSize, height: hubSize, borderRadius: "50%",
             background: "radial-gradient(circle at 35% 35%, #fff8dc, var(--color-primary) 55%, #A07810)",
             border: "2px solid #2a1505", zIndex: 4,
           }}
