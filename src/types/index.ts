@@ -298,3 +298,38 @@ export interface ArenaBroadcastEvent {
   payload: Record<string, unknown>;
 }
 
+// ── La Ruleta en línea (multijugador con código de sala) ───────────────────────
+
+export type RuletaStatus = "lobby" | "playing" | "ronda_fin" | "finished";
+
+export interface RuletaSala {
+  id: string;
+  codigo: string;
+  status: RuletaStatus;
+  rondas_totales: number;
+  ronda_actual: number;
+  turno_jugador_id: string | null;
+  turno_termina_en: string | null;
+  giro_usado: boolean;
+  puede_consonante: boolean;
+  valor_giro_actual: number | null;
+  frases_usadas: string[];
+  ultima_categoria: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface RuletaJugador {
+  id: string;
+  sala_id: string;
+  nombre: string;
+  orden: number;
+  puntos: number;
+  created_at: string;
+}
+
+export interface RuletaBoardTile {
+  type: "letter" | "space";
+  char: string | null;
+}
+
