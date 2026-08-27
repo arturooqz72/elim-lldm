@@ -6,7 +6,12 @@ import { Trophy } from "lucide-react";
 import Link from "next/link";
 import type { RuletaJugador } from "@/types";
 
-export function MatchEndScreen({ jugadores }: { jugadores: RuletaJugador[] }) {
+interface MatchEndScreenProps {
+  jugadores: RuletaJugador[];
+  meId?: string | null;
+}
+
+export function MatchEndScreen({ jugadores, meId }: MatchEndScreenProps) {
   const sorted = [...jugadores].sort((a, b) => b.puntos - a.puntos);
   const winner = sorted[0];
 
@@ -42,13 +47,29 @@ export function MatchEndScreen({ jugadores }: { jugadores: RuletaJugador[] }) {
         )}
       </div>
       <div className="w-full flex flex-col gap-2">
-        {sorted.map((j, i) => (
-          <div key={j.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-            <span className="text-sm font-bold w-5" style={{ color: "var(--color-text-muted)" }}>{i + 1}</span>
-            <span className="flex-1 font-medium" style={{ color: "var(--color-text)" }}>{j.nombre}</span>
-            <span className="font-bold" style={{ color: "var(--color-primary)" }}>{j.puntos}</span>
-          </div>
-        ))}
+        {sorted.map((j, i) => {
+          const isMe = j.id === meId;
+          return (
+            <div
+              key={j.id}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl"
+              style={{
+                background: isMe ? "rgba(212,160,23,0.08)" : "var(--color-surface)",
+                border: `1px solid ${isMe ? "rgba(212,160,23,0.25)" : "var(--color-border)"}`,
+              }}
+            >
+              <span className="text-sm font-bold w-5" style={{ color: "var(--color-text-muted)" }}>{i + 1}</span>
+              <span
+                className="flex-1 font-medium"
+                style={{ color: isMe ? "var(--color-primary)" : "var(--color-text)", fontWeight: isMe ? 700 : 500 }}
+              >
+                {j.nombre}
+                {isMe && " (tú)"}
+              </span>
+              <span className="font-bold" style={{ color: "var(--color-primary)" }}>{j.puntos.toLocaleString()}</span>
+            </div>
+          );
+        })}
       </div>
       <Link href="/ruleta" className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}>
         Volver a La Ruleta
