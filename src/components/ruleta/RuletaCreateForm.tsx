@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { Loader2, Sparkles } from "lucide-react";
 import { ROUNDS_MIN, ROUNDS_MAX, ROUNDS_DEFAULT } from "@/lib/ruleta/wheel";
 
+function clampRondas(raw: string): number {
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n)) return ROUNDS_DEFAULT;
+  return Math.max(ROUNDS_MIN, Math.min(ROUNDS_MAX, n));
+}
+
 export function RuletaCreateForm() {
-  const [rondas, setRondas] = useState(ROUNDS_DEFAULT);
+  const [rondasText, setRondasText] = useState(String(ROUNDS_DEFAULT));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -19,7 +25,7 @@ export function RuletaCreateForm() {
     const res = await fetch("/api/ruleta/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rondas }),
+      body: JSON.stringify({ rondas: clampRondas(rondasText) }),
     });
 
     if (!res.ok) {
@@ -41,10 +47,12 @@ export function RuletaCreateForm() {
         </label>
         <input
           type="number"
+          inputMode="numeric"
           min={ROUNDS_MIN}
           max={ROUNDS_MAX}
-          value={rondas}
-          onChange={(e) => setRondas(Math.max(ROUNDS_MIN, Math.min(ROUNDS_MAX, Number(e.target.value) || ROUNDS_DEFAULT)))}
+          value={rondasText}
+          onChange={(e) => setRondasText(e.target.value)}
+          onBlur={() => setRondasText(String(clampRondas(rondasText)))}
           className="w-full rounded-xl px-4 py-3 text-lg font-semibold outline-none"
           style={{
             background: "var(--color-surface-elevated)",
@@ -52,6 +60,9 @@ export function RuletaCreateForm() {
             color: "var(--color-text)",
           }}
         />
+        <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
+          Los jugadores no se eligen aquí: se unen después con el código de la sala (de 2 a 6 personas).
+        </p>
       </div>
 
       {error && (
