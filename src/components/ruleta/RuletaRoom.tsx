@@ -14,6 +14,7 @@ import {
   playWinSound,
   playBankruptSound,
   playTimeoutSound,
+  unlockAudioContext,
 } from "@/lib/ruleta/sound.client";
 import { VOWEL_COST } from "@/lib/ruleta/wheel";
 import { JoinForm } from "./JoinForm";
@@ -82,6 +83,23 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost, initialRound = nu
       // localStorage no disponible
     }
   }, [sala.codigo]);
+
+  // Desbloquear el AudioContext en la primera interacción real del usuario
+  // con la página — los navegadores móviles lo mantienen silenciado hasta
+  // entonces, sin importar qué botón se toque primero.
+  useEffect(() => {
+    function unlock() {
+      unlockAudioContext();
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    }
+    document.addEventListener("pointerdown", unlock, { once: true });
+    document.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      document.removeEventListener("pointerdown", unlock);
+      document.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   // Suscripciones realtime
   useEffect(() => {

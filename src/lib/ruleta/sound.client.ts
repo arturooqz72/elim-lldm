@@ -2,8 +2,16 @@
 
 // Synthesized sound effects for La Ruleta en línea — built with the Web
 // Audio API so there are no audio asset files to ship/host. Every function
-// is wrapped in try/catch so a browser without Web Audio (or one that
-// blocks autoplay before any user gesture) just silently plays nothing.
+// is wrapped in try/catch so a browser without Web Audio just silently
+// plays nothing.
+//
+// The AudioContext is a shared singleton, not one-per-sound: mobile
+// browsers create it in a "suspended" state until the user has interacted
+// with the page at least once, and it must be explicitly resumed from
+// inside that gesture's call stack — creating (and closing) a fresh
+// context per sound effect never gets past "suspended", so nothing was
+// audible for events that fire from a realtime broadcast handler rather
+// than a direct click (e.g. another player's turn resolving).
 
 interface Note {
   freq: number;
@@ -13,14 +21,41 @@ interface Note {
   type?: OscillatorType;
 }
 
-function playNotes(notes: Note[]) {
+let sharedCtx: AudioContext | null = null;
+
+function getContext(): AudioContext | null {
   try {
+    if (sharedCtx) return sharedCtx;
     const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioCtx();
+    sharedCtx = new AudioCtx();
+    return sharedCtx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Call this from inside a real click/tap handler (e.g. joining the room,
+ * spinning, guessing) so the shared AudioContext gets permission to play.
+ * Safe to call repeatedly — resuming an already-running context is a no-op.
+ */
+export function unlockAudioContext() {
+  const ctx = getContext();
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+}
+
+function playNotes(notes: Note[]) {
+  try {
+    const ctx = getContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     const now = ctx.currentTime;
-    let maxEnd = 0;
 
     notes.forEach(({ freq, start, duration, gain = 0.16, type = "sine" }) => {
       const osc = ctx.createOscillator();
@@ -34,10 +69,7 @@ function playNotes(notes: Note[]) {
       gainNode.connect(ctx.destination);
       osc.start(now + start);
       osc.stop(now + start + duration + 0.05);
-      maxEnd = Math.max(maxEnd, start + duration + 0.05);
     });
-
-    setTimeout(() => ctx.close(), (maxEnd + 0.2) * 1000);
   } catch {
     // Web Audio no disponible en este navegador
   }
