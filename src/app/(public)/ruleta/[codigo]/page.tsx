@@ -1,6 +1,7 @@
-import { createClient, getProfile } from "@/lib/supabase/server";
-import { RuletaRoom } from "@/components/ruleta/RuletaRoom";
+import { createClient, createServiceClient, getProfile } from "@/lib/supabase/server";
+import { RuletaRoom, type RoundState } from "@/components/ruleta/RuletaRoom";
 import { RuletaJoinCodeForm } from "@/components/ruleta/RuletaJoinCodeForm";
+import { buildBoardShape } from "@/lib/ruleta/game.server";
 import type { RuletaJugador, RuletaSala } from "@/types";
 import type { Metadata } from "next";
 
@@ -47,11 +48,45 @@ export default async function RuletaSalaPage({ params }: Props) {
 
   const isHost = profile?.id === sala.created_by;
 
+  // Si alguien carga/recarga la página después de que la ronda ya empezó,
+  // nunca va a recibir el broadcast ROUND_START (ya se disparó antes de que
+  // se conectara) — hay que reconstruir el estado actual desde la DB para
+  // que no se quede con la pantalla en blanco.
+  let initialRound: RoundState | null = null;
+  if (sala.status === "playing" || sala.status === "ronda_fin") {
+    const service = await createServiceClient();
+    const { data: ronda } = await service
+      .from("ruleta_rondas")
+      .select("categoria, frase, letras_adivinadas")
+      .eq("sala_id", sala.id)
+      .eq("ronda_numero", sala.ronda_actual)
+      .maybeSingle();
+
+    if (ronda) {
+      const letrasProbadas = ronda.letras_adivinadas as string[];
+      initialRound = {
+        ronda: sala.ronda_actual,
+        totalRondas: sala.rondas_totales,
+        categoria: ronda.categoria,
+        board: buildBoardShape(ronda.frase, letrasProbadas),
+        letrasProbadas,
+        turnoJugadorId: sala.turno_jugador_id,
+        turnoTerminaEn: sala.turno_termina_en ? new Date(sala.turno_termina_en).getTime() : null,
+        puedeConsonante: sala.puede_consonante,
+        giroUsado: sala.giro_usado,
+        mensaje: sala.status === "ronda_fin" ? "Ronda terminada." : "Partida en curso.",
+        frase: sala.status === "ronda_fin" ? ronda.frase : undefined,
+        spinToSegment: null,
+      };
+    }
+  }
+
   return (
     <RuletaRoom
       sala={sala as RuletaSala}
       jugadoresIniciales={(jugadoresRaw ?? []) as RuletaJugador[]}
       isHost={isHost}
+      initialRound={initialRound}
     />
   );
 }

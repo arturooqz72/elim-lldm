@@ -28,7 +28,7 @@ import { MatchEndScreen } from "./MatchEndScreen";
 
 type Phase = "lobby" | "playing" | "ronda_fin" | "finished";
 
-interface RoundState {
+export interface RoundState {
   ronda: number;
   totalRondas: number;
   categoria: string;
@@ -47,6 +47,7 @@ interface RuletaRoomProps {
   sala: RuletaSala;
   jugadoresIniciales: RuletaJugador[];
   isHost: boolean;
+  initialRound?: RoundState | null;
 }
 
 function phaseFromStatus(status: RuletaSala["status"]): Phase {
@@ -56,13 +57,13 @@ function phaseFromStatus(status: RuletaSala["status"]): Phase {
   return "lobby";
 }
 
-export function RuletaRoom({ sala, jugadoresIniciales, isHost }: RuletaRoomProps) {
+export function RuletaRoom({ sala, jugadoresIniciales, isHost, initialRound = null }: RuletaRoomProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
   const [jugadores, setJugadores] = useState<RuletaJugador[]>(jugadoresIniciales);
   const [jugadorId, setJugadorId] = useState<string | null>(null);
   const [hostWantsToPlay, setHostWantsToPlay] = useState(false);
-  const [round, setRound] = useState<RoundState | null>(null);
+  const [round, setRound] = useState<RoundState | null>(initialRound);
   const [spinToken, setSpinToken] = useState(0);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
