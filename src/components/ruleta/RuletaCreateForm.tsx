@@ -36,6 +36,16 @@ export function RuletaCreateForm() {
     }
 
     const data = await res.json();
+    if (data.jugador_id) {
+      try {
+        localStorage.setItem(
+          `ruleta_jugador_${data.codigo}`,
+          JSON.stringify({ id: data.jugador_id, nombre: data.nombre })
+        );
+      } catch {
+        // localStorage no disponible
+      }
+    }
     router.push(`/ruleta/${data.codigo}`);
   }
 
@@ -61,7 +71,7 @@ export function RuletaCreateForm() {
           }}
         />
         <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
-          Los jugadores no se eligen aquí: se unen después con el código de la sala (de 2 a 6 personas).
+          Tú ya quedas como jugador. Comparte el código para que se unan de 1 a 5 personas más (2 a 6 en total).
         </p>
       </div>
 

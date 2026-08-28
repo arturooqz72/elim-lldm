@@ -53,12 +53,27 @@ export async function POST(request: Request) {
   const { data: sala, error } = await service
     .from("ruleta_salas")
     .insert({ codigo, rondas_totales: rondas, created_by: user.id })
-    .select("codigo")
+    .select("id, codigo")
     .single();
 
   if (error || !sala) {
     return NextResponse.json({ error: error?.message ?? "Error al crear la sala" }, { status: 500 });
   }
 
-  return NextResponse.json({ codigo: sala.codigo });
+  // El anfitrión queda registrado como jugador desde el inicio, para poder
+  // jugar en la misma sala que organiza sin un paso extra.
+  const { data: profile } = await service
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .single();
+  const nombre = (profile?.display_name ?? "Anfitrión").slice(0, 20);
+
+  const { data: jugador } = await service
+    .from("ruleta_jugadores")
+    .insert({ sala_id: sala.id, nombre, orden: 0, puntos: 0 })
+    .select("id")
+    .single();
+
+  return NextResponse.json({ codigo: sala.codigo, jugador_id: jugador?.id ?? null, nombre });
 }
