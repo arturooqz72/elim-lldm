@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
   const { data: jugador } = await service
     .from("ruleta_jugadores")
-    .insert({ sala_id: sala.id, nombre, orden: 0, puntos: 0 })
+    .insert({ sala_id: sala.id, nombre, orden: 0, puntos: 0, user_id: user.id })
     .select("id")
     .single();
 

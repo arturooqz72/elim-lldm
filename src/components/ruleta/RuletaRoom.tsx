@@ -49,6 +49,7 @@ interface RuletaRoomProps {
   jugadoresIniciales: RuletaJugador[];
   isHost: boolean;
   initialRound?: RoundState | null;
+  initialJugadorId?: string | null;
 }
 
 function phaseFromStatus(status: RuletaSala["status"]): Phase {
@@ -58,11 +59,17 @@ function phaseFromStatus(status: RuletaSala["status"]): Phase {
   return "lobby";
 }
 
-export function RuletaRoom({ sala, jugadoresIniciales, isHost, initialRound = null }: RuletaRoomProps) {
+export function RuletaRoom({
+  sala,
+  jugadoresIniciales,
+  isHost,
+  initialRound = null,
+  initialJugadorId = null,
+}: RuletaRoomProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
   const [jugadores, setJugadores] = useState<RuletaJugador[]>(jugadoresIniciales);
-  const [jugadorId, setJugadorId] = useState<string | null>(null);
+  const [jugadorId, setJugadorId] = useState<string | null>(initialJugadorId);
   const [hostWantsToPlay, setHostWantsToPlay] = useState(false);
   const [round, setRound] = useState<RoundState | null>(initialRound);
   const [spinToken, setSpinToken] = useState(0);
@@ -73,16 +80,18 @@ export function RuletaRoom({ sala, jugadoresIniciales, isHost, initialRound = nu
   const jugadorCountRef = useRef(jugadoresIniciales.length);
   const isFirstJugadoresLoad = useRef(true);
 
-  // Restaurar identidad del jugador desde localStorage — también aplica al
-  // anfitrión si decidió unirse como jugador además de organizar la sala.
+  // Restaurar identidad del jugador desde localStorage — solo hace falta
+  // para invitados sin cuenta; si el servidor ya resolvió initialJugadorId
+  // a partir de la cuenta logueada, esa identidad manda.
   useEffect(() => {
+    if (initialJugadorId) return;
     try {
       const stored = localStorage.getItem(`ruleta_jugador_${sala.codigo}`);
       if (stored) setJugadorId((JSON.parse(stored) as { id: string }).id);
     } catch {
       // localStorage no disponible
     }
-  }, [sala.codigo]);
+  }, [sala.codigo, initialJugadorId]);
 
   // Desbloquear el AudioContext en la primera interacción real del usuario
   // con la página — los navegadores móviles lo mantienen silenciado hasta

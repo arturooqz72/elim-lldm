@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { MAX_PLAYERS } from "@/lib/ruleta/wheel";
 
 export async function POST(
@@ -7,6 +7,13 @@ export async function POST(
   { params }: { params: Promise<{ codigo: string }> }
 ) {
   const { codigo } = await params;
+
+  // Unirse sigue sin requerir cuenta — pero si el que se une SÍ tiene
+  // sesión, se etiqueta su fila con user_id para poder reconectarlo
+  // automáticamente si vuelve a abrir la sala desde otro dispositivo.
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+
   const supabase = await createServiceClient();
 
   let body: { nombre?: string };
@@ -30,6 +37,16 @@ export async function POST(
     return NextResponse.json({ error: "El juego ya comenzó" }, { status: 400 });
   }
 
+  if (user) {
+    const { data: existing } = await supabase
+      .from("ruleta_jugadores")
+      .select("id")
+      .eq("sala_id", sala.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (existing) return NextResponse.json({ jugador_id: existing.id });
+  }
+
   const { count } = await supabase
     .from("ruleta_jugadores")
     .select("id", { count: "exact", head: true })
@@ -41,7 +58,7 @@ export async function POST(
 
   const { data: jugador, error } = await supabase
     .from("ruleta_jugadores")
-    .insert({ sala_id: sala.id, nombre, orden: count ?? 0, puntos: 0 })
+    .insert({ sala_id: sala.id, nombre, orden: count ?? 0, puntos: 0, user_id: user?.id ?? null })
     .select("id")
     .single();
 

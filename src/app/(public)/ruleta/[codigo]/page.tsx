@@ -48,6 +48,14 @@ export default async function RuletaSalaPage({ params }: Props) {
 
   const isHost = profile?.id === sala.created_by;
 
+  // Si el usuario tiene sesión y ya tiene una fila de jugador en esta sala
+  // (creada desde otro dispositivo, o en una visita anterior), reconéctalo
+  // con esa misma identidad en vez de dejar que localStorage — que es por
+  // navegador, no por cuenta — decida si "ya está jugando" o no.
+  const initialJugadorId = profile
+    ? ((jugadoresRaw ?? []).find((j) => j.user_id === profile.id)?.id ?? null)
+    : null;
+
   // Si alguien carga/recarga la página después de que la ronda ya empezó,
   // nunca va a recibir el broadcast ROUND_START (ya se disparó antes de que
   // se conectara) — hay que reconstruir el estado actual desde la DB para
@@ -87,6 +95,7 @@ export default async function RuletaSalaPage({ params }: Props) {
       jugadoresIniciales={(jugadoresRaw ?? []) as RuletaJugador[]}
       isHost={isHost}
       initialRound={initialRound}
+      initialJugadorId={initialJugadorId}
     />
   );
 }

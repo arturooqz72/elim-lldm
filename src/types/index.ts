@@ -325,6 +325,7 @@ export interface RuletaJugador {
   nombre: string;
   orden: number;
   puntos: number;
+  user_id: string | null;
   created_at: string;
 }
 
