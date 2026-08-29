@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MessageCircle, Users } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 
 function whatsappHref(whatsapp: string, nombre: string) {
   const digits = whatsapp.replace(/[^\d]/g, "");
@@ -23,8 +23,13 @@ export function JugadoresEnLineaList({
   const [enLineaIds, setEnLineaIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const supabase = createClient();
-    // Solo escucha — quien marca presencia real es PublicHeader.tsx.
+    // Cliente propio (no el singleton) — PublicHeader.tsx ya tiene un canal
+    // "presence:site" suscrito con el cliente singleton; pedir el mismo
+    // canal por nombre a través de ese mismo singleton devuelve la misma
+    // instancia ya suscrita, y registrar un callback "presence" sobre un
+    // canal ya suscrito tira un error real ("cannot add presence callbacks
+    // ... after subscribe()") que rompe la carga de toda la página.
+    const supabase = createFreshClient();
     const channel = supabase.channel("presence:site");
     channel
       .on("presence", { event: "sync" }, () => {
