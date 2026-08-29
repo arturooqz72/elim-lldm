@@ -1,4 +1,4 @@
-import { Gamepad2, RotateCw, Trophy, ChevronRight, Users } from "lucide-react";
+import { Gamepad2, RotateCw, Trophy, ChevronRight, Users, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -44,6 +44,18 @@ const GAMES = [
     accentBorder: "rgba(212,160,23,0.3)",
     accentColor: "#D4A017",
   },
+  {
+    href: "/juegos/jugadores",
+    external: false,
+    className: "card-jugadores",
+    emoji: "📋",
+    icon: UsersRound,
+    title: "Jugadores en línea",
+    desc: "Anótate para que te inviten, o invita a otros por WhatsApp",
+    accentBg: "rgba(37,211,102,0.08)",
+    accentBorder: "rgba(37,211,102,0.3)",
+    accentColor: "#25D366",
+  },
 ] as const;
 
 export default function JuegosHubPage() {
@@ -60,6 +72,7 @@ export default function JuegosHubPage() {
         .card-ruleta:hover  { border-color: rgba(29,158,117,.45) !important; }
         .card-ruleta-online:hover { border-color: rgba(59,130,246,.45) !important; }
         .card-arena:hover   { border-color: rgba(212,160,23,.45) !important; }
+        .card-jugadores:hover { border-color: rgba(37,211,102,.45) !important; }
       `}</style>
 
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>

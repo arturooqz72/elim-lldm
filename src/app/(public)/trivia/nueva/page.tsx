@@ -2,6 +2,7 @@ import { createClient, createServiceClient, getProfile } from "@/lib/supabase/se
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { VerJugadoresLink } from "@/components/juegos/VerJugadoresLink";
 import { generateJoinCode } from "@/lib/utils";
 import { TRIVIA_CATEGORIES, TRIVIA_DIFFICULTY_LABEL } from "@/types";
 import type { TriviaDifficulty } from "@/types";
@@ -92,9 +93,11 @@ export default async function NuevaSalaTriviaPage() {
         <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--color-text)" }}>
           Nueva sala de trivia
         </h1>
-        <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>
           Configura tu sala, comparte el código en pantalla y deja que tu audiencia se una.
         </p>
+
+        <VerJugadoresLink />
 
         <form action={createRoom} className="flex flex-col gap-6">
           {/* Name */}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ArenaCreateForm } from "@/components/arena/ArenaCreateForm";
+import { VerJugadoresLink } from "@/components/juegos/VerJugadoresLink";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Nueva sala — Elim Arena" };
@@ -31,9 +32,11 @@ export default async function NuevaSalaArenaPage() {
         <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--color-text)" }}>
           Nueva sala de Elim Arena
         </h1>
-        <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>
           Configura el título y las preguntas. Necesitas mínimo 5 y máximo 20.
         </p>
+
+        <VerJugadoresLink />
 
         <ArenaCreateForm />
       </div>
