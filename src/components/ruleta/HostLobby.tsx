@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Play, Loader2, Copy, Check } from "lucide-react";
+import { Users, Play, Loader2, Copy, Check, Share2 } from "lucide-react";
 import type { RuletaJugador } from "@/types";
 import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
 
@@ -15,12 +15,39 @@ interface HostLobbyProps {
 
 export function HostLobby({ codigo, jugadores, onStart, starting, error }: HostLobbyProps) {
   const [copied, setCopied] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(codigo);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard no disponible
+    }
+  }
+
+  async function handleInvite() {
+    const url = `${window.location.origin}/ruleta/${codigo}`;
+    const shareData = {
+      title: "La Ruleta — Elim LLDM",
+      text: `Únete a jugar La Ruleta conmigo. Código: ${codigo}`,
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // El usuario canceló el share o falló — seguir con copiar el link
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 1500);
     } catch {
       // clipboard no disponible
     }
@@ -44,6 +71,16 @@ export function HostLobby({ codigo, jugadores, onStart, starting, error }: HostL
           {codigo}
         </span>
         {copied ? <Check size={22} style={{ color: "var(--color-success)" }} /> : <Copy size={22} style={{ color: "var(--color-text-muted)" }} />}
+      </button>
+
+      <button
+        type="button"
+        onClick={handleInvite}
+        className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors"
+        style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)", color: "var(--color-primary)" }}
+      >
+        {inviteCopied ? <Check size={17} /> : <Share2 size={17} />}
+        {inviteCopied ? "Enlace copiado" : "Invitar jugadores"}
       </button>
 
       <div className="rounded-2xl p-4 flex-1 flex flex-col gap-3" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
