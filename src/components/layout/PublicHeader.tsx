@@ -48,6 +48,26 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
     return () => subscription.unsubscribe();
   }, []);
 
+  // Presencia global: mientras haya sesión iniciada en cualquier pestaña con
+  // este layout montado, se marca "en línea" en un canal compartido — lo lee
+  // /juegos/jugadores para mostrar quién de la lista de invitación está
+  // conectado ahora mismo, además de quién simplemente se registró.
+  useEffect(() => {
+    if (!profile) return;
+    const supabase = createClient();
+    const channel = supabase.channel("presence:site", {
+      config: { presence: { key: profile.id } },
+    });
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        channel.track({ online_at: new Date().toISOString() });
+      }
+    });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile]);
+
   async function handleSignOut() {
     const supabase = createFreshClient();
     await supabase.auth.signOut();

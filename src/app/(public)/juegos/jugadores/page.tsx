@@ -47,9 +47,12 @@ export default async function JugadoresEnLineaPage() {
           <JugadoresEnLineaForm userId={profile.id} registrado={propio ? { nombre: propio.nombre, whatsapp: propio.whatsapp } : null} />
 
           <div>
-            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>
+            <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
               Lista de jugadores ({jugadores?.length ?? 0})
             </h2>
+            <p className="text-xs mb-3" style={{ color: "var(--color-text-muted)" }}>
+              El punto verde indica quién tiene el sitio abierto ahora mismo.
+            </p>
             <JugadoresEnLineaList jugadores={jugadores ?? []} currentUserId={profile.id} />
           </div>
         </div>
