@@ -117,6 +117,23 @@ export function RuletaRoom({
   useEffect(() => {
     const supabase = createClient();
 
+    // Red de seguridad: el marcador normalmente se actualiza solo por la
+    // suscripción postgres_changes de más abajo, pero en móvil esa conexión
+    // puede quedarse atrás (pestaña en segundo plano, reconexión lenta) sin
+    // que la del juego se vea afectada — el jugador sigue viendo el tablero
+    // avanzar con normalidad mientras su puntaje se queda congelado. Cuando
+    // un evento indica que los puntos de alguien cambiaron, se vuelve a leer
+    // la lista completa de jugadores directo de la base, sin depender de
+    // que esa segunda conexión haya entregado el UPDATE.
+    async function refetchJugadores() {
+      const { data } = await supabase
+        .from("ruleta_jugadores")
+        .select("*")
+        .eq("sala_id", sala.id)
+        .order("orden");
+      if (data) setJugadores(data as RuletaJugador[]);
+    }
+
     const channel = supabase
       .channel(`ruleta:${sala.codigo}`)
       .on("broadcast", { event: "*" }, (msg) => {
@@ -146,8 +163,12 @@ export function RuletaRoom({
             giroUsado: p.tipo === "puntos",
             mensaje: p.mensaje,
           }));
-          if (p.tipo === "bancarrota") playBankruptSound();
-          else playLandSound();
+          if (p.tipo === "bancarrota") {
+            playBankruptSound();
+            void refetchJugadores();
+          } else {
+            playLandSound();
+          }
         }
 
         if (event === "LETTER_RESULT" || event === "RESOLVE_RESULT") {
@@ -169,6 +190,8 @@ export function RuletaRoom({
             frase: p.frase ?? prev.frase,
             spinToSegment: prev.spinToSegment,
           }));
+          if (p.esVocal === true || p.acierto === true) void refetchJugadores();
+
           if (p.resuelto) {
             playWinSound();
             setPhase("ronda_fin");
