@@ -96,6 +96,7 @@ export default async function RuletaSalaPage({ params }: Props) {
       isHost={isHost}
       initialRound={initialRound}
       initialJugadorId={initialJugadorId}
+      viewerUserId={profile?.id ?? null}
     />
   );
 }

@@ -19,6 +19,7 @@ import {
 import { VOWEL_COST } from "@/lib/ruleta/wheel";
 import { JoinForm } from "./JoinForm";
 import { HostLobby } from "./HostLobby";
+import { RuletaVoiceChat } from "./RuletaVoiceChat";
 import { Wheel } from "./Wheel";
 import { Board } from "./Board";
 import { Letters } from "./Letters";
@@ -50,6 +51,7 @@ interface RuletaRoomProps {
   isHost: boolean;
   initialRound?: RoundState | null;
   initialJugadorId?: string | null;
+  viewerUserId?: string | null;
 }
 
 function phaseFromStatus(status: RuletaSala["status"]): Phase {
@@ -65,6 +67,7 @@ export function RuletaRoom({
   isHost,
   initialRound = null,
   initialJugadorId = null,
+  viewerUserId = null,
 }: RuletaRoomProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
@@ -333,6 +336,10 @@ export function RuletaRoom({
             </button>
           </div>
         </header>
+
+        {viewerUserId && jugadorId && phase !== "finished" && (
+          <RuletaVoiceChat codigo={sala.codigo} />
+        )}
 
         {phase === "finished" ? (
           <MatchEndScreen jugadores={jugadores} meId={jugadorId} />
