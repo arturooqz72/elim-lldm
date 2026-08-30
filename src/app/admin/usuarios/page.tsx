@@ -2,6 +2,25 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle, XCircle, ShieldCheck, User } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// El correo de la cuenta vive en Supabase Auth (auth.users), no en la tabla
+// profiles — hay que pedirlo aparte con la Admin API del service role.
+async function fetchAuthEmails(supabase: SupabaseClient): Promise<Map<string, string>> {
+  const emails = new Map<string, string>();
+  let page = 1;
+  const perPage = 1000;
+  for (;;) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error || !data) break;
+    for (const u of data.users) {
+      if (u.email) emails.set(u.id, u.email);
+    }
+    if (data.users.length < perPage) break;
+    page++;
+  }
+  return emails;
+}
 
 export const metadata = { title: "Usuarios — Admin" };
 
@@ -39,7 +58,7 @@ export default async function UsuariosPage({
   if (q) query = query.ilike("display_name", `%${q}%`);
   if (role) query = query.eq("role", role);
 
-  const { data: users } = await query;
+  const [{ data: users }, emailById] = await Promise.all([query, fetchAuthEmails(supabase)]);
 
   return (
     <div>
@@ -146,6 +165,9 @@ export default async function UsuariosPage({
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: "var(--color-text)" }}>
                     {user.display_name}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: "var(--color-primary)" }}>
+                    {emailById.get(user.id) ?? "—"}
                   </p>
                   <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {formatDate(user.created_at).split(",")[0]}
