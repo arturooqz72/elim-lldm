@@ -75,12 +75,15 @@ export default async function AdminSaludosPage() {
               className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 rounded-2xl"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
-              <div className="min-w-0 sm:w-48 shrink-0">
+              <div className="min-w-0 sm:w-56 shrink-0">
                 <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
                   {item.nombre}
                 </p>
                 <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                   {formatDate(item.created_at).split(",")[0]} · {item.duration_seconds}s
+                </p>
+                <p className="text-xs truncate" style={{ color: item.contacto ? "var(--color-primary)" : "var(--color-text-muted)" }}>
+                  {item.contacto ?? "Sin contacto"}
                 </p>
               </div>
 
