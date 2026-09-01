@@ -34,10 +34,23 @@ CREATE TABLE arena_publica_preguntas (
   opcion_b TEXT NOT NULL,
   opcion_c TEXT NOT NULL,
   opcion_d TEXT NOT NULL,
-  respuesta_correcta TEXT NOT NULL CHECK (respuesta_correcta IN ('a','b','c','d')),
   orden INT NOT NULL,
   UNIQUE (sala_id, orden)
 );
+
+-- La respuesta correcta vive aparte, sin ninguna policy/GRANT público —
+-- mismo patrón que ruleta_rondas en 0016_ruleta_online.sql. Si viviera en
+-- arena_publica_preguntas (que sí es públicamente legible, para que
+-- cualquiera vea el texto de la pregunta y las opciones), cualquiera
+-- podría consultarla por la API REST antes de responder.
+CREATE TABLE arena_publica_respuestas_correctas (
+  pregunta_id UUID PRIMARY KEY REFERENCES arena_publica_preguntas(id) ON DELETE CASCADE,
+  respuesta_correcta TEXT NOT NULL CHECK (respuesta_correcta IN ('a','b','c','d'))
+);
+
+ALTER TABLE arena_publica_respuestas_correctas ENABLE ROW LEVEL SECURITY;
+-- Sin policies, sin GRANTs para anon/authenticated a propósito — solo el
+-- service role (que ignora RLS) puede leerla.
 
 CREATE TABLE arena_publica_jugadores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +74,15 @@ CREATE TABLE arena_publica_respuestas (
 );
 
 CREATE INDEX idx_arena_publica_salas_status ON arena_publica_salas(status);
+-- A lo sumo una sala "no terminada" a la vez. Esto es lo que realmente
+-- evita la condición de carrera de getOrCreateOpenRoom() (dos requests que
+-- no ven ninguna sala abierta e intentan crear una cada uno): si dos
+-- INSERT llegan casi al mismo tiempo, Postgres deja pasar el primero y
+-- rechaza el segundo con una violación de unicidad (23505), que la app
+-- atrapa y resuelve re-consultando la sala que sí se creó.
+CREATE UNIQUE INDEX idx_arena_publica_salas_una_abierta
+  ON arena_publica_salas ((1))
+  WHERE status <> 'finished';
 CREATE INDEX idx_arena_publica_preguntas_sala ON arena_publica_preguntas(sala_id, orden);
 CREATE INDEX idx_arena_publica_jugadores_sala ON arena_publica_jugadores(sala_id);
 CREATE INDEX idx_arena_publica_respuestas_sala ON arena_publica_respuestas(sala_id, pregunta_id);

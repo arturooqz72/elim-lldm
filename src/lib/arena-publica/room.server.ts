@@ -32,18 +32,21 @@ function shuffle<T>(arr: T[]): T[] {
  * es quien, sin darse cuenta, prepara la siguiente.
  */
 export async function getOrCreateOpenRoom(): Promise<{
-  sala: SalaActual;
+  sala: SalaActual | null;
   error: string | null;
 }> {
   const service = await createServiceClient();
 
-  const { data: existente } = await service
-    .from("arena_publica_salas")
-    .select("*")
-    .neq("status", "finished")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const buscarSalaAbierta = () =>
+    service
+      .from("arena_publica_salas")
+      .select("*")
+      .neq("status", "finished")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+  const { data: existente } = await buscarSalaAbierta();
 
   if (existente) return { sala: existente as SalaActual, error: null };
 
@@ -57,12 +60,12 @@ export async function getOrCreateOpenRoom(): Promise<{
     .eq("is_public", true);
 
   if (setsError) {
-    return { sala: null as unknown as SalaActual, error: setsError.message };
+    return { sala: null, error: setsError.message };
   }
   const setIds = (setsPublicos ?? []).map((s) => s.id as string);
   if (setIds.length === 0) {
     return {
-      sala: null as unknown as SalaActual,
+      sala: null,
       error: `Todavía no hay suficientes preguntas públicas (se necesitan al menos ${MIN_PREGUNTAS_DISPONIBLES}).`,
     };
   }
@@ -73,11 +76,11 @@ export async function getOrCreateOpenRoom(): Promise<{
     .in("question_set_id", setIds);
 
   if (preguntasError) {
-    return { sala: null as unknown as SalaActual, error: preguntasError.message };
+    return { sala: null, error: preguntasError.message };
   }
   if (!preguntasDisponibles || preguntasDisponibles.length < MIN_PREGUNTAS_DISPONIBLES) {
     return {
-      sala: null as unknown as SalaActual,
+      sala: null,
       error: `Todavía no hay suficientes preguntas públicas (se necesitan al menos ${MIN_PREGUNTAS_DISPONIBLES}).`,
     };
   }
@@ -91,25 +94,47 @@ export async function getOrCreateOpenRoom(): Promise<{
     .single();
 
   if (salaError || !nuevaSala) {
-    return { sala: null as unknown as SalaActual, error: salaError?.message ?? "No se pudo crear la sala" };
+    // 23505 = violación de unicidad: otra request concurrente ganó la
+    // carrera vía el índice único parcial idx_arena_publica_salas_una_abierta.
+    // No es un error real — esa sala ya existe, así que la buscamos y la
+    // devolvemos en vez de fallar.
+    if (salaError?.code === "23505") {
+      const { data: salaGanadora } = await buscarSalaAbierta();
+      if (salaGanadora) return { sala: salaGanadora as SalaActual, error: null };
+    }
+    return { sala: null, error: salaError?.message ?? "No se pudo crear la sala" };
   }
 
-  const { error: insertPreguntasError } = await service.from("arena_publica_preguntas").insert(
-    elegidas.map((q, i) => ({
-      sala_id: nuevaSala.id,
-      pregunta: q.question_text,
-      opcion_a: q.option_a,
-      opcion_b: q.option_b,
-      opcion_c: q.option_c,
-      opcion_d: q.option_d,
-      respuesta_correcta: q.correct_option,
-      orden: i + 1,
+  const { data: preguntasInsertadas, error: insertPreguntasError } = await service
+    .from("arena_publica_preguntas")
+    .insert(
+      elegidas.map((q, i) => ({
+        sala_id: nuevaSala.id,
+        pregunta: q.question_text,
+        opcion_a: q.option_a,
+        opcion_b: q.option_b,
+        opcion_c: q.option_c,
+        opcion_d: q.option_d,
+        orden: i + 1,
+      }))
+    )
+    .select("id");
+
+  if (insertPreguntasError || !preguntasInsertadas) {
+    await service.from("arena_publica_salas").delete().eq("id", nuevaSala.id);
+    return { sala: null, error: insertPreguntasError?.message ?? "No se pudieron crear las preguntas" };
+  }
+
+  const { error: insertRespuestasError } = await service.from("arena_publica_respuestas_correctas").insert(
+    preguntasInsertadas.map((p, i) => ({
+      pregunta_id: p.id,
+      respuesta_correcta: elegidas[i].correct_option,
     }))
   );
 
-  if (insertPreguntasError) {
+  if (insertRespuestasError) {
     await service.from("arena_publica_salas").delete().eq("id", nuevaSala.id);
-    return { sala: null as unknown as SalaActual, error: insertPreguntasError.message };
+    return { sala: null, error: insertRespuestasError.message };
   }
 
   return { sala: nuevaSala as SalaActual, error: null };
