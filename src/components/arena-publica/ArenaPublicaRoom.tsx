@@ -198,6 +198,25 @@ export function ArenaPublicaRoom({
   }, []);
 
   function handleJoined(id: string, sid: string, nombre: string) {
+    if (sid !== salaId) {
+      // La sala para la que se renderizó esta página terminó entre la carga
+      // y el envío del nombre, y el API de join creó/usó una sala nueva
+      // (sid) vía getOrCreateOpenRoom(). Este componente nunca recibió el
+      // snapshot inicial (preguntas, jugadores, fase, deadlines) de esa
+      // sala nueva, así que no hay forma limpia de "cambiar de sala" en
+      // memoria. Persistimos bajo la clave correcta y forzamos una
+      // navegación dura para obtener un Server Component fresco — mismo
+      // patrón que "Jugar otra ronda" en FinishedScreen, y por la misma
+      // razón: forzar un getOrCreateOpenRoom() fresco en el servidor.
+      try {
+        localStorage.setItem(`arena_publica_jugador_${sid}`, JSON.stringify({ id, nombre }));
+      } catch {
+        // localStorage no disponible
+      }
+      window.location.href = "/arena-abierta";
+      return;
+    }
+
     setJugadorId(id);
     try {
       localStorage.setItem(`arena_publica_jugador_${salaId}`, JSON.stringify({ id, nombre }));
