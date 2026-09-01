@@ -173,6 +173,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: preguntaError.message }, { status: 500 });
     }
     if (!preguntaActual) {
+      console.error(
+        "[arena-publica/advance] Transición 2 (playing->reveal): falta la pregunta con orden=pregunta_actual — dato inconsistente",
+        { salaId: sala.id, orden: sala.pregunta_actual }
+      );
       return NextResponse.json({ applied: false });
     }
 
