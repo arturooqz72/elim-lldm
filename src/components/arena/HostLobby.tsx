@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Play, Loader2, Copy, Check } from "lucide-react";
+import { Users, Play, Loader2, Copy, Check, Share2 } from "lucide-react";
 import type { ArenaJugador } from "@/types";
 
 interface HostLobbyProps {
@@ -14,12 +14,39 @@ interface HostLobbyProps {
 
 export function HostLobby({ codigo, titulo, jugadores, onStart, starting }: HostLobbyProps) {
   const [copied, setCopied] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(codigo);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard no disponible
+    }
+  }
+
+  async function handleInvite() {
+    const url = `${window.location.origin}/arena/${codigo}`;
+    const shareData = {
+      title: `${titulo} — Elim Arena`,
+      text: `Únete a jugar trivia bíblica conmigo. Código: ${codigo}`,
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // El usuario canceló el share o falló — seguir con copiar el link
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 1500);
     } catch {
       // clipboard no disponible
     }
@@ -54,6 +81,16 @@ export function HostLobby({ codigo, titulo, jugadores, onStart, starting }: Host
         )}
       </button>
 
+      <button
+        type="button"
+        onClick={handleInvite}
+        className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-colors"
+        style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)", color: "var(--color-primary)" }}
+      >
+        {inviteCopied ? <Check size={17} /> : <Share2 size={17} />}
+        {inviteCopied ? "Enlace copiado" : "Invitar jugadores"}
+      </button>
+
       <div
         className="rounded-2xl p-4 flex-1 flex flex-col gap-3"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
@@ -68,7 +105,7 @@ export function HostLobby({ codigo, titulo, jugadores, onStart, starting }: Host
         <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
           {jugadores.length === 0 ? (
             <p className="text-sm text-center py-4" style={{ color: "var(--color-text-muted)" }}>
-              Esperando jugadores...
+              Esperando jugadores... comparte el código para que se unan desde su celular.
             </p>
           ) : (
             jugadores.map((j) => (
@@ -91,6 +128,12 @@ export function HostLobby({ codigo, titulo, jugadores, onStart, starting }: Host
           )}
         </div>
       </div>
+
+      {jugadores.length === 0 && (
+        <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
+          El anfitrión no juega — se necesita al menos 1 jugador conectado desde su propio celular para poder empezar.
+        </p>
+      )}
 
       <button
         onClick={onStart}
