@@ -103,6 +103,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: preguntaError.message }, { status: 500 });
     }
     if (!pregunta) {
+      console.error(
+        "[arena-publica/advance] Transición 1 (counting->playing): falta la pregunta con orden=1 — dato inconsistente",
+        { salaId: sala.id, orden: 1 }
+      );
       return NextResponse.json({ applied: false });
     }
 
@@ -184,6 +188,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: respuestaError.message }, { status: 500 });
     }
     if (!respuesta) {
+      console.error(
+        "[arena-publica/advance] Transición 2 (playing->reveal): falta la respuesta correcta en arena_publica_respuestas_correctas — dato inconsistente",
+        { salaId: sala.id, preguntaId: preguntaActual.id, orden: sala.pregunta_actual }
+      );
       return NextResponse.json({ applied: false });
     }
 
@@ -265,6 +273,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: preguntaError.message }, { status: 500 });
     }
     if (!pregunta) {
+      console.error(
+        "[arena-publica/advance] Transición 3 (reveal->siguiente pregunta): falta la pregunta con orden=siguienteOrden — dato inconsistente",
+        { salaId: sala.id, orden: siguienteOrden }
+      );
       return NextResponse.json({ applied: false });
     }
 
