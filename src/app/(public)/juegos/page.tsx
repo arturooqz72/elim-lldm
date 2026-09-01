@@ -1,4 +1,4 @@
-import { Gamepad2, RotateCw, Trophy, ChevronRight, Users, UsersRound } from "lucide-react";
+import { Gamepad2, RotateCw, Trophy, ChevronRight, Users, UsersRound, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -45,6 +45,18 @@ const GAMES = [
     accentColor: "#D4A017",
   },
   {
+    href: "/arena-abierta",
+    external: false,
+    className: "card-arena-abierta",
+    emoji: "⚡",
+    icon: Sparkles,
+    title: "Arena Abierta",
+    desc: "Trivia bíblica al instante, sin crear sala — solo pon tu nombre y juega",
+    accentBg: "rgba(168,85,247,0.08)",
+    accentBorder: "rgba(168,85,247,0.3)",
+    accentColor: "#A855F7",
+  },
+  {
     href: "/juegos/jugadores",
     external: false,
     className: "card-jugadores",
@@ -72,6 +84,7 @@ export default function JuegosHubPage() {
         .card-ruleta:hover  { border-color: rgba(29,158,117,.45) !important; }
         .card-ruleta-online:hover { border-color: rgba(59,130,246,.45) !important; }
         .card-arena:hover   { border-color: rgba(212,160,23,.45) !important; }
+        .card-arena-abierta:hover { border-color: rgba(168,85,247,.45) !important; }
         .card-jugadores:hover { border-color: rgba(37,211,102,.45) !important; }
       `}</style>
 
