@@ -1,4 +1,4 @@
-import { getProfile } from "@/lib/supabase/server";
+import { getProfile, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +14,19 @@ export default async function NuevaSalaArenaPage() {
   if (profile.role !== "admin" && profile.role !== "anfitrion") {
     redirect("/arena");
   }
+
+  const supabase = await createClient();
+  const { data: questionSets } = await supabase
+    .from("question_sets")
+    .select("id, title, questions(count)")
+    .eq("is_public", true)
+    .order("title");
+
+  const sets = (questionSets ?? []).map((s) => ({
+    id: s.id as string,
+    title: s.title as string,
+    count: ((s.questions as unknown as { count: number }[])[0]?.count) ?? 0,
+  }));
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -33,12 +46,12 @@ export default async function NuevaSalaArenaPage() {
           Nueva sala de Elim Arena
         </h1>
         <p className="text-sm mb-4" style={{ color: "var(--color-text-muted)" }}>
-          Configura el título y las preguntas. Necesitas mínimo 5 y máximo 20.
+          Usa un set de preguntas ya hecho o escribe las tuyas. Necesitas mínimo 5 y máximo 20.
         </p>
 
         <VerJugadoresLink />
 
-        <ArenaCreateForm />
+        <ArenaCreateForm questionSets={sets} />
       </div>
     </div>
   );

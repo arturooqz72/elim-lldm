@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Sparkles } from "lucide-react";
+import { Plus, Trash2, Loader2, Sparkles, ListChecks, PenLine } from "lucide-react";
 import type { AnswerOption } from "@/types";
+
+interface QuestionSetOption {
+  id: string;
+  title: string;
+  count: number;
+}
 
 interface PreguntaForm {
   pregunta: string;
@@ -69,12 +75,17 @@ const EMPTY_PREGUNTA: PreguntaForm = {
 const MIN_PREGUNTAS = 5;
 const MAX_PREGUNTAS = 20;
 
-export function ArenaCreateForm() {
+export function ArenaCreateForm({ questionSets = [] }: { questionSets?: QuestionSetOption[] }) {
+  const [modo, setModo] = useState<"set" | "manual">(questionSets.length > 0 ? "set" : "manual");
+  const [questionSetId, setQuestionSetId] = useState(questionSets[0]?.id ?? "");
   const [titulo, setTitulo] = useState("Elim Arena");
   const [preguntas, setPreguntas] = useState<PreguntaForm[]>(SAMPLE_PREGUNTAS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const selectedSet = questionSets.find((s) => s.id === questionSetId) ?? null;
+  const setTooFewPreguntas = modo === "set" && selectedSet !== null && selectedSet.count < MIN_PREGUNTAS;
 
   function updatePregunta(index: number, field: keyof PreguntaForm, value: string) {
     setPreguntas((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
@@ -94,24 +105,39 @@ export function ArenaCreateForm() {
     e.preventDefault();
     setError(null);
 
-    for (const p of preguntas) {
-      if (
-        !p.pregunta.trim() ||
-        !p.opcion_a.trim() ||
-        !p.opcion_b.trim() ||
-        !p.opcion_c.trim() ||
-        !p.opcion_d.trim()
-      ) {
-        setError("Completa todas las preguntas y opciones antes de continuar.");
+    let body: { titulo: string; preguntas?: PreguntaForm[]; question_set_id?: string };
+
+    if (modo === "set") {
+      if (!questionSetId) {
+        setError("Elige un set de preguntas.");
         return;
       }
+      if (setTooFewPreguntas) {
+        setError(`Este set tiene menos de ${MIN_PREGUNTAS} preguntas — elige otro.`);
+        return;
+      }
+      body = { titulo: titulo.trim(), question_set_id: questionSetId };
+    } else {
+      for (const p of preguntas) {
+        if (
+          !p.pregunta.trim() ||
+          !p.opcion_a.trim() ||
+          !p.opcion_b.trim() ||
+          !p.opcion_c.trim() ||
+          !p.opcion_d.trim()
+        ) {
+          setError("Completa todas las preguntas y opciones antes de continuar.");
+          return;
+        }
+      }
+      body = { titulo: titulo.trim(), preguntas };
     }
 
     setSubmitting(true);
     const res = await fetch("/api/arena/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo: titulo.trim(), preguntas }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -145,34 +171,101 @@ export function ArenaCreateForm() {
         />
       </div>
 
-      <div className="flex flex-col gap-4">
-        {preguntas.map((p, i) => (
-          <PreguntaEditor
-            key={i}
-            index={i}
-            pregunta={p}
-            onChange={updatePregunta}
-            onRemove={() => removePregunta(i)}
-            canRemove={preguntas.length > MIN_PREGUNTAS}
-          />
-        ))}
-      </div>
+      {questionSets.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setModo("set")}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            style={{
+              background: modo === "set" ? "rgba(212,160,23,0.12)" : "var(--color-surface-elevated)",
+              border: `1px solid ${modo === "set" ? "var(--color-primary)" : "var(--color-border)"}`,
+              color: modo === "set" ? "var(--color-primary)" : "var(--color-text-muted)",
+            }}
+          >
+            <ListChecks size={15} />
+            Usar un set
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("manual")}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            style={{
+              background: modo === "manual" ? "rgba(212,160,23,0.12)" : "var(--color-surface-elevated)",
+              border: `1px solid ${modo === "manual" ? "var(--color-primary)" : "var(--color-border)"}`,
+              color: modo === "manual" ? "var(--color-primary)" : "var(--color-text-muted)",
+            }}
+          >
+            <PenLine size={15} />
+            Escribir preguntas
+          </button>
+        </div>
+      )}
 
-      <button
-        type="button"
-        onClick={addPregunta}
-        disabled={preguntas.length >= MAX_PREGUNTAS}
-        className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors"
-        style={{
-          background: "var(--color-surface-elevated)",
-          border: "1px dashed var(--color-border)",
-          color: preguntas.length >= MAX_PREGUNTAS ? "var(--color-text-muted)" : "var(--color-primary)",
-          cursor: preguntas.length >= MAX_PREGUNTAS ? "not-allowed" : "pointer",
-        }}
-      >
-        <Plus size={16} />
-        Agregar pregunta ({preguntas.length}/{MAX_PREGUNTAS})
-      </button>
+      {modo === "set" ? (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Set de preguntas
+          </label>
+          <select
+            value={questionSetId}
+            onChange={(e) => setQuestionSetId(e.target.value)}
+            className="rounded-xl px-4 py-3 text-base outline-none transition-colors"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: `1px solid ${setTooFewPreguntas ? "var(--color-destructive)" : "var(--color-border)"}`,
+              color: "var(--color-text)",
+            }}
+          >
+            {questionSets.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title} ({s.count} preguntas)
+              </option>
+            ))}
+          </select>
+          {setTooFewPreguntas && (
+            <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
+              Este set tiene menos de {MIN_PREGUNTAS} preguntas — elige otro.
+            </p>
+          )}
+          {selectedSet && selectedSet.count > MAX_PREGUNTAS && (
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Este set tiene {selectedSet.count} preguntas — se usarán las primeras {MAX_PREGUNTAS}.
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4">
+            {preguntas.map((p, i) => (
+              <PreguntaEditor
+                key={i}
+                index={i}
+                pregunta={p}
+                onChange={updatePregunta}
+                onRemove={() => removePregunta(i)}
+                canRemove={preguntas.length > MIN_PREGUNTAS}
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={addPregunta}
+            disabled={preguntas.length >= MAX_PREGUNTAS}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px dashed var(--color-border)",
+              color: preguntas.length >= MAX_PREGUNTAS ? "var(--color-text-muted)" : "var(--color-primary)",
+              cursor: preguntas.length >= MAX_PREGUNTAS ? "not-allowed" : "pointer",
+            }}
+          >
+            <Plus size={16} />
+            Agregar pregunta ({preguntas.length}/{MAX_PREGUNTAS})
+          </button>
+        </>
+      )}
 
       {error && (
         <p className="text-sm" style={{ color: "var(--color-destructive)" }}>
