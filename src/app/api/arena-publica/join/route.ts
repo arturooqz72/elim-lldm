@@ -28,6 +28,30 @@ export async function POST(request: Request) {
 
   const service = await createServiceClient();
 
+  // Re-verifica el estado justo antes de insertar: si la sala pasó a
+  // 'playing' en la ventana entre el getOrCreateOpenRoom() de arriba y este
+  // punto, evitamos insertar un jugador "fantasma" en una partida que ya
+  // arrancó y que nunca podrá jugar.
+  const { data: salaFresca, error: salaFrescaError } = await service
+    .from("arena_publica_salas")
+    .select("status")
+    .eq("id", sala.id)
+    .single();
+
+  if (salaFrescaError || !salaFresca) {
+    return NextResponse.json(
+      { error: salaFrescaError?.message ?? "No hay sala disponible" },
+      { status: 500 }
+    );
+  }
+
+  if (salaFresca.status !== "lobby" && salaFresca.status !== "counting") {
+    return NextResponse.json(
+      { error: "La partida actual ya empezó — espera a que termine para unirte a la siguiente." },
+      { status: 400 }
+    );
+  }
+
   const { data: jugador, error: insertError } = await service
     .from("arena_publica_jugadores")
     .insert({ sala_id: sala.id, nombre, puntos: 0 })
@@ -41,28 +65,38 @@ export async function POST(request: Request) {
   // Si acabamos de llegar a 2 jugadores y la sala seguía en 'lobby', arranca
   // la cuenta regresiva — con guardia CAS para que, si dos joins llegan a la
   // vez, solo uno dispare la cuenta.
-  const { count } = await service
+  const { count, error: countError } = await service
     .from("arena_publica_jugadores")
     .select("id", { count: "exact", head: true })
     .eq("sala_id", sala.id);
 
+  if (countError) {
+    console.error(
+      `[arena-publica/join] Error al contar jugadores de la sala ${sala.id}:`,
+      countError
+    );
+  }
+
   if ((count ?? 0) >= MIN_JUGADORES_PARA_INICIAR && sala.status === "lobby") {
     const cuentaTerminaEn = Date.now() + COUNTDOWN_SECONDS * 1000;
-    const { data: updated } = await service
+    const { data: updated, error: updateError } = await service
       .from("arena_publica_salas")
       .update({ status: "counting", cuenta_termina_en: new Date(cuentaTerminaEn).toISOString() })
       .eq("id", sala.id)
       .eq("status", "lobby")
       .select("id");
 
+    if (updateError) {
+      console.error(
+        `[arena-publica/join] Error al actualizar sala ${sala.id} a 'counting':`,
+        updateError
+      );
+    }
+
     if (updated && updated.length > 0) {
       const supabase = await createClient();
       const channel = supabase.channel(`arena-publica:${sala.id}`);
-      await channel.send({
-        type: "broadcast",
-        event: "COUNTDOWN_START",
-        payload: { cuentaTerminaEn },
-      });
+      await channel.httpSend("COUNTDOWN_START", { cuentaTerminaEn });
     }
   }
 
