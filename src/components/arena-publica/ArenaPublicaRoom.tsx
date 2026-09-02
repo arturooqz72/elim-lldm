@@ -8,6 +8,7 @@ import { AnswerButtons } from "@/components/arena/AnswerButtons";
 import { Leaderboard } from "@/components/arena/Leaderboard";
 import { CountdownCircle } from "@/components/arena/CountdownCircle";
 import { JoinPublicaForm } from "./JoinPublicaForm";
+import { ArenaPublicaVoiceChat } from "./ArenaPublicaVoiceChat";
 import { COUNTDOWN_SECONDS, ROUND_SECONDS, REVEAL_SECONDS } from "@/lib/arena-publica/config";
 import type { ArenaJugador, AnswerOption } from "@/types";
 
@@ -270,6 +271,10 @@ export function ArenaPublicaRoom({
             en vivo
           </div>
         </header>
+
+        {jugadorId && phase !== "finished" && (
+          <ArenaPublicaVoiceChat salaId={salaId} jugadorId={jugadorId} />
+        )}
 
         {!jugadorId ? (
           <JoinPublicaForm onJoined={handleJoined} />
