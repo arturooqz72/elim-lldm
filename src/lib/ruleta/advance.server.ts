@@ -1,7 +1,7 @@
 // src/lib/ruleta/advance.server.ts
 import "server-only";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { TURN_SECONDS, RONDA_FIN_SECONDS, MIN_PLAYERS } from "./wheel";
+import { TURN_SECONDS, MIN_PLAYERS } from "./wheel";
 import { buildBoardShape } from "./game.server";
 import { pickPuzzle } from "./puzzles.server";
 import { nextJugadorId } from "./game.server";
