@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createClient, getProfile } from "@/lib/supabase/server";
 import { getOrCreateOpenRoom } from "@/lib/arena-publica/room.server";
 import { ArenaPublicaRoom } from "@/components/arena-publica/ArenaPublicaRoom";
 import type { ArenaJugador } from "@/types";
@@ -11,6 +12,9 @@ function toMs(iso: string | null): number | null {
 }
 
 export default async function ArenaAbiertaPage() {
+  const profile = await getProfile();
+  if (!profile) redirect("/login?returnUrl=/arena-abierta");
+
   const { sala, error } = await getOrCreateOpenRoom();
 
   if (!sala) {
@@ -48,6 +52,7 @@ export default async function ArenaAbiertaPage() {
       salaId={sala.id}
       status={sala.status}
       preguntaActual={sala.pregunta_actual}
+      jugadoresDeseados={sala.jugadores_deseados}
       cuentaTerminaEn={toMs(sala.cuenta_termina_en)}
       preguntaTerminaEn={toMs(sala.pregunta_termina_en)}
       revealTerminaEn={toMs(sala.reveal_termina_en)}
