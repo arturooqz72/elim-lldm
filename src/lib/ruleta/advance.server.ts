@@ -124,7 +124,7 @@ export async function tryAdvanceTurn(
     .eq("sala_id", salaId);
 
   if (jugadoresError) return { applied: false, error: jugadoresError.message };
-  if (!jugadores) return { applied: false };
+  if (!jugadores || jugadores.length === 0) return { applied: false };
 
   const nextId = nextJugadorId(jugadores, sala.turno_jugador_id);
   const endsAt = Date.now() + TURN_SECONDS * 1000;
@@ -240,6 +240,10 @@ export async function tryAdvanceRound(salaId: string): Promise<{ applied: boolea
   return { applied: true };
 }
 
+// Cuánto tiempo, más allá del deadline, se espera antes de considerar una
+// sala "abandonada" y sanarla sin que haya cliente conectado — suficiente
+// margen para que el cliente legítimo (el que perdió la carrera) dispare su
+// propia petición por la vía normal antes de que esto interfiera.
 const STALE_GRACE_MS = 15_000;
 
 /**
@@ -268,25 +272,29 @@ export async function healStaleRuletaRooms(): Promise<void> {
   if (!salas || salas.length === 0) return;
 
   for (const sala of salas) {
-    if (sala.status === "lobby") {
-      const { error: startError } = await tryStartMatch(sala.id, true);
-      if (startError) console.error(`[ruleta/heal] Error al intentar arrancar sala ${sala.id}:`, startError);
-      continue;
-    }
+    try {
+      if (sala.status === "lobby") {
+        const { error: startError } = await tryStartMatch(sala.id, true);
+        if (startError) console.error(`[ruleta/heal] Error al intentar arrancar sala ${sala.id}:`, startError);
+        continue;
+      }
 
-    if (sala.status === "playing") {
-      if (!sala.turno_termina_en) continue;
-      if (now - new Date(sala.turno_termina_en).getTime() < STALE_GRACE_MS) continue;
-      const { error: turnoError } = await tryAdvanceTurn(sala.id, true);
-      if (turnoError) console.error(`[ruleta/heal] Error al sanar turno de sala ${sala.id}:`, turnoError);
-      continue;
-    }
+      if (sala.status === "playing") {
+        if (!sala.turno_termina_en) continue;
+        if (now - new Date(sala.turno_termina_en).getTime() < STALE_GRACE_MS) continue;
+        const { error: turnoError } = await tryAdvanceTurn(sala.id, true);
+        if (turnoError) console.error(`[ruleta/heal] Error al sanar turno de sala ${sala.id}:`, turnoError);
+        continue;
+      }
 
-    if (sala.status === "ronda_fin") {
-      if (!sala.ronda_fin_termina_en) continue;
-      if (now - new Date(sala.ronda_fin_termina_en).getTime() < STALE_GRACE_MS) continue;
-      const { error: rondaError } = await tryAdvanceRound(sala.id);
-      if (rondaError) console.error(`[ruleta/heal] Error al sanar ronda de sala ${sala.id}:`, rondaError);
+      if (sala.status === "ronda_fin") {
+        if (!sala.ronda_fin_termina_en) continue;
+        if (now - new Date(sala.ronda_fin_termina_en).getTime() < STALE_GRACE_MS) continue;
+        const { error: rondaError } = await tryAdvanceRound(sala.id);
+        if (rondaError) console.error(`[ruleta/heal] Error al sanar ronda de sala ${sala.id}:`, rondaError);
+      }
+    } catch (err) {
+      console.error(`[ruleta/heal] Excepción inesperada al sanar sala ${sala.id}:`, err);
     }
   }
 }
