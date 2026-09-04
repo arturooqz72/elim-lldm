@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { TURN_SECONDS, RESOLVE_BONUS } from "@/lib/ruleta/wheel";
+import { TURN_SECONDS, RESOLVE_BONUS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
 import { buildBoardShape, allLettersInPhrase, nextJugadorId, normalize } from "@/lib/ruleta/game.server";
 
 export async function POST(
@@ -56,9 +56,14 @@ export async function POST(
 
     // 1) Actualiza primero la sala (con guardia CAS) — nadie más puede tocar la
     // ronda/jugador hasta que ganemos esta carrera.
+    const ronda_fin_termina_en = Date.now() + RONDA_FIN_SECONDS * 1000;
     const { data: updated, error: updateError } = await service
       .from("ruleta_salas")
-      .update({ status: "ronda_fin", turno_termina_en: null })
+      .update({
+        status: "ronda_fin",
+        turno_termina_en: null,
+        ronda_fin_termina_en: new Date(ronda_fin_termina_en).toISOString(),
+      })
       .eq("id", sala.id)
       .eq("turno_termina_en", sala.turno_termina_en)
       .select("id");

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { ALPHABET, VOWELS, TURN_SECONDS } from "@/lib/ruleta/wheel";
+import { ALPHABET, VOWELS, TURN_SECONDS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
 import { buildBoardShape, countLetterInPhrase, isPhraseSolved, nextJugadorId } from "@/lib/ruleta/game.server";
 
 export async function POST(
@@ -71,7 +71,13 @@ export async function POST(
       .from("ruleta_salas")
       .update(
         resuelto
-          ? { status: "ronda_fin", puede_consonante: false, giro_usado: false, turno_termina_en: null }
+          ? {
+              status: "ronda_fin",
+              puede_consonante: false,
+              giro_usado: false,
+              turno_termina_en: null,
+              ronda_fin_termina_en: new Date(Date.now() + RONDA_FIN_SECONDS * 1000).toISOString(),
+            }
           : { puede_consonante: false, giro_usado: false, turno_termina_en: new Date(endsAt).toISOString() }
       )
       .eq("id", sala.id)
