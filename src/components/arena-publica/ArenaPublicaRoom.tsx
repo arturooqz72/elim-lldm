@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Trophy, Clock, Sparkles } from "lucide-react";
+import { Trophy, Clock, Sparkles, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { createClient } from "@/lib/supabase/client";
 import { AnswerButtons } from "@/components/arena/AnswerButtons";
@@ -87,6 +87,8 @@ export function ArenaPublicaRoom({
   const [selected, setSelected] = useState<AnswerOption | null>(null);
   const [correct, setCorrect] = useState<AnswerOption | null>(null);
   const [answering, setAnswering] = useState(false);
+  const [forceStarting, setForceStarting] = useState(false);
+  const [forceStartError, setForceStartError] = useState<string | null>(null);
   const answerSentRef = useRef(false);
 
   // Restaurar identidad del jugador (sin cuenta) desde localStorage
@@ -112,15 +114,24 @@ export function ArenaPublicaRoom({
     });
   }, [salaId]);
 
-  const handleForceStart = useCallback(() => {
+  const handleForceStart = useCallback(async () => {
     if (!jugadorId) return;
-    fetch("/api/arena-publica/force-start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sala_id: salaId, jugador_id: jugadorId }),
-    }).catch(() => {
-      // best-effort: cualquier otro jugador puede volver a intentarlo
-    });
+    setForceStarting(true);
+    setForceStartError(null);
+    try {
+      const res = await fetch("/api/arena-publica/force-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sala_id: salaId, jugador_id: jugadorId }),
+      });
+      if (!res.ok) {
+        setForceStartError("No se pudo empezar — intenta de nuevo");
+      }
+    } catch {
+      setForceStartError("No se pudo empezar — intenta de nuevo");
+    } finally {
+      setForceStarting(false);
+    }
   }, [salaId, jugadorId]);
 
   // Suscripciones realtime: broadcast de fases + lista de jugadores en vivo
@@ -219,7 +230,7 @@ export function ArenaPublicaRoom({
   function handleEntrado(id: string, sid: string) {
     if (sid !== salaId) {
       // La sala para la que se renderizó esta página terminó entre la carga
-      // y el envío del nombre, y el API de join creó/usó una sala nueva
+      // y el envío del formulario, y el API de join creó/usó una sala nueva
       // (sid) vía getOrCreateOpenRoom(). Este componente nunca recibió el
       // snapshot inicial (preguntas, jugadores, fase, deadlines) de esa
       // sala nueva, así que no hay forma limpia de "cambiar de sala" en
@@ -308,14 +319,29 @@ export function ArenaPublicaRoom({
               {jugadores.length} de {jugadoresDeseados} {jugadoresDeseados === 1 ? "jugador" : "jugadores"}
             </p>
             {jugadores.length >= MIN_JUGADORES_PARA_INICIAR && jugadores.length < jugadoresDeseados && (
-              <button
-                type="button"
-                onClick={handleForceStart}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
-              >
-                Empezar con {jugadores.length}
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleForceStart}
+                  disabled={forceStarting}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+                >
+                  {forceStarting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Empezando…
+                    </>
+                  ) : (
+                    `Empezar con ${jugadores.length}`
+                  )}
+                </button>
+                {forceStartError && (
+                  <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
+                    {forceStartError}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         ) : phase === "counting" ? (
