@@ -1,8 +1,9 @@
-import { Gamepad2, RotateCw, Users, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { Gamepad2, RotateCw, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
 import { PuertaArenaAbierta } from "@/components/juegos/PuertaArenaAbierta";
+import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
+import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 
 export default async function JuegosHubPage() {
   const estadoArenaAbierta = await getEstadoPuertaArenaAbierta();
+  const estadoRuleta = await getEstadoPuertaRuleta();
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -45,27 +47,7 @@ export default async function JuegosHubPage() {
           jugandoAhora={estadoArenaAbierta.jugandoAhora}
         />
 
-        <Link
-          href="/ruleta"
-          className="flex items-center gap-4 p-6 rounded-2xl"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-            style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.3)" }}
-          >
-            <Users size={20} style={{ color: "#3B82F6" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-              Ruleta en línea
-            </h2>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Crea una sala y comparte el código con hasta 6 amigos
-            </p>
-          </div>
-          <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-        </Link>
+        <PuertaRuleta disponible={estadoRuleta.disponible} jugandoAhora={estadoRuleta.jugandoAhora} />
 
         <a
           href="/juegos/ruleta-elimlldm.html"
