@@ -38,6 +38,7 @@ export const SEG_COLORS = [
 export const VOWEL_COST = 700;
 export const TURN_SECONDS = 15;
 export const RESOLVE_BONUS = 500;
+export const RONDA_FIN_SECONDS = 8; // cuánto se muestra la frase/ganador antes de pasar solo a la siguiente ronda
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 export const ROUNDS_MIN = 1;

@@ -309,14 +309,16 @@ export interface RuletaSala {
   status: RuletaStatus;
   rondas_totales: number;
   ronda_actual: number;
+  jugadores_deseados: number;
   turno_jugador_id: string | null;
   turno_termina_en: string | null;
+  ronda_fin_termina_en: string | null;
   giro_usado: boolean;
   puede_consonante: boolean;
   valor_giro_actual: number | null;
   frases_usadas: string[];
   ultima_categoria: string | null;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
 }
 
