@@ -87,3 +87,33 @@ export async function getOrCreateOpenRoom(jugadoresDeseados = MIN_PLAYERS): Prom
 
   return { sala: nuevaSala, error: null };
 }
+
+/**
+ * Versión de solo lectura para la página — nunca crea una sala. Devuelve
+ * la sala más reciente que no esté 'finished' (de cualquier estado:
+ * 'lobby', 'playing', 'ronda_fin'), para pintar el estado actual a un
+ * visitante que todavía no se unió, o reconectar a uno que ya estaba
+ * jugando. Si no hay ninguna, devuelve null y la página muestra el
+ * selector "¿cuántos van a jugar?" sin ninguna sala de referencia — así
+ * la sala nueva solo nace cuando /api/ruleta/join la crea, con la
+ * preferencia real del jugador, en vez de que la propia carga de la
+ * página se adelante y cree una con el valor por defecto antes de que
+ * el jugador alcance a elegir.
+ */
+export async function peekOpenRoom(): Promise<{ id: string; codigo: string } | null> {
+  const service = await createServiceClient();
+
+  await healStaleRuletaRooms().catch((err) => {
+    console.error("[ruleta/room] Error inesperado en healStaleRuletaRooms:", err);
+  });
+
+  const { data } = await service
+    .from("ruleta_salas")
+    .select("id, codigo")
+    .neq("status", "finished")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data ?? null;
+}
