@@ -33,10 +33,13 @@ export default async function RuletaPage() {
 
   const supabase = await createClient();
 
-  const [{ data: sala }, { data: jugadoresRaw }] = await Promise.all([
+  const [{ data: sala, error: salaError }, { data: jugadoresRaw, error: jugadoresError }] = await Promise.all([
     supabase.from("ruleta_salas").select("*").eq("id", salaBase.id).single(),
     supabase.from("ruleta_jugadores").select("*").eq("sala_id", salaBase.id).order("orden"),
   ]);
+
+  if (salaError) console.error("[ruleta/page] Error al leer la sala:", salaError);
+  if (jugadoresError) console.error("[ruleta/page] Error al leer los jugadores:", jugadoresError);
 
   if (!sala) {
     return (

@@ -107,13 +107,17 @@ export async function peekOpenRoom(): Promise<{ id: string; codigo: string } | n
     console.error("[ruleta/room] Error inesperado en healStaleRuletaRooms:", err);
   });
 
-  const { data } = await service
+  const { data, error } = await service
     .from("ruleta_salas")
     .select("id, codigo")
     .neq("status", "finished")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    console.error("[ruleta/room] Error en peekOpenRoom:", error);
+  }
 
   return data ?? null;
 }
