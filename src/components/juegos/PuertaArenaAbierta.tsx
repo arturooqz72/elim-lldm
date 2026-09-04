@@ -9,7 +9,7 @@ interface PuertaArenaAbiertaProps {
 }
 
 export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbiertaProps) {
-  const rojo = jugandoAhora > 0 && !disponible;
+  const ocupado = !disponible;
 
   async function handleInvitar(e: React.MouseEvent) {
     e.preventDefault();
@@ -58,16 +58,16 @@ export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbie
         <span
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide"
           style={{
-            color: rojo ? "var(--color-live)" : "var(--color-success)",
-            background: rojo ? "rgba(255,68,68,0.1)" : "rgba(74,222,128,0.1)",
-            border: `1px solid ${rojo ? "rgba(255,68,68,0.3)" : "rgba(74,222,128,0.32)"}`,
+            color: ocupado ? "var(--color-live)" : "var(--color-success)",
+            background: ocupado ? "rgba(255,68,68,0.1)" : "rgba(74,222,128,0.1)",
+            border: `1px solid ${ocupado ? "rgba(255,68,68,0.3)" : "rgba(74,222,128,0.32)"}`,
           }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: "currentColor" }}
           />
-          {rojo ? "Ocupado" : "Disponible"}
+          {ocupado ? "Ocupado" : "Disponible"}
         </span>
       </div>
 

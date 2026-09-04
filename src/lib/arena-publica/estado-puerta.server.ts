@@ -12,6 +12,11 @@ export interface EstadoPuerta {
  * getOrCreateOpenRoom() a propósito — esto es de solo lectura para pintar
  * una tarjeta, no debe crear una sala nueva solo porque alguien pasó por
  * /juegos sin intención de entrar.
+ *
+ * Tradeoff conocido: al no llamar a healStaleRooms() (a diferencia de
+ * getOrCreateOpenRoom() en room.server.ts), una sala atascada en
+ * playing/reveal tras su deadline seguirá mostrando "Ocupado" aquí hasta
+ * que alguien visite /arena-abierta y dispare la sanación ahí.
  */
 export async function getEstadoPuertaArenaAbierta(): Promise<EstadoPuerta> {
   const supabase = await createClient();
