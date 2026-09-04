@@ -38,7 +38,7 @@ function shuffle<T>(arr: T[]): T[] {
  * es quien, sin darse cuenta, prepara la siguiente. La misma visita también
  * sana de paso cualquier otra sala abandonada — ver healStaleRooms().
  */
-export async function getOrCreateOpenRoom(): Promise<{
+export async function getOrCreateOpenRoom(jugadoresDeseados = 2): Promise<{
   sala: SalaActual | null;
   error: string | null;
 }> {
@@ -100,7 +100,7 @@ export async function getOrCreateOpenRoom(): Promise<{
 
   const { data: nuevaSala, error: salaError } = await service
     .from("arena_publica_salas")
-    .insert({ status: "lobby" })
+    .insert({ status: "lobby", jugadores_deseados: jugadoresDeseados })
     .select("*")
     .single();
 

@@ -15,6 +15,60 @@ async function broadcast(salaId: string, event: string, payload: object) {
 }
 
 /**
+ * Intenta pasar la sala de 'lobby' a 'counting'. La llaman tres caminos
+ * distintos con el mismo resultado esperado — el propio join al llegar al
+ * umbral, la auto-sanación de una sala 'lobby' atascada, y el botón
+ * "empezar con los que hay" — así que vive en un solo lugar en vez de
+ * triplicarse.
+ *
+ * requireTarget=true exige llegar a jugadores_deseados (el camino normal).
+ * requireTarget=false solo exige el piso absoluto MIN_JUGADORES_PARA_INICIAR
+ * — es el atajo que usa el botón de "empezar antes".
+ */
+export async function tryStartCounting(
+  salaId: string,
+  requireTarget: boolean
+): Promise<{ applied: boolean; error?: string }> {
+  const service = await createServiceClient();
+
+  const { data: sala, error: salaError } = await service
+    .from("arena_publica_salas")
+    .select("status, jugadores_deseados")
+    .eq("id", salaId)
+    .maybeSingle();
+
+  if (salaError) return { applied: false, error: salaError.message };
+  if (!sala || sala.status !== "lobby") return { applied: false };
+
+  const { count, error: countError } = await service
+    .from("arena_publica_jugadores")
+    .select("id", { count: "exact", head: true })
+    .eq("sala_id", salaId);
+
+  if (countError) return { applied: false, error: countError.message };
+
+  const umbral = requireTarget ? sala.jugadores_deseados : MIN_JUGADORES_PARA_INICIAR;
+  if ((count ?? 0) < umbral) return { applied: false };
+
+  const cuentaTerminaEn = Date.now() + COUNTDOWN_SECONDS * 1000;
+  const { data: updated, error: updateError } = await service
+    .from("arena_publica_salas")
+    .update({ status: "counting", cuenta_termina_en: new Date(cuentaTerminaEn).toISOString() })
+    .eq("id", salaId)
+    .eq("status", "lobby")
+    .select("id");
+
+  if (updateError) return { applied: false, error: updateError.message };
+
+  if (updated && updated.length > 0) {
+    await broadcast(salaId, "COUNTDOWN_START", { cuentaTerminaEn });
+    return { applied: true };
+  }
+
+  return { applied: false };
+}
+
+/**
  * Aplica como máximo UNA transición de fase para la sala dada, si su
  * deadline actual ya venció. La usan tanto el endpoint /advance (que
  * cualquier cliente conectado dispara al vencer su CountdownCircle local)
@@ -44,34 +98,7 @@ export async function advanceRoomOnce(
   // sala se queda en 'lobby' sin ningún deadline (cuenta_termina_en queda
   // null) y ningún cliente tendría forma de notar que "venció" algo.
   if (sala.status === "lobby") {
-    const { count, error: countError } = await service
-      .from("arena_publica_jugadores")
-      .select("id", { count: "exact", head: true })
-      .eq("sala_id", salaId);
-
-    if (countError) return { applied: false, error: countError.message };
-
-    if ((count ?? 0) >= MIN_JUGADORES_PARA_INICIAR) {
-      const cuentaTerminaEn = now + COUNTDOWN_SECONDS * 1000;
-      const { data: updated, error: updateError } = await service
-        .from("arena_publica_salas")
-        .update({
-          status: "counting",
-          cuenta_termina_en: new Date(cuentaTerminaEn).toISOString(),
-        })
-        .eq("id", salaId)
-        .eq("status", "lobby")
-        .select("id");
-
-      if (updateError) return { applied: false, error: updateError.message };
-
-      if (updated && updated.length > 0) {
-        await broadcast(salaId, "COUNTDOWN_START", { cuentaTerminaEn });
-        return { applied: true };
-      }
-    }
-
-    return { applied: false };
+    return tryStartCounting(salaId, true);
   }
 
   // Transición 1: 'counting' -> 'playing' (primera pregunta).
