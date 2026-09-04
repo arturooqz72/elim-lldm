@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Hash, Loader2, LogOut, SkipForward } from "lucide-react";
+import { Loader2, LogOut, SkipForward, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { RuletaBoardTile, RuletaJugador, RuletaSala } from "@/types";
 import {
@@ -16,9 +16,8 @@ import {
   playTimeoutSound,
   unlockAudioContext,
 } from "@/lib/ruleta/sound.client";
-import { VOWEL_COST } from "@/lib/ruleta/wheel";
-import { JoinForm } from "./JoinForm";
-import { HostLobby } from "./HostLobby";
+import { VOWEL_COST, MIN_PLAYERS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
+import { EntrarForm } from "./EntrarForm";
 import { RuletaVoiceChat } from "./RuletaVoiceChat";
 import { Wheel } from "./Wheel";
 import { Board } from "./Board";
@@ -38,6 +37,7 @@ export interface RoundState {
   letrasProbadas: string[];
   turnoJugadorId: string | null;
   turnoTerminaEn: number | null;
+  rondaFinTerminaEn: number | null;
   puedeConsonante: boolean;
   giroUsado: boolean;
   mensaje: string;
@@ -48,10 +48,8 @@ export interface RoundState {
 interface RuletaRoomProps {
   sala: RuletaSala;
   jugadoresIniciales: RuletaJugador[];
-  isHost: boolean;
   initialRound?: RoundState | null;
   initialJugadorId?: string | null;
-  viewerUserId?: string | null;
 }
 
 function phaseFromStatus(status: RuletaSala["status"]): Phase {
@@ -64,20 +62,15 @@ function phaseFromStatus(status: RuletaSala["status"]): Phase {
 export function RuletaRoom({
   sala,
   jugadoresIniciales,
-  isHost,
   initialRound = null,
   initialJugadorId = null,
-  viewerUserId = null,
 }: RuletaRoomProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(sala.status));
   const [jugadores, setJugadores] = useState<RuletaJugador[]>(jugadoresIniciales);
   const [jugadorId, setJugadorId] = useState<string | null>(initialJugadorId);
-  const [hostWantsToPlay, setHostWantsToPlay] = useState(false);
   const [round, setRound] = useState<RoundState | null>(initialRound);
   const [spinToken, setSpinToken] = useState(0);
-  const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
   const [advancing, setAdvancing] = useState(false);
   const [resolveText, setResolveText] = useState("");
   const jugadorCountRef = useRef(jugadoresIniciales.length);
@@ -143,7 +136,7 @@ export function RuletaRoom({
           const p = payload as unknown as Omit<RoundState, "spinToSegment" | "mensaje" | "puedeConsonante" | "giroUsado">;
           setRound({
             ...p, spinToSegment: null, mensaje: "Nueva frase cargada.",
-            puedeConsonante: false, giroUsado: false,
+            puedeConsonante: false, giroUsado: false, rondaFinTerminaEn: null,
           });
           setPhase("playing");
         }
@@ -185,6 +178,7 @@ export function RuletaRoom({
             letrasProbadas: p.letrasProbadas ?? prev.letrasProbadas,
             turnoJugadorId: p.turnoJugadorId,
             turnoTerminaEn: p.turnoTerminaEn,
+            rondaFinTerminaEn: p.resuelto ? Date.now() + RONDA_FIN_SECONDS * 1000 : null,
             puedeConsonante: preserveConsonante ? prev.puedeConsonante : false,
             mensaje: p.mensaje,
             frase: p.frase ?? prev.frase,
@@ -253,24 +247,44 @@ export function RuletaRoom({
     jugadorCountRef.current = jugadores.length;
   }, [jugadores, phase]);
 
-  function handleJoined(id: string, nombre: string) {
+  function handleEntrado(id: string, codigo: string) {
+    if (codigo !== sala.codigo) {
+      try {
+        localStorage.setItem(`ruleta_jugador_${codigo}`, JSON.stringify({ id }));
+      } catch {
+        // localStorage no disponible
+      }
+      window.location.href = "/ruleta";
+      return;
+    }
+
     setJugadorId(id);
     try {
-      localStorage.setItem(`ruleta_jugador_${sala.codigo}`, JSON.stringify({ id, nombre }));
+      localStorage.setItem(`ruleta_jugador_${sala.codigo}`, JSON.stringify({ id }));
     } catch {
       // localStorage no disponible
     }
   }
 
-  async function handleStart() {
-    setStarting(true);
-    setStartError(null);
-    const res = await fetch(`/api/ruleta/${sala.codigo}/start`, { method: "POST" });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setStartError(data.error ?? "No se pudo iniciar");
+  const [forceStarting, setForceStarting] = useState(false);
+  const [forceStartError, setForceStartError] = useState<string | null>(null);
+
+  async function handleForceStart() {
+    if (!jugadorId) return;
+    setForceStarting(true);
+    setForceStartError(null);
+    try {
+      const res = await fetch(`/api/ruleta/${sala.codigo}/force-start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jugador_id: jugadorId }),
+      });
+      if (!res.ok) setForceStartError("No se pudo empezar — intenta de nuevo");
+    } catch {
+      setForceStartError("No se pudo empezar — intenta de nuevo");
+    } finally {
+      setForceStarting(false);
     }
-    setStarting(false);
   }
 
   async function handleSpin() {
@@ -306,11 +320,12 @@ export function RuletaRoom({
 
   const [forcingSkip, setForcingSkip] = useState(false);
   async function handleForceSkip() {
+    if (!jugadorId) return;
     setForcingSkip(true);
     await fetch(`/api/ruleta/${sala.codigo}/timeout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ force: true }),
+      body: JSON.stringify({ force: true, jugador_id: jugadorId }),
     });
     setForcingSkip(false);
   }
@@ -341,10 +356,14 @@ export function RuletaRoom({
           <div className="flex items-center gap-2">
             <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
-              style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.25)", color: "var(--color-primary)" }}
+              style={{
+                background: "rgba(212,160,23,0.1)",
+                border: "1px solid rgba(212,160,23,0.25)",
+                color: "var(--color-primary)",
+              }}
             >
-              <Hash size={13} />
-              {sala.codigo}
+              <Sparkles size={13} />
+              en vivo
             </div>
             <button
               type="button"
@@ -360,41 +379,46 @@ export function RuletaRoom({
           </div>
         </header>
 
-        {viewerUserId && jugadorId && phase !== "finished" && (
+        {jugadorId && phase !== "finished" && (
           <RuletaVoiceChat codigo={sala.codigo} />
         )}
 
         {phase === "finished" ? (
           <MatchEndScreen jugadores={jugadores} meId={jugadorId} />
-        ) : isHost && phase === "lobby" && hostWantsToPlay && !jugadorId ? (
-          <JoinForm
-            codigo={sala.codigo}
-            onJoined={(id, nombre) => {
-              handleJoined(id, nombre);
-              setHostWantsToPlay(false);
-            }}
-          />
-        ) : isHost && phase === "lobby" ? (
-          <>
-            <HostLobby codigo={sala.codigo} jugadores={jugadores} onStart={handleStart} starting={starting} error={startError} />
-            {!jugadorId && (
-              <button
-                type="button"
-                onClick={() => setHostWantsToPlay(true)}
-                className="text-sm font-semibold text-center py-2"
-                style={{ color: "var(--color-primary)" }}
-              >
-                ¿Tú también quieres jugar? Únete como jugador
-              </button>
-            )}
-          </>
-        ) : !isHost && !jugadorId ? (
-          <JoinForm codigo={sala.codigo} onJoined={handleJoined} />
+        ) : !jugadorId ? (
+          <EntrarForm onEntrado={handleEntrado} />
         ) : phase === "lobby" ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
             <Loader2 size={28} className="animate-spin" style={{ color: "var(--color-primary)" }} />
-            <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>Esperando que el anfitrión inicie...</p>
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>{jugadores.length} jugadores en la sala</p>
+            <p className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
+              esperando más jugadores...
+            </p>
+            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+              {jugadores.length} de {sala.jugadores_deseados} {sala.jugadores_deseados === 1 ? "jugador" : "jugadores"}
+            </p>
+            {jugadores.length >= MIN_PLAYERS && jugadores.length < sala.jugadores_deseados && (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleForceStart}
+                  disabled={forceStarting}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+                >
+                  {forceStarting ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Empezando…
+                    </>
+                  ) : (
+                    `Empezar con ${jugadores.length}`
+                  )}
+                </button>
+                {forceStartError && (
+                  <p className="text-xs" style={{ color: "var(--color-destructive)" }}>{forceStartError}</p>
+                )}
+              </div>
+            )}
           </div>
         ) : round && (phase === "playing" || phase === "ronda_fin") ? (
           <div className="flex-1 flex flex-col gap-4">
@@ -405,7 +429,7 @@ export function RuletaRoom({
               <TurnTimer endsAt={phase === "playing" ? round.turnoTerminaEn : null} onExpire={handleTimeout} />
             </div>
 
-            {isHost && phase === "playing" && (
+            {phase === "playing" && (
               <button
                 type="button"
                 onClick={handleForceSkip}
@@ -424,10 +448,8 @@ export function RuletaRoom({
               <RoundBanner
                 frase={round.frase ?? ""}
                 ganador={jugadores.find((j) => j.id === round.turnoJugadorId) ?? null}
-                isHost={isHost}
-                isLastRound={round.ronda >= round.totalRondas}
-                onNext={handleNextRound}
-                advancing={advancing}
+                terminaEn={round.rondaFinTerminaEn}
+                onExpire={handleNextRound}
               />
             ) : (
               <>
