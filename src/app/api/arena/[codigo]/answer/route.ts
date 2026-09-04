@@ -49,7 +49,7 @@ export async function POST(
 
   const { data: pregunta } = await supabase
     .from("elim_arena_preguntas")
-    .select("id, sala_id, orden, respuesta_correcta")
+    .select("id, sala_id, orden")
     .eq("id", pregunta_id)
     .maybeSingle();
 
@@ -60,7 +60,15 @@ export async function POST(
     return NextResponse.json({ error: "Esta pregunta ya no está activa" }, { status: 400 });
   }
 
-  const esCorrecta = respuesta === pregunta.respuesta_correcta;
+  // La respuesta correcta vive aparte, sin GRANTs públicos — solo el
+  // service role client puede leerla. Ver 0024_elim_arena_respuestas_correctas.sql.
+  const { data: respuestaCorrecta } = await supabase
+    .from("elim_arena_respuestas_correctas")
+    .select("respuesta_correcta")
+    .eq("pregunta_id", pregunta_id)
+    .maybeSingle();
+
+  const esCorrecta = respuesta === respuestaCorrecta?.respuesta_correcta;
   const tiempoClamped = Math.max(0, Math.min(tiempo_ms, ROUND_MS));
   const puntos = esCorrecta
     ? Math.max(100, Math.round(1000 * (1 - tiempoClamped / ROUND_MS)))

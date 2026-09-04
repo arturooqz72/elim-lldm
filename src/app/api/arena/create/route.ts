@@ -152,22 +152,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: pregError } = await service.from("elim_arena_preguntas").insert(
-    preguntas.map((p, i) => ({
-      sala_id: sala.id,
-      pregunta: p.pregunta.trim(),
-      opcion_a: p.opcion_a.trim(),
-      opcion_b: p.opcion_b.trim(),
-      opcion_c: p.opcion_c.trim(),
-      opcion_d: p.opcion_d.trim(),
-      respuesta_correcta: p.respuesta_correcta,
-      orden: i + 1,
+  const { data: preguntasInsertadas, error: pregError } = await service
+    .from("elim_arena_preguntas")
+    .insert(
+      preguntas.map((p, i) => ({
+        sala_id: sala.id,
+        pregunta: p.pregunta.trim(),
+        opcion_a: p.opcion_a.trim(),
+        opcion_b: p.opcion_b.trim(),
+        opcion_c: p.opcion_c.trim(),
+        opcion_d: p.opcion_d.trim(),
+        orden: i + 1,
+      }))
+    )
+    .select("id");
+
+  if (pregError || !preguntasInsertadas) {
+    await service.from("elim_arena_salas").delete().eq("id", sala.id);
+    return NextResponse.json({ error: pregError?.message ?? "No se pudieron crear las preguntas" }, { status: 500 });
+  }
+
+  const { error: respError } = await service.from("elim_arena_respuestas_correctas").insert(
+    preguntasInsertadas.map((p, i) => ({
+      pregunta_id: p.id,
+      respuesta_correcta: preguntas[i].respuesta_correcta,
     }))
   );
 
-  if (pregError) {
+  if (respError) {
     await service.from("elim_arena_salas").delete().eq("id", sala.id);
-    return NextResponse.json({ error: pregError.message }, { status: 500 });
+    return NextResponse.json({ error: respError.message }, { status: 500 });
   }
 
   return NextResponse.json({ codigo: sala.codigo });
