@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { MAX_PLAYERS } from "@/lib/ruleta/wheel";
+import { tryStartMatch } from "@/lib/ruleta/advance.server";
+import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
 
 export async function POST(
   request: Request,
@@ -8,25 +9,37 @@ export async function POST(
 ) {
   const { codigo } = await params;
 
-  // Unirse sigue sin requerir cuenta — pero si el que se une SÍ tiene
-  // sesión, se etiqueta su fila con user_id para poder reconectarlo
-  // automáticamente si vuelve a abrir la sala desde otro dispositivo.
   const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
 
-  const supabase = await createServiceClient();
+  if (!user) {
+    return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
+  }
 
-  let body: { nombre?: string };
+  let body: { jugadores_deseados?: number };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Cuerpo de la solicitud inválido" }, { status: 400 });
   }
 
-  const nombre = body.nombre?.trim().slice(0, 20);
-  if (!nombre) return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
+  const jugadoresDeseados = Math.max(
+    MIN_PLAYERS,
+    Math.min(MAX_PLAYERS, Math.round(body.jugadores_deseados ?? MIN_PLAYERS))
+  );
 
-  const { data: sala } = await supabase
+  const { data: profile } = await authClient
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .single();
+  const nombre = (profile?.display_name ?? "Jugador").slice(0, 20);
+
+  const service = await createServiceClient();
+
+  const { data: sala } = await service
     .from("ruleta_salas")
     .select("id, status")
     .eq("codigo", codigo.toUpperCase())
@@ -37,17 +50,16 @@ export async function POST(
     return NextResponse.json({ error: "El juego ya comenzó" }, { status: 400 });
   }
 
-  if (user) {
-    const { data: existing } = await supabase
-      .from("ruleta_jugadores")
-      .select("id")
-      .eq("sala_id", sala.id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (existing) return NextResponse.json({ jugador_id: existing.id });
-  }
+  const { data: existente } = await service
+    .from("ruleta_jugadores")
+    .select("id")
+    .eq("sala_id", sala.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  const { count } = await supabase
+  if (existente) return NextResponse.json({ jugador_id: existente.id });
+
+  const { count } = await service
     .from("ruleta_jugadores")
     .select("id", { count: "exact", head: true })
     .eq("sala_id", sala.id);
@@ -56,23 +68,34 @@ export async function POST(
     return NextResponse.json({ error: "La sala está llena" }, { status: 400 });
   }
 
-  const { data: jugador, error } = await supabase
+  const { data: jugador, error } = await service
     .from("ruleta_jugadores")
-    .insert({ sala_id: sala.id, nombre, orden: count ?? 0, puntos: 0, user_id: user?.id ?? null })
+    .insert({ sala_id: sala.id, nombre, orden: count ?? 0, puntos: 0, user_id: user.id })
     .select("id")
     .single();
 
   if (error) {
+    // 23505 = otra request concurrente de la MISMA cuenta ganó la carrera
+    // entre el check de "existente" de arriba y este insert (doble clic,
+    // doble pestaña) — no es un error real, buscamos y devolvemos esa fila.
     if (error.code === "23505") {
-      return NextResponse.json(
-        { error: "Alguien más se unió justo antes que tú, intenta de nuevo" },
-        { status: 409 }
-      );
+      const { data: jugadorGanador } = await service
+        .from("ruleta_jugadores")
+        .select("id")
+        .eq("sala_id", sala.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (jugadorGanador) return NextResponse.json({ jugador_id: jugadorGanador.id });
     }
     return NextResponse.json({ error: error.message ?? "Error al unirse" }, { status: 500 });
   }
   if (!jugador) {
     return NextResponse.json({ error: "Error al unirse" }, { status: 500 });
+  }
+
+  const { error: startError } = await tryStartMatch(sala.id, true);
+  if (startError) {
+    console.error(`[ruleta/join] tryStartMatch falló para sala ${sala.id}:`, startError);
   }
 
   return NextResponse.json({ jugador_id: jugador.id });
