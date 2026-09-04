@@ -848,129 +848,14 @@ git commit -m "Set ronda_fin_termina_en at all three round-end entry points"
 
 ## Task 7: Cuenta obligatoria para unirse + arranque automático
 
-**Files:**
-- Modify: `src/app/api/ruleta/[codigo]/join/route.ts`
-
-- [ ] **Paso 1: Reescribir la ruta completa**
-
-```typescript
-import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { tryStartMatch } from "@/lib/ruleta/advance.server";
-import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ codigo: string }> }
-) {
-  const { codigo } = await params;
-
-  const authClient = await createClient();
-  const {
-    data: { user },
-  } = await authClient.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
-  }
-
-  let body: { jugadores_deseados?: number };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Cuerpo de la solicitud inválido" }, { status: 400 });
-  }
-
-  const jugadoresDeseados = Math.max(
-    MIN_PLAYERS,
-    Math.min(MAX_PLAYERS, Math.round(body.jugadores_deseados ?? MIN_PLAYERS))
-  );
-
-  const { data: profile } = await authClient
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user.id)
-    .single();
-  const nombre = (profile?.display_name ?? "Jugador").slice(0, 20);
-
-  const service = await createServiceClient();
-
-  const { data: sala } = await service
-    .from("ruleta_salas")
-    .select("id, status")
-    .eq("codigo", codigo.toUpperCase())
-    .maybeSingle();
-
-  if (!sala) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
-  if (sala.status !== "lobby") {
-    return NextResponse.json({ error: "El juego ya comenzó" }, { status: 400 });
-  }
-
-  const { data: existente } = await service
-    .from("ruleta_jugadores")
-    .select("id")
-    .eq("sala_id", sala.id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (existente) return NextResponse.json({ jugador_id: existente.id });
-
-  const { count } = await service
-    .from("ruleta_jugadores")
-    .select("id", { count: "exact", head: true })
-    .eq("sala_id", sala.id);
-
-  if ((count ?? 0) >= MAX_PLAYERS) {
-    return NextResponse.json({ error: "La sala está llena" }, { status: 400 });
-  }
-
-  const { data: jugador, error } = await service
-    .from("ruleta_jugadores")
-    .insert({ sala_id: sala.id, nombre, orden: count ?? 0, puntos: 0, user_id: user.id })
-    .select("id")
-    .single();
-
-  if (error) {
-    // 23505 = otra request concurrente de la MISMA cuenta ganó la carrera
-    // entre el check de "existente" de arriba y este insert (doble clic,
-    // doble pestaña) — no es un error real, buscamos y devolvemos esa fila.
-    if (error.code === "23505") {
-      const { data: jugadorGanador } = await service
-        .from("ruleta_jugadores")
-        .select("id")
-        .eq("sala_id", sala.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (jugadorGanador) return NextResponse.json({ jugador_id: jugadorGanador.id });
-    }
-    return NextResponse.json({ error: error.message ?? "Error al unirse" }, { status: 500 });
-  }
-  if (!jugador) {
-    return NextResponse.json({ error: "Error al unirse" }, { status: 500 });
-  }
-
-  const { error: startError } = await tryStartMatch(sala.id, true);
-  if (startError) {
-    console.error(`[ruleta/join] tryStartMatch falló para sala ${sala.id}:`, startError);
-  }
-
-  return NextResponse.json({ jugador_id: jugador.id });
-}
-```
-
-Cambios clave respecto a la versión anterior: exige sesión (ya no hay rama "unirse sin cuenta"); ya no acepta `nombre` del cliente, usa `profiles.display_name`; recibe `jugadores_deseados` opcional (irrelevante si la sala ya existía); el índice único `(sala_id, user_id)` del Task 1 se aprovecha con manejo de `23505` desde el primer insert (aplicando de una vez la lección de la Fase 1 — Arena Abierta tuvo que corregir esto en una vuelta de revisión aparte); dispara `tryStartMatch` al final igual que el join de Arena Abierta dispara `tryStartCounting`, con el error logueado en vez de descartado en silencio.
-
-- [ ] **Paso 2: Typecheck**
-
-Run: `./node_modules/.bin/tsc --noEmit`
-Expected: sin errores.
-
-- [ ] **Paso 3: Commit**
-
-```bash
-git add "src/app/api/ruleta/[codigo]/join/route.ts"
-git commit -m "Require login to join Ruleta, drop free-text nombre, auto-start"
-```
+> **CORREGIDO durante la ejecución (commit `4eb7087`).** El plan original de este task tenía un defecto real de diseño: mantenía `join` como `/api/ruleta/[codigo]/join`, asumiendo que la página ya había resuelto (y en el proceso, CREADO) la sala antes de que el jugador llegara al selector "¿cuántos van a jugar?". Como resultado, el selector nunca podía tener efecto real: para cualquier sala nueva, la página ya la había creado con el valor por defecto (`MIN_PLAYERS`) antes de que el POST a `/join` (que sí llevaba la preferencia real) pudiera hacer algo — `getOrCreateOpenRoom()` siempre encontraba la sala que la página ya había creado y la devolvía tal cual, ignorando el número elegido. Es la misma carrera que existe hoy en producción en Arena Abierta (su página también llama a `getOrCreateOpenRoom()` sin argumento antes de que el jugador vea el selector) — Arena Abierta se libra en parte porque su ruta de `/join` sí es capaz de crear la sala con la preferencia real (no está atada a un código ya conocido), pero la carrera contra la página sigue estando ahí sin corregir. Ver la nota al final del Task 15 sobre este hallazgo en Arena Abierta.
+>
+> **Lo que realmente se construyó, en su lugar:**
+> - `src/app/api/ruleta/join/route.ts` (SIN `[codigo]` en la ruta — mueve el archivo, no lo modifica en el mismo lugar) — llama a `getOrCreateOpenRoom(jugadoresDeseados)` él mismo (importado de `room.server.ts`, Task 3) en vez de buscar una sala por un código ya conocido. Así, esta ruta es la ÚNICA que decide con qué meta nace una sala nueva — nunca hay otra llamada que se le adelante con el valor por defecto. Incluye el mismo re-chequeo de estado fresco justo antes de insertar que ya tiene el `join` de Arena Abierta (cerrar la ventana de carrera entre `getOrCreateOpenRoom()` y el insert). Responde `{ jugador_id, codigo }` — el cliente no conocía el código de antemano, así que la respuesta se lo entrega.
+> - `src/lib/ruleta/room.server.ts` gana una función nueva, `peekOpenRoom()`: solo lectura, nunca crea una sala — devuelve la más reciente que no esté `finished`, o `null` si no hay ninguna. La usa la página (Task 12) en vez de `getOrCreateOpenRoom()`, precisamente para no adelantarse a crear una sala con el valor por defecto antes de que el jugador elija.
+> - Se borró `src/app/api/ruleta/[codigo]/join/route.ts` (la versión vieja, keyed por código).
+>
+> El código completo de la ruta corregida y de `peekOpenRoom()` ya están en el repo — no hace falta reconstruirlos, este task ya está hecho. Los Tasks 9, 11 y 12 más abajo también llevan una nota de corrección relacionada, porque dependen de esta forma nueva de `join`.
 
 ---
 
@@ -1056,7 +941,9 @@ git commit -m "Add force-start endpoint for Ruleta lobbies"
 
 - [ ] **Paso 1: Crear `EntrarForm.tsx`**
 
-Mismo patrón exacto que `src/components/arena-publica/EntrarForm.tsx` (Fase 1, ya revisado y probado en producción) — selector de cuántos van a jugar, sin campo de nombre, apuntando al endpoint de Ruleta:
+> **Nota de diseño (ver la corrección documentada en el Task 7):** a diferencia de lo que decía la versión original de este paso, `EntrarForm` NO recibe un `codigo` como prop — apunta al endpoint fijo `/api/ruleta/join` (sin código en la URL, igual que `src/components/arena-publica/EntrarForm.tsx` de Arena Abierta, que tampoco necesita saber de antemano en qué sala va a terminar). El propio POST decide (o crea) la sala con la preferencia elegida aquí, y devuelve `codigo` junto con `jugador_id`.
+>
+> `onEntrado` ahora es **opcional**. Cuando `RuletaRoom.tsx` (Task 11, un Client Component) la usa, pasa su propio callback para notar si terminó en una sala distinta a la que ya tenía en pantalla. Pero el Task 12 necesita renderizar `EntrarForm` directo desde `page.tsx`, que es un Server Component — y un Server Component no puede pasarle una función en línea a un Client Component (no es serializable a través del límite RSC). Por eso, si no se pasa `onEntrado`, el propio componente hace la navegación dura por su cuenta.
 
 ```tsx
 "use client";
@@ -1066,11 +953,10 @@ import { ArrowRight, Loader2, Disc3 } from "lucide-react";
 import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
 
 interface EntrarFormProps {
-  codigo: string;
-  onEntrado: (jugadorId: string) => void;
+  onEntrado?: (jugadorId: string, codigo: string) => void;
 }
 
-export function EntrarForm({ codigo, onEntrado }: EntrarFormProps) {
+export function EntrarForm({ onEntrado }: EntrarFormProps) {
   const [jugadoresDeseados, setJugadoresDeseados] = useState(MIN_PLAYERS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1084,7 +970,7 @@ export function EntrarForm({ codigo, onEntrado }: EntrarFormProps) {
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch(`/api/ruleta/${codigo}/join`, {
+    const res = await fetch("/api/ruleta/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jugadores_deseados: jugadoresDeseados }),
@@ -1098,7 +984,13 @@ export function EntrarForm({ codigo, onEntrado }: EntrarFormProps) {
     }
 
     const data = await res.json();
-    onEntrado(data.jugador_id);
+    if (onEntrado) {
+      onEntrado(data.jugador_id, data.codigo);
+    } else {
+      // Sin callback (uso desde page.tsx sin sala previa): recarga directo
+      // a /ruleta, que ahora sí va a encontrar la sala recién creada.
+      window.location.href = "/ruleta";
+    }
   }
 
   return (
@@ -1269,7 +1161,9 @@ interface RuletaRoomProps {
 
 Y en la firma de la función, quitar `isHost`, `hostWantsToPlay` (con su `useState`) y `viewerUserId` de la desestructuración/cuerpo. `RuletaVoiceChat` deja de depender de `viewerUserId` — con cuenta obligatoria para jugar, `jugadorId` ya implica sesión iniciada, así que la condición pasa de `viewerUserId && jugadorId && phase !== "finished"` a `jugadorId && phase !== "finished"`.
 
-- [ ] **Paso 2: `handleJoined` → `handleEntrado`, sin nombre**
+- [ ] **Paso 2: `handleJoined` → `handleEntrado`, sin nombre, con manejo de rotación de sala**
+
+> **Nota de diseño (ver la corrección del Task 7):** `EntrarForm` ya no apunta a una sala conocida de antemano — su POST a `/api/ruleta/join` puede terminar creando o encontrando una sala DISTINTA a la que esta página ya tenía en pantalla (`sala.codigo`, la que vino de `peekOpenRoom()` en el Task 12 — o ninguna, si no había ninguna sala activa). `handleEntrado` ahora recibe también el `codigo` real donde terminó entrando, y si no coincide con `sala.codigo`, hace lo mismo que ya hace `ArenaPublicaRoom.tsx` en ese caso: persiste bajo la clave correcta y fuerza una navegación dura, en vez de intentar simular en memoria el estado de una sala de la que este componente nunca recibió el snapshot inicial (preguntas... digo, ronda/jugadores/fase).
 
 Reemplazar:
 
@@ -1287,7 +1181,17 @@ Reemplazar:
 por:
 
 ```typescript
-  function handleEntrado(id: string) {
+  function handleEntrado(id: string, codigo: string) {
+    if (codigo !== sala.codigo) {
+      try {
+        localStorage.setItem(`ruleta_jugador_${codigo}`, JSON.stringify({ id }));
+      } catch {
+        // localStorage no disponible
+      }
+      window.location.href = "/ruleta";
+      return;
+    }
+
     setJugadorId(id);
     try {
       localStorage.setItem(`ruleta_jugador_${sala.codigo}`, JSON.stringify({ id }));
@@ -1373,7 +1277,7 @@ Reemplazar todo el bloque desde `{phase === "finished" ? (` hasta el `) : null}`
         {phase === "finished" ? (
           <MatchEndScreen jugadores={jugadores} meId={jugadorId} />
         ) : !jugadorId ? (
-          <EntrarForm codigo={sala.codigo} onEntrado={handleEntrado} />
+          <EntrarForm onEntrado={handleEntrado} />
         ) : phase === "lobby" ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
             <Loader2 size={28} className="animate-spin" style={{ color: "var(--color-primary)" }} />
@@ -1615,13 +1519,14 @@ rm -rf "src/app/(public)/ruleta/nueva"
 
 - [ ] **Paso 2: Reescribir `src/app/(public)/ruleta/page.tsx`**
 
-Mismo patrón que `arena-abierta/page.tsx` de la Fase 1: exige sesión, resuelve-o-crea la sala server-side, arma el estado inicial de ronda si ya está en curso (esta parte, `initialRound`, se toma del `[codigo]/page.tsx` que se acaba de borrar — su lógica de reconstrucción de estado sigue siendo necesaria, solo que ahora vive aquí en vez de en una ruta dinámica).
+> **Nota de diseño (ver la corrección del Task 7):** este paso usa `peekOpenRoom()` (Task 7 corregido), NO `getOrCreateOpenRoom()`. Si no hay ninguna sala activa, la página NO crea una — renderiza `EntrarForm` sola, sin envolverla en `RuletaRoom` (que exige una `sala` concreta para todo lo demás que hace: suscripciones realtime, tablero, etc., que no tienen sentido todavía si no existe ninguna sala). El propio POST de `EntrarForm` a `/api/ruleta/join` es quien decide con qué meta nace la sala nueva; al terminar, como esta página nunca le dio a `EntrarForm` ninguna sala de referencia, cualquier `codigo` que devuelva el POST cuenta como "sala distinta a la que había" — por construcción, siempre dispara la rama de navegación dura de `handleEntrado` (Task 11), que manda un reload limpio a `/ruleta` y esa segunda carga sí encuentra la sala recién creada vía `peekOpenRoom()`.
 
 ```tsx
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient, getProfile } from "@/lib/supabase/server";
-import { getOrCreateOpenRoom } from "@/lib/ruleta/room.server";
+import { peekOpenRoom } from "@/lib/ruleta/room.server";
 import { RuletaRoom, type RoundState } from "@/components/ruleta/RuletaRoom";
+import { EntrarForm } from "@/components/ruleta/EntrarForm";
 import { buildBoardShape } from "@/lib/ruleta/game.server";
 import type { RuletaJugador, RuletaSala } from "@/types";
 import type { Metadata } from "next";
@@ -1635,14 +1540,16 @@ export default async function RuletaPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login?returnUrl=/ruleta");
 
-  const { sala: salaBase, error } = await getOrCreateOpenRoom();
+  const salaBase = await peekOpenRoom();
 
   if (!salaBase) {
+    // No hay ninguna sala activa todavía — no se crea ninguna aquí. El
+    // propio EntrarForm, al enviar el selector, es quien crea la sala vía
+    // /api/ruleta/join con la meta que elija el jugador.
     return (
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-        <div className="w-full max-w-[480px] mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>La Ruleta</h1>
-          <p style={{ color: "var(--color-text-muted)" }}>{error ?? "No se pudo cargar la sala."}</p>
+        <div className="w-full max-w-[480px] mx-auto px-4 py-16 flex flex-col">
+          <EntrarForm />
         </div>
       </div>
     );
@@ -1714,6 +1621,8 @@ export default async function RuletaPage() {
 ```
 
 Nota: a diferencia de `arena-abierta/page.tsx`, aquí sí hace falta reconstruir `initialRound` (Arena Abierta también lo hace, en su propio `page.tsx` — mismo patrón, solo que con los campos de Ruleta).
+
+Nota sobre el caso "sin sala": `<EntrarForm />` se renderiza sin `onEntrado` a propósito — es un Server Component el que la está montando, y no puede pasarle una función en línea (no es serializable a través del límite RSC). Sin ese prop, `EntrarForm` (Task 9) hace la navegación dura por su cuenta tras un join exitoso. No hace falta guardar nada en localStorage desde aquí — `RuletaRoom.tsx` (Task 11) va a volver a recibir ese mismo `jugador_id` desde el servidor en la recarga (`initialJugadorId`, calculado arriba comparando `user_id` contra `profile.id` — no depende de localStorage para esta reconexión inmediata).
 
 - [ ] **Paso 3: `handleLeaveRoom` en `RuletaRoom.tsx` — revisar el destino**
 
@@ -2151,4 +2060,15 @@ git commit -m "Add live door for Ruleta on /juegos hub"
   6. Probar "Forzar siguiente turno" con cualquiera de las dos cuentas (ya no debe estar limitado a un "anfitrión").
   7. Verificar `/admin/ruleta` — debe listar las salas con su estado, y "Terminar partida" debe funcionar.
   8. Confirmar que `/ruleta/nueva` y cualquier URL vieja con código (`/ruleta/ABCD`) ya no existen (404 esperado — a diferencia de Arena Abierta, aquí si se decide que vale la pena, se podría agregar un redirect desde una URL con código vieja hacia `/ruleta`, pero no es parte de este plan).
+  9. Confirmar específicamente que el selector SÍ tiene efecto real: sin ninguna sala activa (verificar en `/admin/ruleta` que no quede ninguna en `lobby`), entrar, elegir 4, y confirmar en `/admin/ruleta` que la sala nueva quedó con esa meta — no el valor por defecto. Esto es justamente lo que no funcionaba en el diseño original de este plan (ver la corrección del Task 7).
 - [ ] Push a `master` una vez confirmado.
+
+---
+
+## Nota aparte: el mismo bug existe hoy en Arena Abierta (Fase 1, ya en producción)
+
+Al corregir el Task 7 de este plan se encontró que Arena Abierta tiene la misma carrera, sin corregir, en producción: `src/app/(public)/arena-abierta/page.tsx` llama a `getOrCreateOpenRoom()` **sin argumento** en cada visita — si no hay ninguna sala en `lobby`/`counting`, la crea ahí mismo con el valor por defecto (`MIN_JUGADORES_PARA_INICIAR = 2`), antes de que el visitante llegue a ver el selector "¿Cuántos van a jugar?" de `EntrarForm`. Cuando el visitante elige un número y da clic en "Entrar a jugar", el POST a `/api/arena-publica/join` sí manda su preferencia real y sí sabe crear la sala con ella — pero para entonces casi siempre ya existe la que la página creó de más, así que `getOrCreateOpenRoom(jugadoresDeseados)` la encuentra y la devuelve tal cual, ignorando lo que el visitante eligió.
+
+En la práctica, esto significa que el selector de Arena Abierta casi nunca tiene efecto real — la única forma de que sí aplique es que el propio join gane la carrera contra la próxima visita a `/arena-abierta` de cualquier otra persona, algo que no se puede garantizar. Esto no se detectó durante la verificación en vivo de la Fase 1 porque, en ese momento, ya existía una sala de otra persona real jugando — así que "mi elección se ignoró" se veía indistinguible de "me uní a una sala que alguien más ya había armado", el comportamiento correcto y esperado en ese caso.
+
+**No es parte de este plan corregirlo** (Arena Abierta ya está en producción, fuera del alcance de "Fase 2 — Ruleta"), pero el arreglo sería mecánicamente igual al que se aplicó aquí: agregar una función de solo lectura tipo `peekOpenRoom()` a `src/lib/arena-publica/room.server.ts`, usarla desde `arena-abierta/page.tsx` en vez de `getOrCreateOpenRoom()`, y manejar el caso "no hay sala" renderizando `EntrarForm` sin envolverla en `ArenaPublicaRoom`. Vale la pena plantearlo como un fix aparte, chico y aislado, cuando se retome el tema.
