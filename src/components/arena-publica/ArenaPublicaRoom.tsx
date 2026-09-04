@@ -7,9 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import { AnswerButtons } from "@/components/arena/AnswerButtons";
 import { Leaderboard } from "@/components/arena/Leaderboard";
 import { CountdownCircle } from "@/components/arena/CountdownCircle";
-import { JoinPublicaForm } from "./JoinPublicaForm";
+import { EntrarForm } from "./EntrarForm";
 import { ArenaPublicaVoiceChat } from "./ArenaPublicaVoiceChat";
-import { COUNTDOWN_SECONDS, ROUND_SECONDS, REVEAL_SECONDS } from "@/lib/arena-publica/config";
+import {
+  COUNTDOWN_SECONDS,
+  ROUND_SECONDS,
+  REVEAL_SECONDS,
+  MIN_JUGADORES_PARA_INICIAR,
+} from "@/lib/arena-publica/config";
 import type { ArenaJugador, AnswerOption } from "@/types";
 
 type ArenaPublicaPhase = "lobby" | "counting" | "playing" | "reveal" | "finished";
@@ -37,6 +42,7 @@ interface ArenaPublicaRoomProps {
   salaId: string;
   status: ArenaPublicaPhase;
   preguntaActual: number;
+  jugadoresDeseados: number;
   cuentaTerminaEn: number | null;
   preguntaTerminaEn: number | null;
   revealTerminaEn: number | null;
@@ -59,6 +65,7 @@ export function ArenaPublicaRoom({
   salaId,
   status,
   preguntaActual,
+  jugadoresDeseados,
   cuentaTerminaEn,
   preguntaTerminaEn,
   revealTerminaEn,
@@ -104,6 +111,17 @@ export function ArenaPublicaRoom({
       // best-effort: cualquier otro cliente puede disparar el siguiente advance
     });
   }, [salaId]);
+
+  const handleForceStart = useCallback(() => {
+    if (!jugadorId) return;
+    fetch("/api/arena-publica/force-start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sala_id: salaId, jugador_id: jugadorId }),
+    }).catch(() => {
+      // best-effort: cualquier otro jugador puede volver a intentarlo
+    });
+  }, [salaId, jugadorId]);
 
   // Suscripciones realtime: broadcast de fases + lista de jugadores en vivo
   useEffect(() => {
@@ -198,7 +216,7 @@ export function ArenaPublicaRoom({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleJoined(id: string, sid: string, nombre: string) {
+  function handleEntrado(id: string, sid: string) {
     if (sid !== salaId) {
       // La sala para la que se renderizó esta página terminó entre la carga
       // y el envío del nombre, y el API de join creó/usó una sala nueva
@@ -210,7 +228,7 @@ export function ArenaPublicaRoom({
       // patrón que "Jugar otra ronda" en FinishedScreen, y por la misma
       // razón: forzar un getOrCreateOpenRoom() fresco en el servidor.
       try {
-        localStorage.setItem(`arena_publica_jugador_${sid}`, JSON.stringify({ id, nombre }));
+        localStorage.setItem(`arena_publica_jugador_${sid}`, JSON.stringify({ id }));
       } catch {
         // localStorage no disponible
       }
@@ -220,7 +238,7 @@ export function ArenaPublicaRoom({
 
     setJugadorId(id);
     try {
-      localStorage.setItem(`arena_publica_jugador_${salaId}`, JSON.stringify({ id, nombre }));
+      localStorage.setItem(`arena_publica_jugador_${salaId}`, JSON.stringify({ id }));
     } catch {
       // localStorage no disponible
     }
@@ -277,7 +295,7 @@ export function ArenaPublicaRoom({
         )}
 
         {!jugadorId ? (
-          <JoinPublicaForm onJoined={handleJoined} />
+          <EntrarForm onEntrado={handleEntrado} />
         ) : phase === "finished" ? (
           <FinishedScreen jugadores={jugadores} meId={jugadorId} />
         ) : phase === "lobby" ? (
@@ -287,8 +305,18 @@ export function ArenaPublicaRoom({
               esperando más jugadores...
             </p>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {jugadores.length} {jugadores.length === 1 ? "jugador" : "jugadores"} en la sala
+              {jugadores.length} de {jugadoresDeseados} {jugadoresDeseados === 1 ? "jugador" : "jugadores"}
             </p>
+            {jugadores.length >= MIN_JUGADORES_PARA_INICIAR && jugadores.length < jugadoresDeseados && (
+              <button
+                type="button"
+                onClick={handleForceStart}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)" }}
+              >
+                Empezar con {jugadores.length}
+              </button>
+            )}
           </div>
         ) : phase === "counting" ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
