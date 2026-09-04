@@ -8,6 +8,7 @@ export interface SalaActual {
   id: string;
   status: "lobby" | "counting" | "playing" | "reveal" | "finished";
   pregunta_actual: number;
+  jugadores_deseados: number;
   cuenta_termina_en: string | null;
   pregunta_termina_en: string | null;
   reveal_termina_en: string | null;

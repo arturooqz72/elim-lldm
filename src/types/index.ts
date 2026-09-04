@@ -280,6 +280,7 @@ export interface ArenaJugador {
   puntos: number;
   ultimo_respondido_at: string | null;
   created_at: string;
+  user_id: string | null;
 }
 
 export interface ArenaRespuesta {
