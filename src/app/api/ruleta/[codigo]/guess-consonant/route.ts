@@ -64,6 +64,7 @@ export async function POST(
     const puntosGanados = count * (sala.valor_giro_actual ?? 0);
     const resuelto = isPhraseSolved(ronda.frase, nuevasLetras);
     const endsAt = Date.now() + TURN_SECONDS * 1000;
+    const rondaFinTerminaEn = Date.now() + RONDA_FIN_SECONDS * 1000;
 
     // 1) Actualiza primero la sala (con guardia CAS) — nadie más puede tocar la
     // ronda/jugador hasta que ganemos esta carrera.
@@ -76,7 +77,7 @@ export async function POST(
               puede_consonante: false,
               giro_usado: false,
               turno_termina_en: null,
-              ronda_fin_termina_en: new Date(Date.now() + RONDA_FIN_SECONDS * 1000).toISOString(),
+              ronda_fin_termina_en: new Date(rondaFinTerminaEn).toISOString(),
             }
           : { puede_consonante: false, giro_usado: false, turno_termina_en: new Date(endsAt).toISOString() }
       )
@@ -131,6 +132,7 @@ export async function POST(
         turnoJugadorId: body.jugador_id,
         turnoTerminaEn: resuelto ? null : endsAt,
         resuelto,
+        rondaFinTerminaEn: resuelto ? rondaFinTerminaEn : null,
         frase: resuelto ? ronda.frase : undefined,
         jugadorGanadorId: resuelto ? body.jugador_id : undefined,
         mensaje: `La letra ${letra} aparece ${count} vez(es). +${puntosGanados} puntos.`,

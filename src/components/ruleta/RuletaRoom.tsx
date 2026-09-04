@@ -16,7 +16,7 @@ import {
   playTimeoutSound,
   unlockAudioContext,
 } from "@/lib/ruleta/sound.client";
-import { VOWEL_COST, MIN_PLAYERS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
+import { VOWEL_COST, MIN_PLAYERS } from "@/lib/ruleta/wheel";
 import { EntrarForm } from "./EntrarForm";
 import { RuletaVoiceChat } from "./RuletaVoiceChat";
 import { Wheel } from "./Wheel";
@@ -170,6 +170,7 @@ export function RuletaRoom({
             turnoJugadorId: string; turnoTerminaEn: number | null;
             resuelto: boolean; frase?: string; mensaje: string;
             esVocal?: boolean; acierto?: boolean;
+            rondaFinTerminaEn?: number | null;
           };
           const preserveConsonante = p.esVocal === true && p.acierto === true && !p.resuelto;
           setRound((prev) => prev && ({
@@ -178,7 +179,7 @@ export function RuletaRoom({
             letrasProbadas: p.letrasProbadas ?? prev.letrasProbadas,
             turnoJugadorId: p.turnoJugadorId,
             turnoTerminaEn: p.turnoTerminaEn,
-            rondaFinTerminaEn: p.resuelto ? Date.now() + RONDA_FIN_SECONDS * 1000 : null,
+            rondaFinTerminaEn: p.rondaFinTerminaEn ?? null,
             puedeConsonante: preserveConsonante ? prev.puedeConsonante : false,
             mensaje: p.mensaje,
             frase: p.frase ?? prev.frase,
@@ -339,11 +340,11 @@ export function RuletaRoom({
     router.push("/ruleta");
   }
 
-  async function handleNextRound() {
+  const handleNextRound = useCallback(async () => {
     setAdvancing(true);
     await fetch(`/api/ruleta/${sala.codigo}/next-round`, { method: "POST" });
     setAdvancing(false);
-  }
+  }, [sala.codigo]);
 
   const misTurno = jugadorId !== null && round?.turnoJugadorId === jugadorId;
   const miPuntaje = jugadores.find((j) => j.id === jugadorId)?.puntos ?? 0;

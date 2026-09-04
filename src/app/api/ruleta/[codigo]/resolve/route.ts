@@ -117,6 +117,7 @@ export async function POST(
         turnoJugadorId: body.jugador_id,
         turnoTerminaEn: null,
         resuelto: true,
+        rondaFinTerminaEn: ronda_fin_termina_en,
         jugadorGanadorId: body.jugador_id,
         puntosGanados: RESOLVE_BONUS,
         mensaje: "¡Resolvió el panel!",
