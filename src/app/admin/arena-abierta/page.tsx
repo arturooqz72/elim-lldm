@@ -53,7 +53,7 @@ export default async function AdminArenaAbiertaPage() {
             Arena Abierta
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
-            Salas públicas sin registro — cualquier sala en curso se puede terminar a mano si se
+            Salas públicas de trivia — cualquier sala en curso se puede terminar a mano si se
             queda atascada.
           </p>
         </div>
