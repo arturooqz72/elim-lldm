@@ -1,90 +1,46 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { TURN_SECONDS } from "@/lib/ruleta/wheel";
-import { nextJugadorId } from "@/lib/ruleta/game.server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { tryAdvanceTurn } from "@/lib/ruleta/advance.server";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ codigo: string }> }
 ) {
   const { codigo } = await params;
-  const supabase = await createClient();
   const service = await createServiceClient();
 
-  let body: { force?: boolean } = {};
+  let body: { force?: boolean; jugador_id?: string } = {};
   try {
     body = await request.json();
   } catch {
-    // Cuerpo vacío es válido — este endpoint normalmente no lleva body.
+    // Cuerpo vacío es válido — el disparo automático no manda body.
   }
 
   const { data: sala } = await service
     .from("ruleta_salas")
-    .select("*")
+    .select("id")
     .eq("codigo", codigo.toUpperCase())
-    .single();
+    .maybeSingle();
 
   if (!sala) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
 
-  if (sala.status !== "playing" || sala.turno_termina_en === null) {
-    return NextResponse.json({ applied: false });
-  }
-
-  // El anfitrión puede forzar el avance de turno sin esperar a que venza el
-  // reloj — es la vía de escape manual para cuando ningún cliente conectado
-  // logra reportar el vencimiento automático (p. ej. una pestaña móvil
-  // suspendida en segundo plano).
-  let isHostForce = false;
+  let bypassDeadline = false;
   if (body.force === true) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && user.id === sala.created_by) isHostForce = true;
+    if (!body.jugador_id) {
+      return NextResponse.json({ error: "jugador_id requerido para forzar" }, { status: 400 });
+    }
+    const { data: jugador } = await service
+      .from("ruleta_jugadores")
+      .select("id")
+      .eq("id", body.jugador_id)
+      .eq("sala_id", sala.id)
+      .maybeSingle();
+    if (!jugador) return NextResponse.json({ error: "No eres jugador de esta sala" }, { status: 403 });
+    bypassDeadline = true;
   }
 
-  if (!isHostForce && new Date(sala.turno_termina_en).getTime() > Date.now()) {
-    return NextResponse.json({ applied: false });
-  }
+  const { applied, error } = await tryAdvanceTurn(sala.id, bypassDeadline);
+  if (error) return NextResponse.json({ error }, { status: 500 });
 
-  const { data: jugadores } = await service
-    .from("ruleta_jugadores")
-    .select("id, orden")
-    .eq("sala_id", sala.id);
-
-  if (!jugadores) return NextResponse.json({ applied: false });
-
-  if (sala.turno_jugador_id === null) return NextResponse.json({ applied: false });
-
-  const nextId = nextJugadorId(jugadores, sala.turno_jugador_id);
-  const endsAt = Date.now() + TURN_SECONDS * 1000;
-
-  const { data: updated, error: updateError } = await service
-    .from("ruleta_salas")
-    .update({
-      puede_consonante: false,
-      giro_usado: false,
-      turno_jugador_id: nextId,
-      turno_termina_en: new Date(endsAt).toISOString(),
-    })
-    .eq("id", sala.id)
-    .eq("turno_termina_en", sala.turno_termina_en)
-    .select("id");
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-  if (!updated || updated.length === 0) {
-    return NextResponse.json({ applied: false });
-  }
-
-  const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
-  await channel.send({
-    type: "broadcast",
-    event: "TURN_TIMEOUT",
-    payload: {
-      turnoJugadorId: nextId,
-      turnoTerminaEn: endsAt,
-      mensaje: "Se acabó el tiempo.",
-    },
-  });
-
-  return NextResponse.json({ applied: true });
+  return NextResponse.json({ applied });
 }
