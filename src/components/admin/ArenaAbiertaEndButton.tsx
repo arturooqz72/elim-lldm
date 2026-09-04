@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OctagonX } from "lucide-react";
 
-export function ArenaAbiertaEndButton({ salaId }: { salaId: string }) {
+export function ArenaAbiertaEndButton({
+  salaId,
+  endpoint,
+}: {
+  salaId: string;
+  endpoint?: string;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -12,7 +18,7 @@ export function ArenaAbiertaEndButton({ salaId }: { salaId: string }) {
   async function handleConfirm() {
     setLoading(true);
     try {
-      await fetch(`/api/admin/arena-abierta/${salaId}/end`, { method: "POST" });
+      await fetch(endpoint ?? `/api/admin/arena-abierta/${salaId}/end`, { method: "POST" });
       router.refresh();
     } finally {
       setLoading(false);
