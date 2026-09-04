@@ -50,6 +50,7 @@ export async function POST(
         puede_consonante: true,
         valor_giro_actual: seg.value,
         turno_termina_en: new Date(endsAt).toISOString(),
+        turnos_saltados_seguidos: 0,
       })
       .eq("id", sala.id)
       .eq("giro_usado", false)
@@ -103,6 +104,7 @@ export async function POST(
       valor_giro_actual: null,
       turno_jugador_id: nextId,
       turno_termina_en: new Date(endsAt).toISOString(),
+      turnos_saltados_seguidos: 0,
     })
     .eq("id", sala.id)
     .eq("giro_usado", false)

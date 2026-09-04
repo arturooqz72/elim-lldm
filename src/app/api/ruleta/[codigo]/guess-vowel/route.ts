@@ -86,7 +86,7 @@ export async function POST(
               turno_termina_en: null,
               ronda_fin_termina_en: new Date(rondaFinTerminaEn).toISOString(),
             }
-          : { turno_termina_en: new Date(endsAt).toISOString() }
+          : { turno_termina_en: new Date(endsAt).toISOString(), turnos_saltados_seguidos: 0 }
       )
       .eq("id", sala.id)
       .eq("turno_termina_en", sala.turno_termina_en)
@@ -173,6 +173,7 @@ export async function POST(
       giro_usado: false,
       turno_jugador_id: nextId,
       turno_termina_en: new Date(endsAt).toISOString(),
+      turnos_saltados_seguidos: 0,
     })
     .eq("id", sala.id)
     .eq("turno_termina_en", sala.turno_termina_en)

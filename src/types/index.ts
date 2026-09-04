@@ -320,6 +320,7 @@ export interface RuletaSala {
   ultima_categoria: string | null;
   created_by: string | null;
   created_at: string;
+  turnos_saltados_seguidos: number;
 }
 
 export interface RuletaJugador {

@@ -12,6 +12,15 @@ async function broadcast(codigo: string, event: string, payload: object) {
   await channel.send({ type: "broadcast", event, payload });
 }
 
+// Cuántos turnos seguidos puede saltar la auto-sanación (nadie conectado
+// que reportara el vencimiento) antes de dar por abandonada la partida y
+// cerrarla — sin este tope, una sala con ambos jugadores desconectados
+// queda saltando turnos para siempre. Cualquier acción real de un jugador
+// (girar, adivinar, resolver, o un /timeout reportado por un cliente en
+// vivo) reinicia el contador a 0, así que este tope solo se alcanza cuando
+// de verdad no hay nadie jugando.
+const MAX_TURNOS_SALTADOS_SEGUIDOS = 3;
+
 /**
  * Intenta pasar la sala de 'lobby' a 'playing' — arranca la primera ronda.
  * Misma lógica que tenía start/route.ts, ahora reutilizable desde: la
@@ -63,6 +72,7 @@ export async function tryStartMatch(
       valor_giro_actual: null,
       frases_usadas: usedKeys,
       ultima_categoria: puzzle.category,
+      turnos_saltados_seguidos: 0,
     })
     .eq("id", salaId)
     .eq("status", "lobby")
@@ -96,10 +106,18 @@ export async function tryStartMatch(
  * bypassDeadline reemplaza al viejo "force" exclusivo del anfitrión: ahora
  * lo puede pedir cualquier jugador de la sala (ver /timeout, que valida
  * pertenencia antes de pasar bypassDeadline=true) o la auto-sanación.
+ *
+ * fromHeal=true marca específicamente el caso "nadie conectado reportó el
+ * vencimiento" (llamado solo desde healStaleRuletaRooms) — a diferencia de
+ * /timeout, que siempre lo pide un cliente real con la pestaña abierta.
+ * Cada salto por esta vía suma al contador de abandono; cualquier otra vía
+ * (timeout real, girar, adivinar, resolver) lo reinicia a 0. Al llegar al
+ * tope, en vez de saltar el turno otra vez, la sala se cierra sola.
  */
 export async function tryAdvanceTurn(
   salaId: string,
-  bypassDeadline: boolean
+  bypassDeadline: boolean,
+  fromHeal = false
 ): Promise<{ applied: boolean; error?: string }> {
   const service = await createServiceClient();
 
@@ -117,6 +135,21 @@ export async function tryAdvanceTurn(
     return { applied: false };
   }
   if (sala.turno_jugador_id === null) return { applied: false };
+
+  if (fromHeal && sala.turnos_saltados_seguidos + 1 >= MAX_TURNOS_SALTADOS_SEGUIDOS) {
+    const { data: updated, error: updateError } = await service
+      .from("ruleta_salas")
+      .update({ status: "finished" })
+      .eq("id", salaId)
+      .eq("turno_termina_en", sala.turno_termina_en)
+      .select("id");
+
+    if (updateError) return { applied: false, error: updateError.message };
+    if (!updated || updated.length === 0) return { applied: false };
+
+    await broadcast(sala.codigo, "GAME_FINISHED", {});
+    return { applied: true };
+  }
 
   const { data: jugadores, error: jugadoresError } = await service
     .from("ruleta_jugadores")
@@ -136,6 +169,7 @@ export async function tryAdvanceTurn(
       giro_usado: false,
       turno_jugador_id: nextId,
       turno_termina_en: new Date(endsAt).toISOString(),
+      turnos_saltados_seguidos: fromHeal ? sala.turnos_saltados_seguidos + 1 : 0,
     })
     .eq("id", salaId)
     .eq("turno_termina_en", sala.turno_termina_en)
@@ -212,6 +246,7 @@ export async function tryAdvanceRound(salaId: string): Promise<{ applied: boolea
       valor_giro_actual: null,
       frases_usadas: usedKeys,
       ultima_categoria: puzzle.category,
+      turnos_saltados_seguidos: 0,
     })
     .eq("id", salaId)
     .eq("status", "ronda_fin")
@@ -253,7 +288,9 @@ const STALE_GRACE_MS = 15_000;
  *  - 'lobby' con suficientes jugadores pero que nunca arrancó (el propio
  *    /join falló en silencio al intentarlo) → tryStartMatch.
  *  - 'playing' cuyo turno venció hace rato y nadie lo reportó (todos
- *    cerraron la pestaña) → tryAdvanceTurn con bypassDeadline.
+ *    cerraron la pestaña) → tryAdvanceTurn con bypassDeadline y fromHeal;
+ *    tras MAX_TURNOS_SALTADOS_SEGUIDOS saltos seguidos sin que nadie
+ *    reaparezca, la sala se da por abandonada y se cierra.
  *  - 'ronda_fin' cuyo ronda_fin_termina_en venció hace rato → tryAdvanceRound.
  */
 export async function healStaleRuletaRooms(): Promise<void> {
@@ -282,7 +319,7 @@ export async function healStaleRuletaRooms(): Promise<void> {
       if (sala.status === "playing") {
         if (!sala.turno_termina_en) continue;
         if (now - new Date(sala.turno_termina_en).getTime() < STALE_GRACE_MS) continue;
-        const { error: turnoError } = await tryAdvanceTurn(sala.id, true);
+        const { error: turnoError } = await tryAdvanceTurn(sala.id, true, true);
         if (turnoError) console.error(`[ruleta/heal] Error al sanar turno de sala ${sala.id}:`, turnoError);
         continue;
       }
