@@ -89,10 +89,30 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !jugador) {
+    // 23505 = violación del índice único parcial
+    // idx_arena_publica_jugadores_sala_user (sala_id, user_id): otra request
+    // concurrente de la misma cuenta (doble clic, doble pestaña) ganó la
+    // carrera entre el check de "existente" de arriba y este insert. No es
+    // un error real — ese jugador ya existe, así que lo buscamos y lo
+    // devolvemos en vez de fallar.
+    if (insertError?.code === "23505") {
+      const { data: jugadorGanador } = await service
+        .from("arena_publica_jugadores")
+        .select("id")
+        .eq("sala_id", sala.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (jugadorGanador) {
+        return NextResponse.json({ jugador_id: jugadorGanador.id, sala_id: sala.id });
+      }
+    }
     return NextResponse.json({ error: insertError?.message ?? "Error al unirse" }, { status: 500 });
   }
 
-  await tryStartCounting(sala.id, true);
+  const { error: startError } = await tryStartCounting(sala.id, true);
+  if (startError) {
+    console.error(`[arena-publica/join] tryStartCounting falló para sala ${sala.id}:`, startError);
+  }
 
   return NextResponse.json({ jugador_id: jugador.id, sala_id: sala.id });
 }
