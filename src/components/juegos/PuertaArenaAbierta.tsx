@@ -14,7 +14,7 @@ export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbie
   async function handleInvitar(e: React.MouseEvent) {
     e.preventDefault();
     const url = `${window.location.origin}/arena-abierta`;
-    const shareData = { title: "Arena Abierta — Elim LLDM", text: "Únete a jugar trivia bíblica conmigo", url };
+    const shareData = { title: "Trivia en línea — Elim LLDM", text: "Únete a jugar trivia bíblica conmigo", url };
 
     if (navigator.share) {
       try {
@@ -47,7 +47,7 @@ export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbie
           </div>
           <div>
             <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-              Arena Abierta
+              Trivia en línea
             </h2>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               Trivia bíblica en vivo

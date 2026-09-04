@@ -5,7 +5,7 @@ import { ArenaPublicaRoom } from "@/components/arena-publica/ArenaPublicaRoom";
 import type { ArenaJugador } from "@/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Arena Abierta — Elim LLDM" };
+export const metadata: Metadata = { title: "Trivia en línea — Elim LLDM" };
 
 function toMs(iso: string | null): number | null {
   return iso === null ? null : new Date(iso).getTime();
@@ -22,7 +22,7 @@ export default async function ArenaAbiertaPage() {
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
         <div className="w-full max-w-[430px] mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center">
           <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-            Arena Abierta
+            Trivia en línea
           </h1>
           <p style={{ color: "var(--color-text-muted)" }}>
             {error ?? "No se pudo cargar la sala."}

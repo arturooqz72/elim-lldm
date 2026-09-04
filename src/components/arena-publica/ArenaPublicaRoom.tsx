@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Trophy, Clock, Sparkles, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Trophy, Clock, Sparkles, Loader2, LogOut, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { createClient } from "@/lib/supabase/client";
 import { AnswerButtons } from "@/components/arena/AnswerButtons";
@@ -72,6 +73,7 @@ export function ArenaPublicaRoom({
   preguntas,
   jugadoresIniciales,
 }: ArenaPublicaRoomProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<ArenaPublicaPhase>(status);
   const [jugadores, setJugadores] = useState<ArenaJugador[]>(jugadoresIniciales);
   const [jugadorId, setJugadorId] = useState<string | null>(null);
@@ -133,6 +135,33 @@ export function ArenaPublicaRoom({
       setForceStarting(false);
     }
   }, [salaId, jugadorId]);
+
+  function handleLeaveRoom() {
+    // A /arena-abierta NO sirve como "salida": con cuenta obligatoria, el
+    // servidor te vuelve a encontrar como jugador de esta misma sala y
+    // caerías directo de regreso. /juegos sí es una salida real.
+    router.push("/juegos");
+  }
+
+  async function handleInvitar() {
+    const url = `${window.location.origin}/arena-abierta`;
+    const shareData = { title: "Trivia en línea — Elim LLDM", text: "Únete a jugar trivia bíblica conmigo", url };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // canceló el share — no hacer nada más
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard no disponible
+    }
+  }
 
   // Suscripciones realtime: broadcast de fases + lista de jugadores en vivo
   useEffect(() => {
@@ -286,18 +315,31 @@ export function ArenaPublicaRoom({
             className="text-lg font-bold"
             style={{ fontFamily: "var(--font-cinzel)", color: "var(--color-primary)" }}
           >
-            Arena Abierta
+            Trivia en línea
           </span>
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
-            style={{
-              background: "rgba(212,160,23,0.1)",
-              border: "1px solid rgba(212,160,23,0.25)",
-              color: "var(--color-primary)",
-            }}
-          >
-            <Sparkles size={13} />
-            en vivo
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
+              style={{
+                background: "rgba(212,160,23,0.1)",
+                border: "1px solid rgba(212,160,23,0.25)",
+                color: "var(--color-primary)",
+              }}
+            >
+              <Sparkles size={13} />
+              en vivo
+            </div>
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              title="Salir de la sala"
+              aria-label="Salir de la sala"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "var(--color-destructive)" }}
+            >
+              <LogOut size={13} />
+              Salir
+            </button>
           </div>
         </header>
 
@@ -318,6 +360,15 @@ export function ArenaPublicaRoom({
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               {jugadores.length} de {jugadoresDeseados} {jugadoresDeseados === 1 ? "jugador" : "jugadores"}
             </p>
+            <button
+              type="button"
+              onClick={handleInvitar}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "rgba(37,211,102,0.1)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}
+            >
+              <Share2 size={14} />
+              Invitar
+            </button>
             {jugadores.length >= MIN_JUGADORES_PARA_INICIAR && jugadores.length < jugadoresDeseados && (
               <div className="flex flex-col items-center gap-2">
                 <button

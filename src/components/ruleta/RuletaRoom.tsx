@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, LogOut, SkipForward, Sparkles } from "lucide-react";
+import { Loader2, LogOut, Share2, SkipForward, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { RuletaBoardTile, RuletaJugador, RuletaSala } from "@/types";
 import {
@@ -337,7 +337,30 @@ export function RuletaRoom({
     } catch {
       // localStorage no disponible
     }
-    router.push("/ruleta");
+    // A /ruleta NO sirve como "salida": con cuenta obligatoria, el
+    // servidor te vuelve a encontrar como jugador de esta misma sala y
+    // caerías directo de regreso. /juegos sí es una salida real.
+    router.push("/juegos");
+  }
+
+  async function handleInvitar() {
+    const url = `${window.location.origin}/ruleta`;
+    const shareData = { title: "La Ruleta — Elim LLDM", text: "Únete a jugar La Ruleta conmigo", url };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // canceló el share — no hacer nada más
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard no disponible
+    }
   }
 
   const handleNextRound = useCallback(async () => {
@@ -397,6 +420,15 @@ export function RuletaRoom({
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               {jugadores.length} de {sala.jugadores_deseados} {sala.jugadores_deseados === 1 ? "jugador" : "jugadores"}
             </p>
+            <button
+              type="button"
+              onClick={handleInvitar}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "rgba(37,211,102,0.1)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}
+            >
+              <Share2 size={14} />
+              Invitar
+            </button>
             {jugadores.length >= MIN_PLAYERS && jugadores.length < sala.jugadores_deseados && (
               <div className="flex flex-col items-center gap-2">
                 <button
