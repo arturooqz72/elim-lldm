@@ -319,6 +319,62 @@ export async function advanceRoomOnce(
   return { applied: false };
 }
 
+/**
+ * Un jugador se sale a mitad de partida ('counting' | 'playing' | 'reveal')
+ * por su propia voluntad — a diferencia de dejar la pestaña abierta y que
+ * la auto-sanación eventualmente la note, esto es un "Salir" explícito.
+ * Termina la partida para todos de inmediato: quien se sale pierde (sus
+ * puntos quedan en 0, así FinishedScreen —que elige ganador por
+ * puntaje— nunca lo puede mostrar como ganador) y la sala pasa a
+ * 'finished', liberando la puerta en /juegos para la siguiente partida.
+ */
+export async function forfeitMatch(
+  salaId: string,
+  jugadorId: string
+): Promise<{ applied: boolean; error?: string }> {
+  const service = await createServiceClient();
+
+  const { data: sala, error: salaError } = await service
+    .from("arena_publica_salas")
+    .select("id, status")
+    .eq("id", salaId)
+    .maybeSingle();
+
+  if (salaError) return { applied: false, error: salaError.message };
+  if (!sala || !["counting", "playing", "reveal"].includes(sala.status)) {
+    return { applied: false };
+  }
+
+  const { data: jugador } = await service
+    .from("arena_publica_jugadores")
+    .select("id")
+    .eq("id", jugadorId)
+    .eq("sala_id", salaId)
+    .maybeSingle();
+
+  if (!jugador) return { applied: false, error: "No eres jugador de esta sala" };
+
+  const { data: updated, error: updateError } = await service
+    .from("arena_publica_salas")
+    .update({ status: "finished" })
+    .eq("id", salaId)
+    .eq("status", sala.status)
+    .select("id");
+
+  if (updateError) return { applied: false, error: updateError.message };
+  if (!updated || updated.length === 0) return { applied: false };
+
+  const { error: jugadorUpdateError } = await service
+    .from("arena_publica_jugadores")
+    .update({ puntos: 0 })
+    .eq("id", jugadorId);
+
+  if (jugadorUpdateError) return { applied: false, error: jugadorUpdateError.message };
+
+  await broadcast(salaId, "GAME_FINISHED", {});
+  return { applied: true };
+}
+
 // Cuánto tiempo, más allá del deadline, se espera antes de considerar una
 // sala "abandonada" y sanarla sin que haya cliente conectado — suficiente
 // margen para que el cliente legítimo (el que perdió la carrera) dispare su

@@ -136,7 +136,23 @@ export function ArenaPublicaRoom({
     }
   }, [salaId, jugadorId]);
 
-  function handleLeaveRoom() {
+  async function handleLeaveRoom() {
+    // Si la partida ya arrancó, salir cuenta como abandono: termina la
+    // sala para todos y quien se sale pierde (ver /leave y forfeitMatch).
+    // Antes de arrancar, solo te quita de la sala. Se espera esta llamada
+    // antes de navegar para que el servidor alcance a cerrar la sala —
+    // best-effort: si falla, la auto-sanación igual la cierra más tarde.
+    if (jugadorId) {
+      try {
+        await fetch("/api/arena-publica/leave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sala_id: salaId, jugador_id: jugadorId }),
+        });
+      } catch {
+        // sin conexión — la auto-sanación cierra la sala más tarde
+      }
+    }
     // A /arena-abierta NO sirve como "salida": con cuenta obligatoria, el
     // servidor te vuelve a encontrar como jugador de esta misma sala y
     // caerías directo de regreso. /juegos sí es una salida real.
