@@ -14,6 +14,15 @@ async function broadcast(salaId: string, event: string, payload: object) {
   await channel.httpSend(event, payload);
 }
 
+// Cuántas transiciones seguidas puede aplicar la auto-sanación (ningún
+// cliente real conectado llamó a /advance) antes de dar por abandonada la
+// partida y cerrarla directo — sin este tope, una sala abandonada solo
+// avanza una fase por cada visita de un tercero a /arena-abierta, y con
+// poco tráfico puede tardar días en llegar a 'finished'. Cualquier avance
+// disparado por un cliente real (su propio CountdownCircle venció y llamó
+// a /advance) reinicia el contador a 0.
+const MAX_AVANCES_AUTOMATICOS_SEGUIDOS = 3;
+
 /**
  * Intenta pasar la sala de 'lobby' a 'counting'. La llaman tres caminos
  * distintos con el mismo resultado esperado — el propio join al llegar al
@@ -73,9 +82,11 @@ export async function tryStartCounting(
  * deadline actual ya venció. La usan tanto el endpoint /advance (que
  * cualquier cliente conectado dispara al vencer su CountdownCircle local)
  * como healStaleRooms() (que la dispara sin que haya ningún cliente
- * conectado). Misma lógica, dos disparadores distintos.
+ * conectado). Misma lógica, dos disparadores distintos — ver
+ * advanceRoomOnce() más abajo, que envuelve esto con el conteo de
+ * abandono.
  */
-export async function advanceRoomOnce(
+async function applyTransition(
   salaId: string
 ): Promise<{ applied: boolean; error?: string }> {
   const service = await createServiceClient();
@@ -320,6 +331,59 @@ export async function advanceRoomOnce(
 }
 
 /**
+ * Envuelve applyTransition() con el conteo de abandono. fromHeal=true
+ * marca específicamente el caso "ningún cliente real conectado disparó
+ * este avance" (llamado solo desde healStaleRooms) — a diferencia de
+ * /advance, que siempre lo pide un cliente real con la pestaña abierta.
+ * Cada transición aplicada por esta vía suma al contador; cualquier otra
+ * (un /advance real) lo reinicia a 0. Al llegar al tope, en vez de aplicar
+ * otra transición, la sala se cierra directo.
+ */
+export async function advanceRoomOnce(
+  salaId: string,
+  fromHeal = false
+): Promise<{ applied: boolean; error?: string }> {
+  const service = await createServiceClient();
+
+  const { data: sala, error: salaError } = await service
+    .from("arena_publica_salas")
+    .select("status, avances_automaticos_seguidos")
+    .eq("id", salaId)
+    .maybeSingle();
+
+  if (salaError) return { applied: false, error: salaError.message };
+  if (!sala) return { applied: false, error: "Sala no encontrada" };
+
+  const enPartida = ["counting", "playing", "reveal"].includes(sala.status);
+
+  if (fromHeal && enPartida && sala.avances_automaticos_seguidos + 1 >= MAX_AVANCES_AUTOMATICOS_SEGUIDOS) {
+    const { data: updated, error: updateError } = await service
+      .from("arena_publica_salas")
+      .update({ status: "finished" })
+      .eq("id", salaId)
+      .eq("status", sala.status)
+      .select("id");
+
+    if (updateError) return { applied: false, error: updateError.message };
+    if (!updated || updated.length === 0) return { applied: false };
+
+    await broadcast(salaId, "GAME_FINISHED", {});
+    return { applied: true };
+  }
+
+  const result = await applyTransition(salaId);
+
+  if (result.applied && enPartida) {
+    await service
+      .from("arena_publica_salas")
+      .update({ avances_automaticos_seguidos: fromHeal ? sala.avances_automaticos_seguidos + 1 : 0 })
+      .eq("id", salaId);
+  }
+
+  return result;
+}
+
+/**
  * Un jugador se sale a mitad de partida ('counting' | 'playing' | 'reveal')
  * por su propia voluntad — a diferencia de dejar la pestaña abierta y que
  * la auto-sanación eventualmente la note, esto es un "Salir" explícito.
@@ -390,7 +454,10 @@ const STALE_GRACE_MS = 15_000;
  * a la página, así que cualquier visitante (entre a la sala que entre) va
  * sanando de paso las demás salas abandonadas, un paso de fase a la vez —
  * cada avance aplicado deja un deadline nuevo en el futuro, así que esta
- * función nunca hace más de una transición por sala por llamada.
+ * función nunca hace más de una transición por sala por llamada. Tras
+ * MAX_AVANCES_AUTOMATICOS_SEGUIDOS avances seguidos sin que ningún cliente
+ * real reaparezca, advanceRoomOnce() da la sala por abandonada y la cierra
+ * directo en vez de seguir empujándola pregunta por pregunta.
  */
 export async function healStaleRooms(): Promise<void> {
   const service = await createServiceClient();
@@ -419,7 +486,7 @@ export async function healStaleRooms(): Promise<void> {
     if (!deadline) continue;
     if (now - new Date(deadline).getTime() < STALE_GRACE_MS) continue;
 
-    const { error: advanceError } = await advanceRoomOnce(sala.id);
+    const { error: advanceError } = await advanceRoomOnce(sala.id, true);
     if (advanceError) {
       console.error(`[arena-publica/heal] Error al sanar sala ${sala.id}:`, advanceError);
     }
