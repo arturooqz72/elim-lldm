@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, Fragment } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import type { Profile } from "@/types";
@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: "/elimplay", label: "ElimPlay", icon: Music },
   { href: "/videos", label: "Videos", icon: Video },
   { href: "/elim-ia", label: "Elim IA", icon: Bot },
+  { href: "/opiniones", label: "Opiniones", icon: MessageSquareText },
   { href: "/contacto", label: "Contáctanos", icon: Mail },
 ];
 

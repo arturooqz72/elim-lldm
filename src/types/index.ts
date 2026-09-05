@@ -338,3 +338,11 @@ export interface RuletaBoardTile {
   char: string | null;
 }
 
+export interface Opinion {
+  id: string;
+  user_id: string;
+  mensaje: string;
+  created_at: string;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+}
+
