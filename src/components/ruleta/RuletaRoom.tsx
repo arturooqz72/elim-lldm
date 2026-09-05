@@ -331,11 +331,27 @@ export function RuletaRoom({
     setForcingSkip(false);
   }
 
-  function handleLeaveRoom() {
+  async function handleLeaveRoom() {
     try {
       localStorage.removeItem(`ruleta_jugador_${sala.codigo}`);
     } catch {
       // localStorage no disponible
+    }
+    // Si la partida ya arrancó, salir cuenta como abandono: termina la
+    // sala para todos y quien se sale pierde (ver /leave y forfeitMatch).
+    // Antes de arrancar, solo te quita de la sala. Se espera esta llamada
+    // antes de navegar para que el servidor alcance a cerrar la sala —
+    // best-effort: si falla, la auto-sanación igual la cierra más tarde.
+    if (jugadorId) {
+      try {
+        await fetch(`/api/ruleta/${sala.codigo}/leave`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jugador_id: jugadorId }),
+        });
+      } catch {
+        // sin conexión — la auto-sanación cierra la sala más tarde
+      }
     }
     // A /ruleta NO sirve como "salida": con cuenta obligatoria, el
     // servidor te vuelve a encontrar como jugador de esta misma sala y
