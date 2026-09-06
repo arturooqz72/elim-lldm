@@ -52,10 +52,13 @@ export async function POST(request: Request) {
   let tools: Record<string, unknown>[] | undefined;
 
   if (mode === "lldm") {
+    // Más reciente primero: si el presupuesto de buildLldmSystemPrompt no
+    // alcanza para todos los documentos, lo que se queda afuera es lo más
+    // viejo — un documento recién subido siempre llega al contexto.
     const { data: docsData } = await supabase
       .from("elim_ia_documents")
       .select("title, content")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
 
     const documents = (docsData ?? []) as Pick<ElimIADocument, "title" | "content">[];
     systemPrompt = buildLldmSystemPrompt(documents);

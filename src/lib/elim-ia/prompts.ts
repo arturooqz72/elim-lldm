@@ -8,7 +8,18 @@ export const SYSTEM_PROMPT_GENERAL =
 
 // Límite aproximado de caracteres de contexto de documentos (deja margen
 // dentro de la ventana de contexto del modelo para el historial y la respuesta).
-const MAX_DOCUMENTS_CONTEXT_CHARS = 300_000;
+const MAX_DOCUMENTS_CONTEXT_CHARS = 500_000;
+
+// Tope por documento individual. Sin esto, uno o dos documentos enormes
+// (p. ej. una libreta de estudios completa de +350,000 caracteres) agotan
+// solos todo MAX_DOCUMENTS_CONTEXT_CHARS, y CUALQUIER documento que venga
+// después en la lista —sin importar cuán corto o recién subido— nunca
+// llega al contexto del modelo. Con el tope, cada documento aporta como
+// máximo un extracto, así que agregar un documento nuevo garantiza que
+// aparezca (ver caller: se pide con created_at descendente, más reciente
+// primero, para que si el presupuesto total no alcanza, lo que se quede
+// afuera sea lo más viejo, no lo más nuevo).
+const MAX_CHARS_PER_DOCUMENT = 35_000;
 
 export function buildLldmSystemPrompt(documents: Pick<ElimIADocument, "title" | "content">[]): string {
   if (documents.length === 0) {
@@ -20,7 +31,8 @@ export function buildLldmSystemPrompt(documents: Pick<ElimIADocument, "title" | 
 
   for (const doc of documents) {
     if (remaining <= 0) break;
-    const content = doc.content.slice(0, remaining);
+    const cap = Math.min(remaining, MAX_CHARS_PER_DOCUMENT);
+    const content = doc.content.slice(0, cap);
     parts.push(`--- Documento: ${doc.title} ---\n${content}`);
     remaining -= content.length;
   }
