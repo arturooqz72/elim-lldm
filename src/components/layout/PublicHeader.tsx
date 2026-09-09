@@ -66,6 +66,15 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
         channel.track({ online_at: new Date().toISOString() });
+
+        // Dispara el aviso de "alguien se conectó, listo para jugar" —
+        // el servidor decide si este usuario está en Jugadores en línea y
+        // si toca avisar al resto (ver /api/juegos/jugadores/notify-online
+        // y su ventana de no repetir aviso en <30 min). Se manda siempre,
+        // sin condición aquí, para no duplicar esa lógica en el cliente.
+        fetch("/api/juegos/jugadores/notify-online", { method: "POST" }).catch(() => {
+          // best-effort — un fallo aquí no debe afectar la navegación
+        });
       }
     });
     return () => {

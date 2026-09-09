@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getProfile, createClient } from "@/lib/supabase/server";
 import { JugadoresEnLineaForm } from "@/components/juegos/JugadoresEnLineaForm";
 import { JugadoresEnLineaList } from "@/components/juegos/JugadoresEnLineaList";
+import { NotifyToggle } from "@/components/juegos/NotifyToggle";
 
 export const metadata: Metadata = {
   title: "Jugadores en línea — Elim LLDM",
@@ -45,6 +46,8 @@ export default async function JugadoresEnLineaPage() {
 
         <div className="flex flex-col gap-6">
           <JugadoresEnLineaForm userId={profile.id} registrado={propio ? { nombre: propio.nombre, whatsapp: propio.whatsapp } : null} />
+
+          {propio && <NotifyToggle />}
 
           <div>
             <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text)" }}>
