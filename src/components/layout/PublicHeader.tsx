@@ -133,7 +133,7 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
               1280px del contenedor y cortaba "Iniciar sesión" a la derecha
               en pantallas de escritorio comunes (1280-1440px). */}
           <a
-            href={whatsappHref("Hola, quisiera contactarlos")}
+            href={whatsappHref()}
             target="_blank"
             rel="noopener noreferrer"
             title="Escríbenos por WhatsApp"
@@ -293,7 +293,7 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
           })}
 
           <a
-            href={whatsappHref("Hola, quisiera contactarlos")}
+            href={whatsappHref()}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"

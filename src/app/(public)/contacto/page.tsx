@@ -32,7 +32,7 @@ export default function ContactoPage() {
         </div>
 
         <a
-          href={whatsappHref("Hola, quisiera contactarlos")}
+          href={whatsappHref()}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-4 p-5 rounded-2xl mb-6 transition-transform duration-200 hover:scale-[1.01]"
