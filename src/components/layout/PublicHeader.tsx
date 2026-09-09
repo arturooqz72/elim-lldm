@@ -233,26 +233,40 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
               }}
             >
               <LogIn size={15} />
-              Iniciar sesión
+              {/* "Entrar" en móvil angosto (<640px) — con el botón "Menú"
+                  ahora con texto al lado, "Iniciar sesión" completo ya no
+                  cabía en una sola línea en anchos como 390px y se partía
+                  en dos. */}
+              <span className="hidden sm:inline">Iniciar sesión</span>
+              <span className="sm:hidden">Entrar</span>
             </Link>
           )}
 
-          {/* Mobile menu toggle */}
+          {/* Mobile menu toggle — con la palabra "Menú" a propósito: solo el
+              ícono de rayitas confundía a algunas personas, que no sabían
+              que ahí se abría la navegación. */}
           <button
-            className="md:hidden p-2 rounded-lg"
+            className="md:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium"
             style={{ color: "var(--color-text-muted)" }}
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileOpen ? "Cerrar" : "Menú"}
           </button>
         </div>
       </div>
 
-      {/* Mobile Nav */}
+      {/* Mobile Nav — fondo SÓLIDO a propósito, no el translúcido del
+          <header> (rgba(...,0.85) + blur, pensado para verse bien encima
+          del hero de la landing). Si el menú se abre estando ya con mucho
+          scroll (ej. hasta el pie de página), ese fondo semitransparente
+          dejaba ver el contenido de abajo como un "fantasma" mezclado con
+          las opciones, volviéndolas difíciles de leer. */}
       {mobileOpen && (
         <div
           className="md:hidden px-4 pb-4 flex flex-col gap-1"
-          style={{ borderTop: "1px solid var(--color-border)" }}
+          style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-bg)" }}
         >
           {NAV_LINKS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");

@@ -22,7 +22,11 @@ export function PublicFooter() {
           </span>
         </div>
 
-        <nav className="flex items-center gap-6">
+        {/* flex-wrap + justify-center: en pantallas angostas 6 links en una
+            sola fila (uno bastante largo, "Saludos para la radio en audio")
+            se salían del ancho de la pantalla y el último quedaba cortado
+            en el borde. Ahora bajan a la siguiente línea en vez de desbordar. */}
+        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           {[
             { href: "/radio", label: "Radio" },
             { href: "/platikas", label: "Estudio en Vivo" },
