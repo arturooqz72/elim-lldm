@@ -6,6 +6,7 @@ import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
 import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
 import { getTablaPosiciones } from "@/lib/juegos/tabla-posiciones.server";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
+import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -65,6 +66,10 @@ export default async function JuegosHubPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-4">
+        <JuegosPresence
+          currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null}
+        />
+
         <div className="flex flex-col gap-3">
           <PuertaArenaAbierta
             disponible={estadoArenaAbierta.disponible}
