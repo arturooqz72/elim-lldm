@@ -1,4 +1,5 @@
-import { Gamepad2, RotateCw, ChevronRight } from "lucide-react";
+import { Gamepad2, RotateCw, ChevronRight, Users } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
 import { PuertaArenaAbierta } from "@/components/juegos/PuertaArenaAbierta";
@@ -56,6 +57,32 @@ export default async function JuegosHubPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-4">
+        {/* Antes solo se llegaba aquí desde un link enterrado en las
+            páginas viejas de Arena/Trivia con código (ya fuera del flujo
+            principal desde el rediseño de Fase 1/2) — nadie la
+            encontraba. Ahora es visible desde el propio hub. */}
+        <Link
+          href="/juegos/jugadores"
+          className="flex items-center gap-4 p-6 rounded-2xl transition-transform duration-200 hover:scale-[1.01]"
+          style={{ background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.3)" }}
+        >
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(37,211,102,0.15)" }}
+          >
+            <Users size={20} style={{ color: "#25D366" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+              Jugadores en línea
+            </h2>
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              Apúntate para que te inviten, o activa el aviso de cuando alguien se conecta
+            </p>
+          </div>
+          <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
+        </Link>
+
         <div className="flex flex-col gap-3">
           <PuertaArenaAbierta
             disponible={estadoArenaAbierta.disponible}
