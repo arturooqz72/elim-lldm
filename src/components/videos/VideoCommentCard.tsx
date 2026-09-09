@@ -12,7 +12,7 @@ interface VideoComment {
   profiles: { display_name: string; avatar_url: string | null } | null;
 }
 
-export function VideoCommentCard({ comment, isAdmin }: { comment: VideoComment; isAdmin: boolean }) {
+export function VideoCommentCard({ comment, canModerate }: { comment: VideoComment; canModerate: boolean }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -59,7 +59,7 @@ export function VideoCommentCard({ comment, isAdmin }: { comment: VideoComment; 
             </span>
           </div>
 
-          {isAdmin && (
+          {canModerate && (
             confirming ? (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button

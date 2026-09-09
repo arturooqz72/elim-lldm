@@ -270,7 +270,11 @@ export default async function VideoDetailPage({ params }: Props) {
           ) : (
             <div>
               {comments.map((comment) => (
-                <VideoCommentCard key={comment.id} comment={comment} isAdmin={profile?.role === "admin"} />
+                <VideoCommentCard
+                  key={comment.id}
+                  comment={comment}
+                  canModerate={profile?.role === "admin" || profile?.role === "moderador"}
+                />
               ))}
             </div>
           )}

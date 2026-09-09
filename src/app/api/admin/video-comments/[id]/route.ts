@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
-// Solo admin por ahora — a diferencia de Opinión y Sugerencias y el chat
-// en vivo, el rol moderador no incluye comentarios de video todavía (el
-// usuario no lo pidió al definir el alcance de moderador). Ampliar aquí
-// es tan simple como agregar `&& role !== "moderador"` si se pide después.
-async function verifyAdmin() {
+// admin borra cualquier cosa; moderador tiene este mismo permiso puntual
+// que ya tiene en Opinión y Sugerencias y el chat en vivo (ver 0030).
+async function verifyCanModerate() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,7 +14,8 @@ async function verifyAdmin() {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (!profile || (profile as { role: string }).role !== "admin") return null;
+  const role = (profile as { role: string } | null)?.role;
+  if (role !== "admin" && role !== "moderador") return null;
   return user;
 }
 
@@ -24,7 +23,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await verifyAdmin();
+  const user = await verifyCanModerate();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
