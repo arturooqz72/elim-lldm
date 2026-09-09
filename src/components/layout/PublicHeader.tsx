@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, Fragment } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
+import { whatsappHref } from "@/lib/whatsapp";
 import type { Profile } from "@/types";
+
+// Verde de marca de WhatsApp — a propósito distinto del dorado del resto
+// del menú, para que se reconozca de un vistazo como "esto abre WhatsApp"
+// y no como una sección más del sitio.
+const WHATSAPP_GREEN = "#25D366";
 
 const NAV_LINKS = [
   { href: "/radio", label: "Radio", icon: Radio },
@@ -122,6 +128,21 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
 
         {/* Auth */}
         <div className="flex items-center gap-2">
+          {/* Ícono solo, sin texto, a propósito: como link de texto dentro
+              del <nav> de arriba empujaba el contenido más allá de los
+              1280px del contenedor y cortaba "Iniciar sesión" a la derecha
+              en pantallas de escritorio comunes (1280-1440px). */}
+          <a
+            href={whatsappHref("Hola, quisiera contactarlos")}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Escríbenos por WhatsApp"
+            className="hidden md:flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200"
+            style={{ background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.3)" }}
+          >
+            <MessageCircle size={16} style={{ color: WHATSAPP_GREEN }} />
+          </a>
+
           {profile?.role === "admin" && (
             <Link
               href="/admin"
@@ -256,6 +277,18 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
               </div>
             );
           })}
+
+          <a
+            href={whatsappHref("Hola, quisiera contactarlos")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
+            style={{ color: WHATSAPP_GREEN }}
+            onClick={() => setMobileOpen(false)}
+          >
+            <MessageCircle size={18} />
+            WhatsApp
+          </a>
 
           {profile?.role === "admin" && (
             <Link
