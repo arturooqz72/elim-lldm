@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
-async function verifyAdmin() {
+// admin borra cualquier cosa; moderador solo tiene este permiso puntual
+// (borrar en el muro de Opinión y Sugerencias), no acceso a /admin.
+async function verifyCanModerate() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,7 +14,8 @@ async function verifyAdmin() {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (!profile || (profile as { role: string }).role !== "admin") return null;
+  const role = (profile as { role: string } | null)?.role;
+  if (role !== "admin" && role !== "moderador") return null;
   return user;
 }
 
@@ -20,7 +23,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await verifyAdmin();
+  const user = await verifyCanModerate();
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;

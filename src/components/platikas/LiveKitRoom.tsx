@@ -14,6 +14,11 @@ interface LiveKitRoomProps {
   isHost: boolean;
   isSpeaker: boolean;
   currentUserId: string | null;
+  // Separado de isHost a propósito: isHost controla el rol LiveKit (mic,
+  // cámara, "host" del token) de ESTA plática puntual; canModerateChat es
+  // un permiso más amplio (también admin/moderador globales) que solo
+  // debe afectar el botón de moderar del chat, no los controles de sala.
+  canModerateChat: boolean;
 }
 
 type TokenState =
@@ -27,6 +32,7 @@ export function LiveKitRoom({
   isHost,
   isSpeaker,
   currentUserId,
+  canModerateChat,
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
   const [isLive, setIsLive] = useState(true);
@@ -79,7 +85,7 @@ export function LiveKitRoom({
         <ChatPanel
           platikaId={platikaId}
           currentUserId={currentUserId}
-          isHost={isHost}
+          canModerate={canModerateChat}
         />
       </div>
 

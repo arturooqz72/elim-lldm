@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { Opinion } from "@/types";
 
-export function OpinionCard({ opinion, isAdmin }: { opinion: Opinion; isAdmin: boolean }) {
+export function OpinionCard({ opinion, canModerate }: { opinion: Opinion; canModerate: boolean }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -56,7 +56,7 @@ export function OpinionCard({ opinion, isAdmin }: { opinion: Opinion; isAdmin: b
             </span>
           </div>
 
-          {isAdmin && (
+          {canModerate && (
             confirming ? (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button

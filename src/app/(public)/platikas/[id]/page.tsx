@@ -60,6 +60,10 @@ export default async function PlatikaRoomPage({ params }: Props) {
   };
 
   const isHost = currentUserId === p.host_id;
+  // Además del anfitrión de ESTA plática: admin y moderador pueden borrar
+  // mensajes del chat en cualquier plática en vivo, sin ser su anfitrión.
+  const canModerateChat =
+    isHost || profile?.role === "admin" || profile?.role === "moderador";
 
   let isSpeaker = false;
   if (currentUserId && !isHost && p.status === "live") {
@@ -244,6 +248,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
               isHost={isHost}
               isSpeaker={isSpeaker}
               currentUserId={currentUserId}
+              canModerateChat={canModerateChat}
             />
           ) : isScheduled ? (
             <ScheduledState scheduledAt={p.scheduled_at} />

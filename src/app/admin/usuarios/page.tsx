@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle, XCircle, ShieldCheck, User } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { RoleSelect } from "@/components/admin/RoleSelect";
 
 // El correo de la cuenta vive en Supabase Auth (auth.users), no en la tabla
 // profiles — hay que pedirlo aparte con la Admin API del service role.
@@ -99,6 +100,7 @@ export default async function UsuariosPage({
         >
           <option value="">Todos los roles</option>
           <option value="admin">Admin</option>
+          <option value="moderador">Moderador</option>
           <option value="anfitrion">Anfitrión</option>
           <option value="participante">Participante</option>
         </select>
@@ -175,31 +177,10 @@ export default async function UsuariosPage({
                 </div>
               </div>
 
-              {/* Role */}
+              {/* Role — se aplica solo con elegir la opción, ver RoleSelect.tsx */}
               <form action={setRole} className="flex items-center gap-1">
                 <input type="hidden" name="id" value={user.id} />
-                <select
-                  name="role"
-                  defaultValue={user.role}
-                  className="rounded-lg px-2 py-1 text-xs outline-none"
-                  style={{
-                    background: "var(--color-surface-elevated)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
-                  }}
-                >
-                  <option value="participante">Participante</option>
-                  <option value="anfitrion">Anfitrión</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <button
-                  type="submit"
-                  className="rounded px-1.5 py-1 text-xs font-bold"
-                  style={{ background: "var(--color-surface-elevated)", color: "var(--color-primary)", border: "1px solid var(--color-border)" }}
-                  title="Aplicar rol"
-                >
-                  ✓
-                </button>
+                <RoleSelect defaultValue={user.role} />
               </form>
 
               {/* Verified LLDM */}

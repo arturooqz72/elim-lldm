@@ -17,10 +17,12 @@ interface ChatMessage {
 interface ChatPanelProps {
   platikaId: string;
   currentUserId: string | null;
-  isHost: boolean;
+  // No es solo "es el anfitrión de esta plática" — también admin/moderador
+  // globales, por eso el nombre describe el permiso y no el rol.
+  canModerate: boolean;
 }
 
-export function ChatPanel({ platikaId, currentUserId, isHost }: ChatPanelProps) {
+export function ChatPanel({ platikaId, currentUserId, canModerate }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -77,7 +79,7 @@ export function ChatPanel({ platikaId, currentUserId, isHost }: ChatPanelProps) 
               m.id === payload.new.id
                 ? { ...m, is_moderated: payload.new.is_moderated }
                 : m
-            ).filter((m) => !m.is_moderated || isHost)
+            ).filter((m) => !m.is_moderated || canModerate)
           );
         }
       )
@@ -86,7 +88,7 @@ export function ChatPanel({ platikaId, currentUserId, isHost }: ChatPanelProps) 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [platikaId, isHost]);
+  }, [platikaId, canModerate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,7 +188,7 @@ export function ChatPanel({ platikaId, currentUserId, isHost }: ChatPanelProps) 
                   {msg.content}
                 </p>
               </div>
-              {isHost && (
+              {canModerate && (
                 <button
                   onClick={() => moderateMessage(msg.id)}
                   className="opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded transition-opacity shrink-0"

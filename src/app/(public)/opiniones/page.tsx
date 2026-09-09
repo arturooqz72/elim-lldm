@@ -51,7 +51,11 @@ export default async function OpinionesPage() {
             </p>
           )}
           {(opiniones as unknown as Opinion[] | null ?? []).map((opinion) => (
-            <OpinionCard key={opinion.id} opinion={opinion} isAdmin={profile?.role === "admin"} />
+            <OpinionCard
+              key={opinion.id}
+              opinion={opinion}
+              canModerate={profile?.role === "admin" || profile?.role === "moderador"}
+            />
           ))}
         </div>
       </div>
