@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export interface EstadoPuerta {
   disponible: boolean;
   jugandoAhora: number;
+  esperando: number;
 }
 
 /**
@@ -23,11 +24,23 @@ export async function getEstadoPuertaRuleta(): Promise<EstadoPuerta> {
 
   const { data: salas } = await supabase
     .from("ruleta_salas")
-    .select("status")
+    .select("id, status")
     .in("status", ["lobby", "playing", "ronda_fin"]);
 
   const hayUnaAbierta = (salas ?? []).some((s) => s.status === "lobby");
   const jugandoAhora = (salas ?? []).filter((s) => s.status === "playing" || s.status === "ronda_fin").length;
 
-  return { disponible: hayUnaAbierta || jugandoAhora === 0, jugandoAhora };
+  // Jugadores sentados en el lobby actual esperando más gente — ver el
+  // mismo patrón en arena-publica/estado-puerta.server.ts.
+  const salaLobbyIds = (salas ?? []).filter((s) => s.status === "lobby").map((s) => s.id);
+  let esperando = 0;
+  if (salaLobbyIds.length > 0) {
+    const { count } = await supabase
+      .from("ruleta_jugadores")
+      .select("id", { count: "exact", head: true })
+      .in("sala_id", salaLobbyIds);
+    esperando = count ?? 0;
+  }
+
+  return { disponible: hayUnaAbierta || jugandoAhora === 0, jugandoAhora, esperando };
 }

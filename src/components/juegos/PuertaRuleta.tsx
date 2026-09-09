@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { Users, Share2 } from "lucide-react";
+import { GameNotifyBell } from "./GameNotifyBell";
 
 interface PuertaRuletaProps {
   disponible: boolean;
   jugandoAhora: number;
+  esperando: number;
+  notificacionesActivas: boolean;
 }
 
-export function PuertaRuleta({ disponible, jugandoAhora }: PuertaRuletaProps) {
+export function PuertaRuleta({
+  disponible,
+  jugandoAhora,
+  esperando,
+  notificacionesActivas,
+}: PuertaRuletaProps) {
   const ocupado = !disponible;
 
   async function handleInvitar(e: React.MouseEvent) {
@@ -92,6 +100,8 @@ export function PuertaRuleta({ disponible, jugandoAhora }: PuertaRuletaProps) {
           Invitar
         </button>
       </div>
+
+      <GameNotifyBell gameKey="ruleta" esperando={esperando} initialSubscribed={notificacionesActivas} />
     </div>
   );
 }

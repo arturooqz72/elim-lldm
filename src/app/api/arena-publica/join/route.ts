@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getOrCreateOpenRoom } from "@/lib/arena-publica/room.server";
 import { tryStartCounting } from "@/lib/arena-publica/advance.server";
 import { MIN_JUGADORES_PARA_INICIAR, MAX_JUGADORES_POR_SALA } from "@/lib/arena-publica/config";
+import { notifyGameWaiting } from "@/lib/juegos/notify-waiting.server";
 
 export async function POST(request: Request) {
   const authClient = await createClient();
@@ -109,9 +110,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insertError?.message ?? "Error al unirse" }, { status: 500 });
   }
 
-  const { error: startError } = await tryStartCounting(sala.id, true);
+  const { applied, error: startError } = await tryStartCounting(sala.id, true);
   if (startError) {
     console.error(`[arena-publica/join] tryStartCounting falló para sala ${sala.id}:`, startError);
+  }
+
+  // applied === false: seguimos esperando más gente para arrancar — avisa
+  // a quien tenga la campana activada para este juego. Si ya arrancó
+  // (applied === true), no hace falta reclutar a nadie más.
+  if (!applied) {
+    void notifyGameWaiting("arena_abierta", user.id, "/arena-abierta");
   }
 
   return NextResponse.json({ jugador_id: jugador.id, sala_id: sala.id });

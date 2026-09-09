@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { Share2 } from "lucide-react";
+import { GameNotifyBell } from "./GameNotifyBell";
 
 interface PuertaArenaAbiertaProps {
   disponible: boolean;
   jugandoAhora: number;
+  esperando: number;
+  notificacionesActivas: boolean;
 }
 
-export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbiertaProps) {
+export function PuertaArenaAbierta({
+  disponible,
+  jugandoAhora,
+  esperando,
+  notificacionesActivas,
+}: PuertaArenaAbiertaProps) {
   const ocupado = !disponible;
 
   async function handleInvitar(e: React.MouseEvent) {
@@ -95,6 +103,8 @@ export function PuertaArenaAbierta({ disponible, jugandoAhora }: PuertaArenaAbie
           Invitar
         </button>
       </div>
+
+      <GameNotifyBell gameKey="arena_abierta" esperando={esperando} initialSubscribed={notificacionesActivas} />
     </div>
   );
 }

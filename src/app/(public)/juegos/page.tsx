@@ -1,5 +1,4 @@
-import { Gamepad2, RotateCw, ChevronRight, Users } from "lucide-react";
-import Link from "next/link";
+import { Gamepad2, RotateCw, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
 import { PuertaArenaAbierta } from "@/components/juegos/PuertaArenaAbierta";
@@ -7,26 +6,35 @@ import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
 import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
 import { getTablaPosiciones } from "@/lib/juegos/tabla-posiciones.server";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
-import { getProfile } from "@/lib/supabase/server";
+import { getProfile, createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
   description: "Entra directo a jugar con otros miembros — sin códigos, sin esperar a nadie que organice.",
 };
 
+async function getGameKeysConNotificacion(userId: string | null): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("game_notify_subscriptions")
+    .select("game_key")
+    .eq("user_id", userId);
+  return new Set((data ?? []).map((r) => (r as { game_key: string }).game_key));
+}
+
 export default async function JuegosHubPage() {
-  // En paralelo: las dos puertas y sus dos tablas de posiciones son
-  // consultas independientes, así que encadenarlas con await sueltos haría
-  // esperar a la página cinco viajes seguidos a Supabase en vez de uno.
-  const [estadoArenaAbierta, estadoRuleta, posicionesArena, posicionesRuleta, profile] =
+  // El perfil va primero porque la consulta de campanas activas necesita
+  // su id — el resto sigue en paralelo detrás.
+  const profile = await getProfile();
+
+  const [estadoArenaAbierta, estadoRuleta, posicionesArena, posicionesRuleta, notificacionesActivas] =
     await Promise.all([
       getEstadoPuertaArenaAbierta(),
       getEstadoPuertaRuleta(),
       getTablaPosiciones("arena_abierta"),
       getTablaPosiciones("ruleta"),
-      // null si el visitante no inició sesión — /juegos es pública y la
-      // tabla debe verse igual, solo que sin resaltar ninguna fila.
-      getProfile(),
+      getGameKeysConNotificacion(profile?.id ?? null),
     ]);
 
   return (
@@ -57,36 +65,12 @@ export default async function JuegosHubPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-4">
-        {/* Antes solo se llegaba aquí desde un link enterrado en las
-            páginas viejas de Arena/Trivia con código (ya fuera del flujo
-            principal desde el rediseño de Fase 1/2) — nadie la
-            encontraba. Ahora es visible desde el propio hub. */}
-        <Link
-          href="/juegos/jugadores"
-          className="flex items-center gap-4 p-6 rounded-2xl transition-transform duration-200 hover:scale-[1.01]"
-          style={{ background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.3)" }}
-        >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(37,211,102,0.15)" }}
-          >
-            <Users size={20} style={{ color: "#25D366" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-              Jugadores en línea
-            </h2>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Apúntate para que te inviten, o activa el aviso de cuando alguien se conecta
-            </p>
-          </div>
-          <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-        </Link>
-
         <div className="flex flex-col gap-3">
           <PuertaArenaAbierta
             disponible={estadoArenaAbierta.disponible}
             jugandoAhora={estadoArenaAbierta.jugandoAhora}
+            esperando={estadoArenaAbierta.esperando}
+            notificacionesActivas={notificacionesActivas.has("arena_abierta")}
           />
           <TablaPosiciones
             titulo="Tabla de posiciones — Trivia en línea"
@@ -96,7 +80,12 @@ export default async function JuegosHubPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <PuertaRuleta disponible={estadoRuleta.disponible} jugandoAhora={estadoRuleta.jugandoAhora} />
+          <PuertaRuleta
+            disponible={estadoRuleta.disponible}
+            jugandoAhora={estadoRuleta.jugandoAhora}
+            esperando={estadoRuleta.esperando}
+            notificacionesActivas={notificacionesActivas.has("ruleta")}
+          />
           <TablaPosiciones
             titulo="Tabla de posiciones — La Ruleta en línea"
             filas={posicionesRuleta}

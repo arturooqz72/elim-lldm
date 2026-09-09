@@ -75,7 +75,7 @@ export async function unsubscribeFromPush(): Promise<void> {
     body: JSON.stringify({ endpoint }),
   }).catch(() => {
     // best-effort — si falla, la suscripción ya quedó inválida en el
-    // navegador de todas formas, y notify-online la limpiará sola en el
-    // próximo intento fallido de envío (ver sendPushNotification).
+    // navegador de todas formas, y notifyGameWaiting() la limpiará sola en
+    // el próximo intento fallido de envío (ver sendPushNotification).
   });
 }

@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getOrCreateOpenRoom } from "@/lib/ruleta/room.server";
 import { tryStartMatch } from "@/lib/ruleta/advance.server";
 import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
+import { notifyGameWaiting } from "@/lib/juegos/notify-waiting.server";
 
 // Deliberadamente SIN [codigo] en la ruta — a diferencia de las demás
 // rutas de Ruleta (que ya operan dentro de una sala conocida), esta es la
@@ -117,9 +118,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Error al unirse" }, { status: 500 });
   }
 
-  const { error: startError } = await tryStartMatch(sala.id, true);
+  const { applied, error: startError } = await tryStartMatch(sala.id, true);
   if (startError) {
     console.error(`[ruleta/join] tryStartMatch falló para sala ${sala.id}:`, startError);
+  }
+
+  // applied === false: seguimos esperando más gente para arrancar — avisa
+  // a quien tenga la campana activada para este juego.
+  if (!applied) {
+    void notifyGameWaiting("ruleta", user.id, "/ruleta");
   }
 
   return NextResponse.json({ jugador_id: jugador.id, codigo: sala.codigo });
