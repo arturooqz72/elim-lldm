@@ -4,6 +4,9 @@ import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.s
 import { PuertaArenaAbierta } from "@/components/juegos/PuertaArenaAbierta";
 import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
 import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
+import { getTablaPosiciones } from "@/lib/juegos/tabla-posiciones.server";
+import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
+import { getProfile } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -11,8 +14,19 @@ export const metadata: Metadata = {
 };
 
 export default async function JuegosHubPage() {
-  const estadoArenaAbierta = await getEstadoPuertaArenaAbierta();
-  const estadoRuleta = await getEstadoPuertaRuleta();
+  // En paralelo: las dos puertas y sus dos tablas de posiciones son
+  // consultas independientes, así que encadenarlas con await sueltos haría
+  // esperar a la página cinco viajes seguidos a Supabase en vez de uno.
+  const [estadoArenaAbierta, estadoRuleta, posicionesArena, posicionesRuleta, profile] =
+    await Promise.all([
+      getEstadoPuertaArenaAbierta(),
+      getEstadoPuertaRuleta(),
+      getTablaPosiciones("arena_abierta"),
+      getTablaPosiciones("ruleta"),
+      // null si el visitante no inició sesión — /juegos es pública y la
+      // tabla debe verse igual, solo que sin resaltar ninguna fila.
+      getProfile(),
+    ]);
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -42,12 +56,26 @@ export default async function JuegosHubPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-4">
-        <PuertaArenaAbierta
-          disponible={estadoArenaAbierta.disponible}
-          jugandoAhora={estadoArenaAbierta.jugandoAhora}
-        />
+        <div className="flex flex-col gap-3">
+          <PuertaArenaAbierta
+            disponible={estadoArenaAbierta.disponible}
+            jugandoAhora={estadoArenaAbierta.jugandoAhora}
+          />
+          <TablaPosiciones
+            titulo="Tabla de posiciones — Trivia en línea"
+            filas={posicionesArena}
+            currentUserId={profile?.id ?? null}
+          />
+        </div>
 
-        <PuertaRuleta disponible={estadoRuleta.disponible} jugandoAhora={estadoRuleta.jugandoAhora} />
+        <div className="flex flex-col gap-3">
+          <PuertaRuleta disponible={estadoRuleta.disponible} jugandoAhora={estadoRuleta.jugandoAhora} />
+          <TablaPosiciones
+            titulo="Tabla de posiciones — La Ruleta en línea"
+            filas={posicionesRuleta}
+            currentUserId={profile?.id ?? null}
+          />
+        </div>
 
         <a
           href="/juegos/ruleta-elimlldm.html"

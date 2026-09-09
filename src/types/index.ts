@@ -346,3 +346,13 @@ export interface Opinion {
   profiles: { display_name: string; avatar_url: string | null } | null;
 }
 
+
+export type JuegoConTabla = "arena_abierta" | "ruleta";
+
+export interface FilaPosicion {
+  user_id: string;
+  nombre: string;
+  avatar_url: string | null;
+  puntos_totales: number;
+  partidas: number;
+}
