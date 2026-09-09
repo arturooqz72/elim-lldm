@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Eye } from "lucide-react";
+import { Play, Eye, Heart } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
 
 interface VideoListItem {
@@ -11,6 +11,7 @@ interface VideoListItem {
   thumbnail_url: string | null;
   duration_seconds: number | null;
   view_count: number;
+  likes_count: number;
   tags: string[];
   video_categories: { id: string; name: string; slug: string } | null;
   profiles: { display_name: string; avatar_url: string | null } | null;
@@ -126,9 +127,17 @@ export function VideoCard({
         )}
 
         <div className="flex items-center justify-between mt-auto pt-1">
-          <div className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            <Eye size={11} />
-            <span>{item.view_count.toLocaleString()}</span>
+          <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-muted)" }}>
+            <div className="flex items-center gap-1">
+              <Eye size={11} />
+              <span>{item.view_count.toLocaleString()}</span>
+            </div>
+            {item.likes_count > 0 && (
+              <div className="flex items-center gap-1">
+                <Heart size={11} />
+                <span>{item.likes_count.toLocaleString()}</span>
+              </div>
+            )}
           </div>
 
           {item.tags?.length > 0 && (

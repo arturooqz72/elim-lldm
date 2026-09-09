@@ -34,7 +34,7 @@ export default async function VideosPage({
   let query = supabase
     .from("videos")
     .select(
-      "id, title, description, thumbnail_url, duration_seconds, view_count, published_at, tags, video_categories(id, name, slug), profiles!videos_created_by_fkey(display_name, avatar_url)"
+      "id, title, description, thumbnail_url, duration_seconds, view_count, likes_count, published_at, tags, video_categories(id, name, slug), profiles!videos_created_by_fkey(display_name, avatar_url)"
     )
     .eq("status", "approved")
     .order("published_at", { ascending: false });
@@ -244,6 +244,7 @@ export default async function VideosPage({
                 thumbnail_url: string | null;
                 duration_seconds: number | null;
                 view_count: number;
+                likes_count: number;
                 tags: string[];
                 video_categories: { id: string; name: string; slug: string } | null;
                 profiles: { display_name: string; avatar_url: string | null } | null;

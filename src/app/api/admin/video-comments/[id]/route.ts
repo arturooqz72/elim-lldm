@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+
+// Solo admin por ahora — a diferencia de Opinión y Sugerencias y el chat
+// en vivo, el rol moderador no incluye comentarios de video todavía (el
+// usuario no lo pidió al definir el alcance de moderador). Ampliar aquí
+// es tan simple como agregar `&& role !== "moderador"` si se pide después.
+async function verifyAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (!profile || (profile as { role: string }).role !== "admin") return null;
+  return user;
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await verifyAdmin();
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const service = await createServiceClient();
+
+  const { error } = await service.from("video_comments").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}

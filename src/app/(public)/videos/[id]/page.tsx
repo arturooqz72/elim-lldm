@@ -1,7 +1,10 @@
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient, getProfile } from "@/lib/supabase/server";
 import { VideoPlayer } from "@/components/archivo/VideoPlayer";
+import { LikeButton } from "@/components/videos/LikeButton";
+import { VideoCommentForm } from "@/components/videos/VideoCommentForm";
+import { VideoCommentCard } from "@/components/videos/VideoCommentCard";
 import { formatDate, formatDuration } from "@/lib/utils";
-import { Video as VideoIcon, ArrowLeft, Eye, Tag, Calendar, AlertTriangle, Clock } from "lucide-react";
+import { Video as VideoIcon, ArrowLeft, Eye, Tag, Calendar, AlertTriangle, Clock, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -47,6 +50,7 @@ export default async function VideoDetailPage({ params }: Props) {
     thumbnail_url: string | null;
     duration_seconds: number | null;
     view_count: number;
+    likes_count: number;
     status: "pending" | "approved" | "rejected";
     rejection_reason: string | null;
     published_at: string | null;
@@ -58,6 +62,28 @@ export default async function VideoDetailPage({ params }: Props) {
   // Increment view count in the background (no-op if not approved yet)
   const serviceClient = await createServiceClient();
   void serviceClient.rpc("increment_video_view_count", { video_id: id });
+
+  // Perfil actual primero — hace falta su id para la consulta de "¿ya le
+  // di like?", así que no puede ir en el mismo Promise.all que esa.
+  const profile = await getProfile();
+  const currentUserId = profile?.id ?? null;
+
+  const [ownLikeResult, commentsResult] = await Promise.all([
+    currentUserId
+      ? supabase.from("video_likes").select("id").eq("video_id", id).eq("user_id", currentUserId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("video_comments")
+      .select("id, mensaje, created_at, profiles(display_name, avatar_url)")
+      .eq("video_id", id)
+      .order("created_at", { ascending: false }),
+  ]);
+  const comments = (commentsResult.data ?? []) as unknown as Array<{
+    id: string;
+    mensaje: string;
+    created_at: string;
+    profiles: { display_name: string; avatar_url: string | null } | null;
+  }>;
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -172,6 +198,28 @@ export default async function VideoDetailPage({ params }: Props) {
             )}
           </div>
 
+          {/* Like + jump to comments */}
+          <div className="flex items-center gap-3">
+            <LikeButton
+              videoId={record.id}
+              currentUserId={currentUserId}
+              initialLiked={!!ownLikeResult.data}
+              initialCount={record.likes_count}
+            />
+            <a
+              href="#comentarios"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: "var(--color-surface-elevated)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              <MessageCircle size={15} />
+              <span>{comments.length.toLocaleString()}</span>
+            </a>
+          </div>
+
           {/* Description */}
           {record.description && (
             <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
@@ -201,8 +249,34 @@ export default async function VideoDetailPage({ params }: Props) {
           )}
         </div>
 
-        {/* Divider */}
-        <div className="mt-10 pt-8" style={{ borderTop: "1px solid var(--color-border)" }}>
+        {/* Comentarios */}
+        <div id="comentarios" className="mt-10 pt-8" style={{ borderTop: "1px solid var(--color-border)" }}>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: "var(--color-text)" }}>
+            <MessageCircle size={18} style={{ color: "var(--color-primary)" }} />
+            Comentarios
+            <span className="text-sm font-normal" style={{ color: "var(--color-text-muted)" }}>
+              ({comments.length})
+            </span>
+          </h2>
+
+          <div className="mb-6">
+            <VideoCommentForm videoId={record.id} userId={currentUserId} />
+          </div>
+
+          {comments.length === 0 ? (
+            <p className="text-sm text-center py-6" style={{ color: "var(--color-text-muted)" }}>
+              Sé el primero en comentar.
+            </p>
+          ) : (
+            <div>
+              {comments.map((comment) => (
+                <VideoCommentCard key={comment.id} comment={comment} isAdmin={profile?.role === "admin"} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--color-border)" }}>
           <p className="text-xs text-center" style={{ color: "var(--color-text-muted)" }}>
             Videos compartidos por la comunidad de la Iglesia La Luz del Mundo — Elim LLDM
           </p>
