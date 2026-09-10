@@ -356,3 +356,15 @@ export interface FilaPosicion {
   puntos_totales: number;
   partidas: number;
 }
+
+export type AhorcadoCategoria = "personaje" | "lugar" | "concepto" | "libro";
+
+export interface AhorcadoPalabra {
+  id: string;
+  palabra: string;
+  categoria: AhorcadoCategoria;
+  pista: string;
+  referencia_biblica: string | null;
+  activo: boolean;
+  created_at: string;
+}
