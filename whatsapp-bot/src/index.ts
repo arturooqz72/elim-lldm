@@ -2,10 +2,18 @@
 //
 // Se conecta a WhatsApp usando whatsapp-web.js (sesión del propio
 // WhatsApp del número que se escanee por QR — no requiere la API
-// oficial de Meta Business). Cada mensaje que le escribe una persona
-// se reenvía al endpoint interno /api/whatsapp/chat de elimlldm.net,
-// que reutiliza la misma base de conocimiento y el mismo modo LLDM
-// de Elim IA (solo responde con lo que hay en los documentos que el
+// oficial de Meta Business). Pensado para vincularse al número que
+// YA está publicado como contacto en elimlldm.net, no a uno nuevo.
+//
+// Comportamiento: cuando alguien escribe, el bot NO contesta de
+// inmediato — espera AUTO_REPLY_DELAY_MS dando oportunidad a que el
+// dueño de la cuenta responda personalmente desde su propio
+// WhatsApp. Si eso pasa antes de que se cumpla el plazo, la
+// respuesta automática se cancela. Si nadie contesta a tiempo, el
+// bot reenvía lo que la persona escribió (todo lo acumulado en ese
+// rato) al endpoint interno /api/whatsapp/chat de elimlldm.net, que
+// reutiliza la misma base de conocimiento y el mismo modo LLDM de
+// Elim IA (solo responde con lo que hay en los documentos que el
 // administrador subió).
 //
 // Pensado para correr como contenedor Docker de larga duración en el
@@ -21,6 +29,10 @@ const ELIM_CLEAR_URL = process.env.ELIM_CLEAR_URL ?? "https://elimlldm.net/api/w
 const WHATSAPP_BOT_SECRET = process.env.WHATSAPP_BOT_SECRET;
 const RESPOND_IN_GROUPS = process.env.RESPOND_IN_GROUPS === "true";
 const PUPPETEER_EXECUTABLE_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+
+// Cuánto espera el bot antes de contestar, para darte tiempo a
+// responder tú mismo desde tu propio WhatsApp. Default: 5 minutos.
+const AUTO_REPLY_DELAY_MS = Number(process.env.AUTO_REPLY_DELAY_MS ?? 5 * 60 * 1000);
 
 // Límite de mensajes por número en la ventana de tiempo, para que
 // nadie pueda tumbarnos la cuenta de Anthropic mandando mensajes en
@@ -99,10 +111,68 @@ async function clearHistory(phoneNumber: string): Promise<void> {
 
 const HELP_TEXT =
   "Hola, soy el asistente de Elim LLDM 🙏\n\n" +
-  "Escríbeme tu pregunta y te respondo con base en los documentos oficiales.\n\n" +
+  "Escríbeme tu pregunta. Si nadie te contesta en unos minutos, te respondo con base en los documentos oficiales.\n\n" +
   "Comandos:\n" +
   "!limpiar — borra nuestro historial de conversación\n" +
   "!ayuda — muestra este mensaje";
+
+// Respuesta automática pendiente por chat: se arma con lo que la
+// persona escribió mientras esperamos, y se cancela si el dueño de
+// la cuenta contesta primero desde su propio WhatsApp (evento
+// "message" con fromMe === true en ese mismo chat).
+interface PendingReply {
+  timer: ReturnType<typeof setTimeout>;
+  messages: string[];
+}
+const pendingReplies = new Map<string, PendingReply>();
+
+function queueAutoReply(chatId: string, text: string) {
+  const existing = pendingReplies.get(chatId);
+  if (existing) clearTimeout(existing.timer);
+  const messages = existing ? [...existing.messages, text] : [text];
+
+  const timer = setTimeout(() => {
+    void resolveAutoReply(chatId);
+  }, AUTO_REPLY_DELAY_MS);
+
+  pendingReplies.set(chatId, { timer, messages });
+}
+
+function cancelAutoReply(chatId: string) {
+  const pending = pendingReplies.get(chatId);
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  pendingReplies.delete(chatId);
+  console.log(`Respuesta automática cancelada para ${chatId} — ya contestaste tú.`);
+}
+
+async function resolveAutoReply(chatId: string) {
+  const pending = pendingReplies.get(chatId);
+  if (!pending) return;
+  pendingReplies.delete(chatId);
+
+  try {
+    const chat = await client.getChatById(chatId);
+    await chat.sendStateTyping();
+
+    const combined = pending.messages.join("\n");
+    const reply = await callElimIA(chatId, combined);
+
+    for (const chunk of splitIntoChunks(reply, MAX_REPLY_CHUNK)) {
+      await client.sendMessage(chatId, chunk);
+    }
+  } catch (err) {
+    console.error("Error mandando la respuesta automática de WhatsApp:", err);
+    try {
+      await client.sendMessage(
+        chatId,
+        "Disculpa, tuve un problema para responder. Intenta de nuevo en un momento 🙏"
+      );
+    } catch {
+      // Si ni siquiera se pudo mandar el mensaje de error, solo lo dejamos en el log.
+    }
+  }
+}
 
 const client = new Client({
   authStrategy: new LocalAuth({ dataPath: "session" }),
@@ -136,7 +206,15 @@ client.on("disconnected", (reason) => {
 client.on("message", async (msg: Message) => {
   try {
     if (msg.from === "status@broadcast") return;
-    if (msg.fromMe) return;
+
+    // El dueño de la cuenta (tú) escribiendo desde tu propio
+    // WhatsApp en ese mismo chat — ya estás atendiendo, cancela
+    // cualquier respuesta automática pendiente para no duplicar.
+    if (msg.fromMe) {
+      cancelAutoReply(msg.to);
+      return;
+    }
+
     if (!RESPOND_IN_GROUPS && msg.from.endsWith("@g.us")) return;
 
     const text = msg.body?.trim();
@@ -144,12 +222,16 @@ client.on("message", async (msg: Message) => {
 
     const lower = text.toLowerCase();
 
+    // Los comandos se atienden al instante — son una interacción
+    // directa con el bot, no una pregunta que el dueño deba
+    // contestar personalmente.
     if (lower === "!ayuda" || lower === "!help") {
       await msg.reply(HELP_TEXT);
       return;
     }
 
     if (lower === "!limpiar" || lower === "!clear" || lower === "!reset") {
+      cancelAutoReply(msg.from);
       await clearHistory(msg.from);
       await msg.reply("Listo, borré nuestro historial de conversación. ¿En qué te ayudo?");
       return;
@@ -162,23 +244,11 @@ client.on("message", async (msg: Message) => {
       return;
     }
 
-    const chat = await msg.getChat();
-    await chat.sendStateTyping();
-
-    const reply = await callElimIA(msg.from, text);
-
-    for (const chunk of splitIntoChunks(reply, MAX_REPLY_CHUNK)) {
-      await msg.reply(chunk);
-    }
+    // No contestamos ya — encolamos y esperamos AUTO_REPLY_DELAY_MS
+    // por si tú respondes primero desde tu propio WhatsApp.
+    queueAutoReply(msg.from, text);
   } catch (err) {
     console.error("Error procesando mensaje de WhatsApp:", err);
-    try {
-      await msg.reply(
-        "Disculpa, tuve un problema para responder. Intenta de nuevo en un momento 🙏"
-      );
-    } catch {
-      // Si ni siquiera se pudo mandar el mensaje de error, solo lo dejamos en el log.
-    }
   }
 });
 

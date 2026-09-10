@@ -1,29 +1,42 @@
 # Bot de WhatsApp — Elim LLDM
 
-Asistente de WhatsApp que responde preguntas de la comunidad usando la
-misma base de conocimiento de Elim IA (modo LLDM: solo contesta con
-lo que hay en los documentos que subiste en /admin/elim-ia).
+Respaldo automático para el WhatsApp de contacto que ya está publicado
+en elimlldm.net (**725-277-9358**, el mismo del botón "Contáctanos").
+Si alguien te escribe ahí y no puedes contestar tú, la IA responde
+usando la misma base de conocimiento de Elim IA (modo LLDM: solo
+contesta con lo que hay en los documentos que subiste en
+/admin/elim-ia). No es un número nuevo ni un bot aparte — se vincula
+al MISMO número que ya usas.
 
 No usa la API oficial de WhatsApp Business de Meta — se conecta como
-un WhatsApp normal (whatsapp-web.js), vinculando el número que tú
-elijas escaneando un código QR, igual que cuando vinculas WhatsApp Web
-o WhatsApp Desktop.
+un WhatsApp normal (whatsapp-web.js), vinculando ese número
+escaneando un código QR desde el teléfono donde ya lo tienes
+instalado, igual que cuando vinculas WhatsApp Web o WhatsApp Desktop.
+Sigues usando WhatsApp en ese teléfono con toda normalidad — el bot
+solo se suma como "dispositivo vinculado" adicional.
 
 ## Cómo funciona
 
-1. Alguien te escribe por WhatsApp.
-2. El bot (corriendo en el servidor Hetzner) recibe el mensaje y se lo
-   manda a `https://elimlldm.net/api/whatsapp/chat`.
-3. Ese endpoint de elimlldm.net busca en `elim_ia_documents`, arma el
-   mismo prompt de modo LLDM que usa Elim IA, y le pregunta a Claude.
-4. El bot recibe la respuesta y se la contesta a la persona por
+1. Alguien te escribe por WhatsApp al 725-277-9358.
+2. El bot **no contesta de inmediato** — espera `AUTO_REPLY_DELAY_MS`
+   (5 minutos por defecto) dándote la oportunidad de responder tú
+   mismo, normal, desde tu propio teléfono.
+3. **Si tú contestas antes** de que se cumpla ese plazo, el bot lo
+   detecta (ve que escribiste desde la misma cuenta en ese chat) y
+   cancela la respuesta automática — no interviene.
+4. **Si nadie contesta a tiempo**, el bot manda todo lo que la persona
+   escribió mientras esperaba a `https://elimlldm.net/api/whatsapp/chat`.
+5. Ese endpoint busca en `elim_ia_documents`, arma el mismo prompt de
+   modo LLDM que usa Elim IA, y le pregunta a Claude.
+6. El bot recibe la respuesta y se la contesta a la persona por
    WhatsApp.
-5. El historial de esa conversación se guarda en la tabla
+7. El historial de esa conversación se guarda en la tabla
    `whatsapp_ia_messages` (por número de teléfono), para que el
    asistente recuerde el contexto de los últimos mensajes.
 
-Comandos que entiende el bot: `!ayuda` y `!limpiar` (borra el
-historial de esa persona).
+Comandos que entiende el bot: `!ayuda` (respuesta instantánea) y
+`!limpiar` (borra el historial de esa persona, también instantáneo —
+ambos se atienden al momento, sin esperar el plazo de respaldo).
 
 ## Antes de desplegar
 
@@ -60,12 +73,26 @@ historial de esa persona).
    ```bash
    docker compose logs -f
    ```
-   Abre WhatsApp en el celular del número que vas a usar → **Ajustes
-   → Dispositivos vinculados → Vincular un dispositivo** → escanea el
-   QR que aparece en la terminal.
+   Abre WhatsApp en el celular donde ya tienes activo el **725-277-9358**
+   → **Ajustes → Dispositivos vinculados → Vincular un dispositivo** →
+   escanea el QR que aparece en la terminal. Es el mismo procedimiento
+   que vincular WhatsApp Web — tu teléfono sigue funcionando normal.
 
-4. Cuando el log diga "Bot de WhatsApp de Elim LLDM listo.", ya puedes
-   escribirle un mensaje de prueba a ese número.
+4. Cuando el log diga "Bot de WhatsApp de Elim LLDM listo.", ya está
+   vinculado. Mándale un mensaje de prueba desde OTRO número (no el
+   tuyo) y espera sin contestar tú — a los `AUTO_REPLY_DELAY_MS`
+   configurados (5 min por defecto) debe llegar la respuesta
+   automática.
+
+**Si ya habías vinculado el bot a un número distinto antes** (sesión
+vieja guardada en `./session`), hay que borrar esa sesión para
+volver a escanear con el número correcto:
+```bash
+docker compose down
+rm -rf session/*
+docker compose up -d --build
+docker compose logs -f
+```
 
 ## Actualizar el bot después de un cambio de código
 
@@ -103,7 +130,10 @@ curl -X POST https://elimlldm.net/api/whatsapp/chat \
   el QR — revisa los logs de vez en cuando.
 - whatsapp-web.js NO es la API oficial de Meta: funciona muy bien
   para el volumen de una comunidad, pero técnicamente corre por fuera
-  de los términos de servicio de WhatsApp. El número que uses debería
-  ser uno dedicado a esto (no tu WhatsApp personal), por si algún día
-  hay que migrar a la API oficial de WhatsApp Business sin perder tu
-  número de siempre.
+  de los términos de servicio de WhatsApp. Si algún día quieres migrar
+  el 725-277-9358 a la API oficial de WhatsApp Business, ese trámite
+  es independiente de este bot (que simplemente dejarías de correr).
+- El plazo de espera (`AUTO_REPLY_DELAY_MS`) es por chat: si la misma
+  persona escribe varios mensajes seguidos mientras espera, todos se
+  juntan en uno solo antes de mandarlos a la IA, para que no pierda
+  contexto.
