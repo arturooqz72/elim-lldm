@@ -17,6 +17,7 @@ import {
   AudioLines,
   Zap,
   Disc3,
+  Puzzle,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/admin/trivia", label: "Salas de Trivia", icon: Sparkles },
   { href: "/admin/arena-abierta", label: "Arena Abierta", icon: Zap },
   { href: "/admin/ruleta", label: "La Ruleta", icon: Disc3 },
+  { href: "/admin/ahorcado", label: "Ahorcado", icon: Puzzle },
   { href: "/admin/archivo", label: "Archivo", icon: Archive },
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
   { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
