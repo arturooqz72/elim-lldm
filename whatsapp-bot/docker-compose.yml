@@ -1,0 +1,12 @@
+services:
+  elim-whatsapp-bot:
+    build: .
+    container_name: elim-whatsapp-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./session:/app/session
+    # Poco uso de CPU/RAM en reposo; Chromium sube un poco al procesar
+    # cada mensaje. Ajusta si el servidor anda justo de recursos.
+    mem_limit: 768m
