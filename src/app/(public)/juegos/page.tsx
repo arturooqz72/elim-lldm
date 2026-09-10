@@ -1,10 +1,12 @@
-import { Gamepad2, RotateCw, ChevronRight } from "lucide-react";
+import { Gamepad2, Puzzle, RotateCw, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
 import { PuertaArenaAbierta } from "@/components/juegos/PuertaArenaAbierta";
 import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
 import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
 import { getTablaPosiciones } from "@/lib/juegos/tabla-posiciones.server";
+import { getRankingIndividual } from "@/lib/juegos/ranking-individual.server";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
@@ -29,14 +31,21 @@ export default async function JuegosHubPage() {
   // su id — el resto sigue en paralelo detrás.
   const profile = await getProfile();
 
-  const [estadoArenaAbierta, estadoRuleta, posicionesArena, posicionesRuleta, notificacionesActivas] =
-    await Promise.all([
-      getEstadoPuertaArenaAbierta(),
-      getEstadoPuertaRuleta(),
-      getTablaPosiciones("arena_abierta"),
-      getTablaPosiciones("ruleta"),
-      getGameKeysConNotificacion(profile?.id ?? null),
-    ]);
+  const [
+    estadoArenaAbierta,
+    estadoRuleta,
+    posicionesArena,
+    posicionesRuleta,
+    posicionesAhorcado,
+    notificacionesActivas,
+  ] = await Promise.all([
+    getEstadoPuertaArenaAbierta(),
+    getEstadoPuertaRuleta(),
+    getTablaPosiciones("arena_abierta"),
+    getTablaPosiciones("ruleta"),
+    getRankingIndividual("ahorcado"),
+    getGameKeysConNotificacion(profile?.id ?? null),
+  ]);
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -65,60 +74,110 @@ export default async function JuegosHubPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-4">
+      <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-8">
         <JuegosPresence
           currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null}
         />
 
-        <div className="flex flex-col gap-3">
-          <PuertaArenaAbierta
-            disponible={estadoArenaAbierta.disponible}
-            jugandoAhora={estadoArenaAbierta.jugandoAhora}
-            esperando={estadoArenaAbierta.esperando}
-            notificacionesActivas={notificacionesActivas.has("arena_abierta")}
-          />
-          <TablaPosiciones
-            titulo="Tabla de posiciones — Trivia en línea"
-            filas={posicionesArena}
-            currentUserId={profile?.id ?? null}
-          />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <PuertaRuleta
-            disponible={estadoRuleta.disponible}
-            jugandoAhora={estadoRuleta.jugandoAhora}
-            esperando={estadoRuleta.esperando}
-            notificacionesActivas={notificacionesActivas.has("ruleta")}
-          />
-          <TablaPosiciones
-            titulo="Tabla de posiciones — La Ruleta en línea"
-            filas={posicionesRuleta}
-            currentUserId={profile?.id ?? null}
-          />
-        </div>
-
-        <a
-          href="/juegos/ruleta-elimlldm.html"
-          className="flex items-center gap-4 p-6 rounded-2xl"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-            style={{ background: "rgba(29,158,117,0.08)", border: "1px solid rgba(29,158,117,0.3)" }}
+        <div className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--color-text-muted)" }}
           >
-            <RotateCw size={20} style={{ color: "#1D9E75" }} />
+            Juegos en vivo
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <PuertaArenaAbierta
+              disponible={estadoArenaAbierta.disponible}
+              jugandoAhora={estadoArenaAbierta.jugandoAhora}
+              esperando={estadoArenaAbierta.esperando}
+              notificacionesActivas={notificacionesActivas.has("arena_abierta")}
+            />
+            <TablaPosiciones
+              titulo="Tabla de posiciones — Trivia en línea"
+              filas={posicionesArena}
+              currentUserId={profile?.id ?? null}
+            />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-              Ruleta de retos
-            </h2>
-            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Gira solo y descubre tu reto
-            </p>
+
+          <div className="flex flex-col gap-3">
+            <PuertaRuleta
+              disponible={estadoRuleta.disponible}
+              jugandoAhora={estadoRuleta.jugandoAhora}
+              esperando={estadoRuleta.esperando}
+              notificacionesActivas={notificacionesActivas.has("ruleta")}
+            />
+            <TablaPosiciones
+              titulo="Tabla de posiciones — La Ruleta en línea"
+              filas={posicionesRuleta}
+              currentUserId={profile?.id ?? null}
+            />
           </div>
-          <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-        </a>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Juegos individuales
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/juegos/ahorcado"
+              className="flex items-center gap-4 p-6 rounded-2xl"
+              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.3)" }}
+              >
+                <Puzzle size={20} style={{ color: "#A78BFA" }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                  Ahorcado del Nuevo Testamento
+                </h2>
+                <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  Personajes, lugares, palabras clave y libros — de un jugador
+                </p>
+              </div>
+              <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
+            </Link>
+            <TablaPosiciones
+              titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
+              filas={posicionesAhorcado}
+              currentUserId={profile?.id ?? null}
+              unidadSingular="palabra"
+              unidadPlural="palabras"
+              vacio="Aún nadie ha ganado una palabra. ¡Sé el primero!"
+            />
+          </div>
+
+          <a
+            href="/juegos/ruleta-elimlldm.html"
+            className="flex items-center gap-4 p-6 rounded-2xl"
+            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+              style={{ background: "rgba(29,158,117,0.08)", border: "1px solid rgba(29,158,117,0.3)" }}
+            >
+              <RotateCw size={20} style={{ color: "#1D9E75" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                Ruleta de retos
+              </h2>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Gira solo y descubre tu reto
+              </p>
+            </div>
+            <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
+          </a>
+        </div>
       </div>
     </div>
   );
