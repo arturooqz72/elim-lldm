@@ -82,7 +82,20 @@ export async function POST(request: Request) {
     .order("created_at", { ascending: false });
 
   const documents = (docsData ?? []) as Pick<ElimIADocument, "title" | "content">[];
-  const systemPrompt = buildLldmSystemPrompt(documents);
+
+  // WhatsApp no renderiza Markdown: "## título" y "**negrita**" salen
+  // como texto literal con los símbolos a la vista. buildLldmSystemPrompt
+  // es compartido con el chat web de Elim IA (donde el Markdown sí se ve
+  // bien), así que el ajuste de formato va aquí, solo para este canal.
+  const systemPrompt =
+    buildLldmSystemPrompt(documents) +
+    "\n\n# Formato de respuesta (WhatsApp)\n\n" +
+    "Esta respuesta se envía por WhatsApp, que no interpreta Markdown. " +
+    "No uses encabezados (#, ##), ni negrita con doble asterisco (**texto**), " +
+    "ni listas con guiones o viñetas, ni enlaces en formato [texto](url). " +
+    "Escribe en párrafos cortos y naturales, como un mensaje de WhatsApp real. " +
+    "Si necesitas resaltar una palabra, usa un solo asterisco (*así*), que es " +
+    "la negrita nativa de WhatsApp — úsalo con moderación.";
 
   const anthropicResponse = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
