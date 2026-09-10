@@ -35,6 +35,28 @@ export async function POST(request: Request) {
     );
   }
 
+  // Actualiza la fila existente solo si el nuevo score la mejora; si no,
+  // no escribe nada. Se usa tanto para el caso normal (fila ya encontrada
+  // por el SELECT de arriba) como para la recuperación de la carrera de
+  // inserts concurrentes más abajo.
+  const actualizarSiMejora = async (fila: { id: string; score: number }) => {
+    if (score <= fila.score) {
+      return NextResponse.json({ guardado: false, mejorado: false });
+    }
+
+    const { error } = await supabase
+      .from("juego_individual_rankings")
+      .update({
+        score,
+        metadata: { palabras_ganadas: palabrasGanadas },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", fila.id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ guardado: true, mejorado: true });
+  };
+
   const { data: existente, error: errorConsulta } = await supabase
     .from("juego_individual_rankings")
     .select("id, score")
@@ -53,23 +75,26 @@ export async function POST(request: Request) {
       score,
       metadata: { palabras_ganadas: palabrasGanadas },
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (error) {
+      // 23505 = otra request concurrente de la MISMA cuenta ganó la carrera
+      // entre el SELECT de arriba y este insert (doble clic, doble pestaña,
+      // reintento) — no es un error real, buscamos la fila que ganó y
+      // aplicamos la misma lógica de "solo actualiza si mejora" sobre ella.
+      if (error.code === "23505") {
+        const { data: filaGanadora } = await supabase
+          .from("juego_individual_rankings")
+          .select("id, score")
+          .eq("game_key", GAME_KEY)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (filaGanadora) return actualizarSiMejora(filaGanadora);
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
     return NextResponse.json({ guardado: true, mejorado: true });
   }
 
-  if (score <= existente.score) {
-    return NextResponse.json({ guardado: false, mejorado: false });
-  }
-
-  const { error } = await supabase
-    .from("juego_individual_rankings")
-    .update({
-      score,
-      metadata: { palabras_ganadas: palabrasGanadas },
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", existente.id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ guardado: true, mejorado: true });
+  return actualizarSiMejora(existente);
 }
