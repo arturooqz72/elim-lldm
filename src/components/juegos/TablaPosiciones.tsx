@@ -8,6 +8,9 @@ interface TablaPosicionesProps {
   currentUserId?: string | null;
   /** Texto cuando todavía no hay ninguna partida terminada de este juego. */
   vacio?: string;
+  /** Para juegos donde "partida" no aplica (ej. Ahorcado: "palabra"/"palabras"). */
+  unidadSingular?: string;
+  unidadPlural?: string;
 }
 
 // Mismos oro/plata/bronce que arena/Leaderboard.tsx y juegos/Scoreboard.tsx,
@@ -25,6 +28,8 @@ export function TablaPosiciones({
   filas,
   currentUserId,
   vacio = "Aún no hay partidas terminadas. ¡Sé el primero en aparecer aquí!",
+  unidadSingular = "partida",
+  unidadPlural = "partidas",
 }: TablaPosicionesProps) {
   return (
     <div
@@ -105,7 +110,7 @@ export function TablaPosiciones({
                     {fila.puntos_totales.toLocaleString()} pts
                   </span>
                   <span className="text-[10px] leading-tight" style={{ color: "var(--color-text-muted)" }}>
-                    {fila.partidas} {fila.partidas === 1 ? "partida" : "partidas"}
+                    {fila.partidas} {fila.partidas === 1 ? unidadSingular : unidadPlural}
                   </span>
                 </span>
               </li>
