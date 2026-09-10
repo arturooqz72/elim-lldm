@@ -204,9 +204,15 @@ export function AhorcadoGame() {
                   </p>
                 </>
               )}
+              {error && (
+                <p className="text-xs mt-2" style={{ color: "var(--color-destructive)" }}>
+                  {error}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={pedirPalabra}
+                disabled={cargando}
                 className="mt-3 px-4 py-2 rounded-xl text-sm font-bold"
                 style={{ background: "var(--color-primary)", color: "#000" }}
               >
@@ -230,9 +236,15 @@ export function AhorcadoGame() {
       </div>
 
       <div className="text-center">
+        {error && (
+          <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
+            {error}
+          </p>
+        )}
         <button
           type="button"
           onClick={reiniciar}
+          disabled={cargando}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--color-surface-elevated)",
