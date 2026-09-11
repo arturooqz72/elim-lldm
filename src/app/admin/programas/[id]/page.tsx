@@ -1,6 +1,6 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import type { Programa, ProgramaAudio, ProgramaHost } from "@/types";
@@ -8,6 +8,7 @@ import { AudioUploadForm } from "./AudioUploadForm";
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
 async function deleteAudio(formData: FormData) {
@@ -31,13 +32,13 @@ async function addHost(formData: FormData) {
     .ilike("display_name", nombre)
     .maybeSingle();
 
-  if (user) {
-    await supabase
-      .from("programa_hosts")
-      .insert({ programa_id: programaId, user_id: (user as { id: string }).id })
-      .select()
-      .single();
-  }
+  if (!user) redirect(`/admin/programas/${programaId}?error=host_not_found`);
+
+  const { error: insertErr } = await supabase
+    .from("programa_hosts")
+    .insert({ programa_id: programaId, user_id: (user as { id: string }).id });
+  if (insertErr) redirect(`/admin/programas/${programaId}?error=host_save`);
+
   revalidatePath(`/admin/programas/${programaId}`);
 }
 
@@ -50,8 +51,9 @@ async function removeHost(formData: FormData) {
   revalidatePath(`/admin/programas/${programaId}`);
 }
 
-export default async function ProgramaAudiosPage({ params }: Props) {
+export default async function ProgramaAudiosPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
 
   const { data: programaData } = await supabase.from("programas").select("*").eq("id", id).single();
@@ -164,6 +166,17 @@ export default async function ProgramaAudiosPage({ params }: Props) {
                 </p>
               )}
             </div>
+            {error === "host_not_found" && (
+              <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
+                No se encontró ningún usuario con ese nombre exacto. Revisa mayúsculas, espacios y que la
+                persona ya se haya registrado en el sitio con ese nombre.
+              </p>
+            )}
+            {error === "host_save" && (
+              <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
+                Ese usuario ya es conductor de este programa, o hubo un error al guardar.
+              </p>
+            )}
             <form action={addHost} className="flex gap-2">
               <input type="hidden" name="programa_id" value={id} />
               <input
