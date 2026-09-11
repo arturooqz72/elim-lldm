@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { Radio } from "lucide-react";
 import type { Programa } from "@/types";
+import { DeleteProgramaForm } from "./DeleteProgramaForm";
 
 export const metadata = { title: "Programas — Admin" };
 
@@ -43,6 +44,17 @@ async function toggleActivo(formData: FormData) {
   const activo = formData.get("activo") === "true";
   const supabase = await createServiceClient();
   await supabase.from("programas").update({ activo }).eq("id", id);
+  revalidatePath("/admin/programas");
+}
+
+async function deletePrograma(formData: FormData) {
+  "use server";
+  const id = formData.get("id") as string;
+  const supabase = await createServiceClient();
+  // Si el programa tiene transmisiones (platikas) vinculadas, la FK en
+  // modo RESTRICT rechaza el borrado — se ignora el error para no tumbar
+  // la página; el programa simplemente sigue en la lista.
+  await supabase.from("programas").delete().eq("id", id);
   revalidatePath("/admin/programas");
 }
 
@@ -126,6 +138,7 @@ export default async function ProgramasAdminPage({ searchParams }: Props) {
               >
                 Audios
               </Link>
+              <DeleteProgramaForm action={deletePrograma} id={programa.id} />
             </div>
           ))}
         </div>

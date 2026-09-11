@@ -8,7 +8,7 @@ import { AudioUploadForm } from "./AudioUploadForm";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: "host_not_found" | "host_ambiguous" | "host_save" }>;
 }
 
 async function deleteAudio(formData: FormData) {
@@ -26,17 +26,24 @@ async function addHost(formData: FormData) {
   const nombre = (formData.get("nombre") as string).trim();
   const supabase = await createServiceClient();
 
-  const { data: user } = await supabase
+  // ilike sin comodines exige coincidencia exacta (salvo mayúsculas) —
+  // un espacio doble o un nombre parcial ya hacía fallar la búsqueda.
+  // Con comodines buscamos por coincidencia parcial, y si hay más de
+  // un resultado se lo hacemos saber al admin en vez de adivinar cuál.
+  const { data: matches } = await supabase
     .from("profiles")
-    .select("id")
-    .ilike("display_name", nombre)
-    .maybeSingle();
+    .select("id, display_name")
+    .ilike("display_name", `%${nombre}%`)
+    .limit(2);
 
-  if (!user) redirect(`/admin/programas/${programaId}?error=host_not_found`);
+  if (!matches || matches.length === 0) redirect(`/admin/programas/${programaId}?error=host_not_found`);
+  if (matches.length > 1) redirect(`/admin/programas/${programaId}?error=host_ambiguous`);
+
+  const user = matches[0] as { id: string };
 
   const { error: insertErr } = await supabase
     .from("programa_hosts")
-    .insert({ programa_id: programaId, user_id: (user as { id: string }).id });
+    .insert({ programa_id: programaId, user_id: user.id });
   if (insertErr) redirect(`/admin/programas/${programaId}?error=host_save`);
 
   revalidatePath(`/admin/programas/${programaId}`);
@@ -168,8 +175,14 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
             </div>
             {error === "host_not_found" && (
               <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
-                No se encontró ningún usuario con ese nombre exacto. Revisa mayúsculas, espacios y que la
-                persona ya se haya registrado en el sitio con ese nombre.
+                No se encontró ningún usuario cuyo nombre contenga eso. Revisa que la persona ya se haya
+                registrado en el sitio, y que el nombre esté escrito tal cual (acentos incluidos).
+              </p>
+            )}
+            {error === "host_ambiguous" && (
+              <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
+                Hay más de un usuario cuyo nombre contiene eso. Escribe el nombre completo para identificar a
+                uno solo.
               </p>
             )}
             {error === "host_save" && (
