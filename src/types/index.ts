@@ -1,4 +1,4 @@
-export type Role = "admin" | "anfitrion" | "participante" | "moderador";
+export type Role = "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
 
 export type PláticaStatus = "scheduled" | "live" | "ended";
 
