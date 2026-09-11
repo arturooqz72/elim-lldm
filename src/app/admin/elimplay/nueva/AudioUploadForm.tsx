@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Upload, Loader2, CheckCircle, XCircle, X, Music, FileAudio } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 interface AudioUploadFormProps {
@@ -249,7 +249,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
 
-  async function resolveArtistId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  async function resolveArtistId(supabase: ReturnType<typeof createFreshClient>): Promise<string | null> {
     if (!artistId) return null;
     if (artistId !== ARTIST_NEW) return artistId;
 
@@ -291,7 +291,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     return resolvedId;
   }
 
-  async function resolveCategoryId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  async function resolveCategoryId(supabase: ReturnType<typeof createFreshClient>): Promise<string | null> {
     if (!categoryId) return null;
     if (categoryId !== CATEGORY_NEW) return categoryId;
 
@@ -393,7 +393,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
 
       const audioUrl = initData.publicUrl;
 
-      const supabase = createClient();
+      const supabase = createFreshClient();
 
       let cover_url: string | null = null;
       if (ctx.singleFile && coverFile) {
@@ -439,7 +439,7 @@ export function AudioUploadForm({ categories, artists }: AudioUploadFormProps) {
     setIsUploading(true);
     setDebugLines([]);
 
-    const supabase = createClient();
+    const supabase = createFreshClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
