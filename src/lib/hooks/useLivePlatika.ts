@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 
 export interface LivePlatika {
   id: string;
@@ -19,7 +19,14 @@ export function useLivePlatika(initial: LivePlatika | null = null) {
   const instanceId = useId();
 
   useEffect(() => {
-    const supabase = createClient();
+    // createFreshClient(), no el singleton createClient(): el singleton
+    // compartido puede quedarse con su initializePromise colgado para
+    // siempre si el refresh de token inicial nunca se resuelve, lo cual
+    // congela en silencio cualquier consulta futura sobre esa instancia
+    // (gotcha ya documentado en src/lib/supabase/client.ts). Este hook
+    // vive en el header, montado en cada página — no puede depender de
+    // que el singleton esté sano en ese momento.
+    const supabase = createFreshClient();
 
     async function refresh() {
       const { data } = await supabase
