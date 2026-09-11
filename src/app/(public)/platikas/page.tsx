@@ -1,6 +1,7 @@
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { Mic, Radio, Users } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GoLiveButton } from "@/components/platikas/GoLiveButton";
 import { PlatikaSessions, type PláticaRow } from "@/components/platikas/PlatikaSessions";
 
@@ -18,6 +19,7 @@ export default async function PlatikaListPage() {
   const profile = await getProfile();
   const canGoLive = profile?.role === "admin" || profile?.role === "anfitrion";
   const isAdmin = profile?.role === "admin";
+  const canManagePrograms = profile?.role === "admin" || profile?.role === "super_moderador";
 
   const [{ data: activeRaw }, { data: endedRaw }] = await Promise.all([
     supabase
@@ -75,7 +77,23 @@ export default async function PlatikaListPage() {
                   Transmisiones en vivo con debate, chat y escenario abierto
                 </p>
               </div>
-              {canGoLive && <GoLiveButton />}
+              <div className="flex items-center gap-2 shrink-0">
+                {canManagePrograms && (
+                  <Link
+                    href="/platikas/programas"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    style={{
+                      background: "var(--color-surface-elevated)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-primary)",
+                    }}
+                  >
+                    <Radio size={15} />
+                    Programas
+                  </Link>
+                )}
+                {canGoLive && <GoLiveButton />}
+              </div>
             </div>
 
             {/* Stat pills */}
