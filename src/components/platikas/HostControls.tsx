@@ -7,6 +7,7 @@ import { PlatformStreamCard } from "./PlatformStreamCard";
 import { RadioBroadcastPanel } from "./RadioBroadcastPanel";
 import { SpeakerControls } from "./SpeakerControls";
 import { createClient } from "@/lib/supabase/client";
+import type { ProgramaAudio } from "@/types";
 
 type StreamPlatform = "youtube" | "facebook" | "tiktok";
 
@@ -46,6 +47,7 @@ interface HostControlsProps {
   onGoLive?: () => void;
   onEnd?: () => void;
   onSpeakerApproved?: (token: string, wsUrl: string) => void;
+  programaAudios?: ProgramaAudio[];
 }
 
 export function HostControls({
@@ -54,6 +56,7 @@ export function HostControls({
   onGoLive,
   onEnd,
   onSpeakerApproved,
+  programaAudios,
 }: HostControlsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [streamEgressIds, setStreamEgressIds] = useState<Record<StreamPlatform, string | null>>({
@@ -198,7 +201,7 @@ export function HostControls({
             </button>
           )}
 
-          {isLive && <RadioBroadcastPanel platikaId={platikaId} />}
+          {isLive && <RadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />}
         </div>
       </div>
 

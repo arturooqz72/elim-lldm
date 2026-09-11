@@ -6,6 +6,7 @@ import { Mic, Calendar, Radio, ArrowLeft, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Metadata } from "next";
+import type { ProgramaAudio } from "@/types";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -41,9 +42,6 @@ export default async function PlatikaRoomPage({ params }: Props) {
 
   if (!platica) notFound();
 
-  const profile = await getProfile();
-  const currentUserId = profile?.id ?? null;
-
   const p = platica as {
     id: string;
     title: string;
@@ -56,8 +54,25 @@ export default async function PlatikaRoomPage({ params }: Props) {
     started_at: string | null;
     thumbnail_url: string | null;
     recording_url: string | null;
+    programa_id: string | null;
     profiles: { display_name: string; avatar_url: string | null; role: string } | null;
   };
+
+  // getProfile() y la consulta de programa_audios no dependen una de la otra
+  // (esta última solo depende de p.programa_id, ya disponible), así que corren
+  // en paralelo con Promise.all en vez de secuencialmente.
+  const [profile, audiosResult] = await Promise.all([
+    getProfile(),
+    p.programa_id
+      ? supabase
+          .from("programa_audios")
+          .select("*")
+          .eq("programa_id", p.programa_id)
+          .order("orden", { ascending: true })
+      : Promise.resolve({ data: null as ProgramaAudio[] | null }),
+  ]);
+  const currentUserId = profile?.id ?? null;
+  const programaAudios: ProgramaAudio[] = audiosResult.data ?? [];
 
   const isHost = currentUserId === p.host_id;
   // Además del anfitrión de ESTA plática: admin y moderador pueden borrar
@@ -252,6 +267,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
               isSpeaker={isSpeaker}
               currentUserId={currentUserId}
               canModerateChat={canModerateChat}
+              programaAudios={programaAudios}
             />
           ) : isScheduled ? (
             <ScheduledState scheduledAt={p.scheduled_at} />

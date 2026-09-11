@@ -7,6 +7,7 @@ import { StagePanel } from "./StagePanel";
 import { ChatPanel } from "./ChatPanel";
 import { HostControls } from "./HostControls";
 import { RequestButton } from "./RequestButton";
+import type { ProgramaAudio } from "@/types";
 
 interface LiveKitRoomProps {
   platikaId: string;
@@ -19,6 +20,7 @@ interface LiveKitRoomProps {
   // un permiso más amplio (también admin/moderador globales) que solo
   // debe afectar el botón de moderar del chat, no los controles de sala.
   canModerateChat: boolean;
+  programaAudios?: ProgramaAudio[];
 }
 
 type TokenState =
@@ -33,6 +35,7 @@ export function LiveKitRoom({
   isSpeaker,
   currentUserId,
   canModerateChat,
+  programaAudios,
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
   const [isLive, setIsLive] = useState(true);
@@ -78,6 +81,7 @@ export function LiveKitRoom({
           onGoLive={() => setIsLive(true)}
           onEnd={() => setIsLive(false)}
           onSpeakerApproved={handleSpeakerApproved}
+          programaAudios={programaAudios}
         />
       )}
 
