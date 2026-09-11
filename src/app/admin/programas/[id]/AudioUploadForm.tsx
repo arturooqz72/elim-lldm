@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 interface AudioUploadFormProps {
@@ -109,13 +109,19 @@ export function AudioUploadForm({ programaId, nextOrden }: AudioUploadFormProps)
         setProgress
       );
 
-      const supabase = createClient();
-      const { error: insertErr } = await supabase.from("programa_audios").insert({
-        programa_id: programaId,
-        titulo: titulo.trim(),
-        audio_url: initData.publicUrl,
-        orden: nextOrden,
-      });
+      const supabase = createFreshClient();
+      const { error: insertErr } = await withTimeout(
+        Promise.resolve(
+          supabase.from("programa_audios").insert({
+            programa_id: programaId,
+            titulo: titulo.trim(),
+            audio_url: initData.publicUrl,
+            orden: nextOrden,
+          })
+        ),
+        15000,
+        "guardar registro del audio"
+      );
       if (insertErr) throw new Error(insertErr.message);
 
       setFile(null);
