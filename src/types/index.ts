@@ -1,4 +1,4 @@
-export type Role = "admin" | "anfitrion" | "participante" | "moderador";
+export type Role = "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
 
 export type PláticaStatus = "scheduled" | "live" | "ended";
 
@@ -366,5 +366,32 @@ export interface AhorcadoPalabra {
   pista: string;
   referencia_biblica: string | null;
   activo: boolean;
+  created_at: string;
+}
+
+export interface Programa {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  horario_texto: string | null;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramaHost {
+  id: string;
+  programa_id: string;
+  user_id: string;
+  created_at: string;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+}
+
+export interface ProgramaAudio {
+  id: string;
+  programa_id: string;
+  titulo: string;
+  audio_url: string;
+  orden: number;
   created_at: string;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMaybeRoomContext, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square } from "lucide-react";
+import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, LogOut } from "lucide-react";
 import {
   AudioMixer,
   captureTabAudio,
@@ -12,11 +12,13 @@ import {
 } from "@/lib/radio-broadcast";
 import { createClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
+import type { ProgramaAudio } from "@/types";
 
 type Status = "idle" | "connecting" | "live" | "error";
 
 interface RadioBroadcastPanelProps {
   platikaId: string;
+  programaAudios?: ProgramaAudio[];
 }
 
 // LiveKitRoom.tsx renders the sidebar (and this component inside it) both
@@ -24,19 +26,25 @@ interface RadioBroadcastPanelProps {
 // throws if called outside a Room context, which would crash the whole page
 // during those pre-connection states. useMaybeRoomContext never throws, so it
 // gates whether the real panel (and its useTracks call) mounts at all.
-export function RadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
+export function RadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadcastPanelProps) {
   const room = useMaybeRoomContext();
   if (!room) return null;
-  return <ConnectedRadioBroadcastPanel platikaId={platikaId} />;
+  return <ConnectedRadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />;
 }
 
-function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
+function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadcastPanelProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [micOn, setMicOn] = useState(false);
   const [roomOn, setRoomOn] = useState(false);
   const [pcOn, setPcOn] = useState(false);
   const [pcLoading, setPcLoading] = useState(false);
+
+  const audios = programaAudios ?? [];
+  const [selectedAudioId, setSelectedAudioId] = useState<string | null>(audios[0]?.id ?? null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const previewRef = useRef<HTMLAudioElement | null>(null);
+  const [playingClip, setPlayingClip] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const mixerRef = useRef<AudioMixer | null>(null);
@@ -164,22 +172,117 @@ function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
     }
   }
 
+  function previewClip(audio: ProgramaAudio) {
+    if (previewingId === audio.id) {
+      previewRef.current?.pause();
+      setPreviewingId(null);
+      return;
+    }
+    if (!previewRef.current) previewRef.current = new Audio();
+    previewRef.current.src = audio.audio_url;
+    previewRef.current.onended = () => setPreviewingId(null);
+    void previewRef.current.play();
+    setPreviewingId(audio.id);
+  }
+
+  async function entrarALaRadioConIntro() {
+    await startBroadcast();
+    const mixer = mixerRef.current;
+    if (!mixer) return;
+    const clip = audios.find((a) => a.id === selectedAudioId);
+    if (!clip) return;
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    if (mixerRef.current !== mixer) return;
+    await mixer.playClip(clip.audio_url);
+  }
+
+  async function dispararAudioEnVivo(audio: ProgramaAudio) {
+    setPlayingClip(true);
+    try {
+      await mixerRef.current?.playClip(audio.audio_url);
+    } finally {
+      setPlayingClip(false);
+    }
+  }
+
+  async function dispararSalidaYDesconectar(audio: ProgramaAudio) {
+    setPlayingClip(true);
+    try {
+      await mixerRef.current?.playClip(audio.audio_url);
+    } finally {
+      setPlayingClip(false);
+      stopBroadcast();
+    }
+  }
+
   if (status === "idle" || status === "connecting") {
+    if (audios.length === 0) {
+      return (
+        <button
+          type="button"
+          onClick={startBroadcast}
+          disabled={status === "connecting"}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{
+            background: "var(--color-surface-elevated)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-muted)",
+          }}
+        >
+          {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
+          {status === "connecting" ? "Conectando…" : "Salida a radio"}
+        </button>
+      );
+    }
+
     return (
-      <button
-        type="button"
-        onClick={startBroadcast}
-        disabled={status === "connecting"}
-        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all"
-        style={{
-          background: "var(--color-surface-elevated)",
-          border: "1px solid var(--color-border)",
-          color: "var(--color-text-muted)",
-        }}
-      >
-        {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
-        {status === "connecting" ? "Conectando…" : "Salida a radio"}
-      </button>
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+          Elige tu intro
+        </p>
+        {audios.map((audio) => (
+          <div key={audio.id} className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedAudioId(audio.id)}
+              className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-left"
+              style={{
+                background: selectedAudioId === audio.id ? "rgba(212,160,23,0.15)" : "var(--color-surface)",
+                border: `1px solid ${selectedAudioId === audio.id ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
+                color: selectedAudioId === audio.id ? "var(--color-primary)" : "var(--color-text)",
+              }}
+            >
+              <span
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{
+                  border: "1.5px solid currentColor",
+                  background: selectedAudioId === audio.id ? "currentColor" : "transparent",
+                }}
+              />
+              {audio.titulo}
+            </button>
+            <button
+              type="button"
+              onClick={() => previewClip(audio)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+              aria-label="Escuchar"
+            >
+              <Play size={12} style={{ color: previewingId === audio.id ? "var(--color-primary)" : "var(--color-text-muted)" }} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={entrarALaRadioConIntro}
+          disabled={status === "connecting" || !selectedAudioId}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-all mt-1"
+          style={{ background: "var(--color-primary)", color: "#000", opacity: !selectedAudioId ? 0.6 : 1 }}
+        >
+          {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
+          {status === "connecting" ? "Conectando…" : "Entrar a la radio"}
+        </button>
+      </div>
     );
   }
 
@@ -250,6 +353,48 @@ function ConnectedRadioBroadcastPanel({ platikaId }: RadioBroadcastPanelProps) {
         onToggle={togglePc}
         meterTrack={pcOn ? pcTrackRef.current : null}
       />
+
+      {audios.length > 0 && (
+        <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
+            Banco de audios
+          </p>
+          {audios.map((audio) => (
+            <div key={audio.id} className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void dispararAudioEnVivo(audio)}
+                disabled={playingClip}
+                className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left"
+                style={{
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text)",
+                  opacity: playingClip ? 0.5 : 1,
+                }}
+              >
+                <Play size={11} />
+                {audio.titulo}
+              </button>
+              <button
+                type="button"
+                onClick={() => void dispararSalidaYDesconectar(audio)}
+                disabled={playingClip}
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{
+                  background: "rgba(248,113,113,0.1)",
+                  border: "1px solid rgba(248,113,113,0.3)",
+                  opacity: playingClip ? 0.5 : 1,
+                }}
+                aria-label="Usar como salida y desconectar"
+                title="Usar como salida y desconectar"
+              >
+                <LogOut size={11} style={{ color: "var(--color-destructive)" }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {errorMsg && (
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>

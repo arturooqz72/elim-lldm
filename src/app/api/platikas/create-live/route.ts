@@ -31,14 +31,14 @@ export async function POST(request: Request) {
     console.error(`${LOG_TAG} error fetching profile:`, profileError);
   }
 
-  if (!profile || !["admin", "anfitrion"].includes(profile.role)) {
+  if (!profile || !["admin", "anfitrion", "super_moderador"].includes(profile.role)) {
     console.error(`${LOG_TAG} role check failed — Forbidden`, { role: profile?.role });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   console.log(`${LOG_TAG} role check passed`, { role: profile.role });
 
-  let body: { title?: string };
+  let body: { title?: string; programa_id?: string };
   try {
     body = await request.json();
   } catch (err) {
@@ -47,11 +47,17 @@ export async function POST(request: Request) {
   }
 
   const title = body.title?.trim();
-  console.log(`${LOG_TAG} parsed body`, { title });
+  const programaId = body.programa_id?.trim() || null;
+  console.log(`${LOG_TAG} parsed body`, { title, programaId });
 
   if (!title) {
     console.error(`${LOG_TAG} missing title — bad request`);
     return NextResponse.json({ error: "El título es requerido" }, { status: 400 });
+  }
+
+  if (programaId && !["admin", "super_moderador"].includes(profile.role)) {
+    console.error(`${LOG_TAG} anfitrion attempted to use programa_id — Forbidden`, { role: profile.role, programaId });
+    return NextResponse.json({ error: "Solo un administrador o Super Moderador puede iniciar la transmisión de un programa" }, { status: 403 });
   }
 
   console.log(`${LOG_TAG} inserting platika row...`);
@@ -61,6 +67,7 @@ export async function POST(request: Request) {
       title,
       host_id: user.id,
       status: "scheduled",
+      programa_id: programaId,
     })
     .select("id")
     .single();

@@ -74,6 +74,30 @@ export class AudioMixer {
     this.sources.clear();
     this.context.close().catch(() => {});
   }
+
+  /**
+   * Reproduce un clip de audio (ej. intro/salida de un programa) hacia
+   * la mezcla que sale a la radio — no hacia las bocinas locales, igual
+   * que el resto de las fuentes de este mixer. Resuelve cuando el clip
+   * termina de sonar, para poder encadenar acciones (ej. desconectar
+   * después de la salida).
+   */
+  async playClip(url: string): Promise<void> {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`No se pudo descargar el clip (${response.status})`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+
+    return new Promise((resolve) => {
+      const source = this.context.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.destination);
+      source.onended = () => resolve();
+      source.start();
+    });
+  }
 }
 
 export async function captureTabAudio(): Promise<MediaStreamTrack> {

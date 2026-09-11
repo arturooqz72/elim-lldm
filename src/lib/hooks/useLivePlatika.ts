@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 export interface LivePlatika {
   id: string;
   title: string;
+  programa_nombre: string | null;
 }
 
 /**
@@ -23,12 +24,14 @@ export function useLivePlatika(initial: LivePlatika | null = null) {
     async function refresh() {
       const { data } = await supabase
         .from("platikas")
-        .select("id, title")
+        .select("id, title, programas(nombre)")
         .eq("status", "live")
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      setLive((data as LivePlatika | null) ?? null);
+
+      const row = data as unknown as { id: string; title: string; programas: { nombre: string } | null } | null;
+      setLive(row ? { id: row.id, title: row.title, programa_nombre: row.programas?.nombre ?? null } : null);
     }
 
     if (initial === null) refresh();

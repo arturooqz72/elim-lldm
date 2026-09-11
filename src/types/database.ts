@@ -17,7 +17,7 @@ export interface Database {
           id: string;
           display_name: string;
           avatar_url: string | null;
-          role: "admin" | "anfitrion" | "participante" | "moderador";
+          role: "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
           verified_lldm: boolean;
           bio: string | null;
           created_at: string;
@@ -27,7 +27,7 @@ export interface Database {
           id: string;
           display_name: string;
           avatar_url?: string | null;
-          role?: "admin" | "anfitrion" | "participante" | "moderador";
+          role?: "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
           verified_lldm?: boolean;
           bio?: string | null;
           created_at?: string;
@@ -36,7 +36,7 @@ export interface Database {
         Update: {
           display_name?: string;
           avatar_url?: string | null;
-          role?: "admin" | "anfitrion" | "participante" | "moderador";
+          role?: "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
           verified_lldm?: boolean;
           bio?: string | null;
           updated_at?: string;

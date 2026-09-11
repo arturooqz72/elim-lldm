@@ -100,6 +100,7 @@ export default async function UsuariosPage({
         >
           <option value="">Todos los roles</option>
           <option value="admin">Admin</option>
+          <option value="super_moderador">Super Moderador</option>
           <option value="moderador">Moderador</option>
           <option value="anfitrion">Anfitrión</option>
           <option value="participante">Participante</option>

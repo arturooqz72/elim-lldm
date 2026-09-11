@@ -273,7 +273,9 @@ export default async function VideoDetailPage({ params }: Props) {
                 <VideoCommentCard
                   key={comment.id}
                   comment={comment}
-                  canModerate={profile?.role === "admin" || profile?.role === "moderador"}
+                  canModerate={
+                    profile?.role === "admin" || profile?.role === "moderador" || profile?.role === "super_moderador"
+                  }
                 />
               ))}
             </div>

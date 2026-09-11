@@ -20,7 +20,7 @@ export function LiveBadge({ className }: LiveBadgeProps) {
       style={{ background: "var(--color-live)", color: "#fff" }}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-      EN VIVO
+      {live.programa_nombre ? `${live.programa_nombre} — En vivo` : "EN VIVO"}
     </Link>
   );
 }

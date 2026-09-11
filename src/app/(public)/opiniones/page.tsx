@@ -54,7 +54,9 @@ export default async function OpinionesPage() {
             <OpinionCard
               key={opinion.id}
               opinion={opinion}
-              canModerate={profile?.role === "admin" || profile?.role === "moderador"}
+              canModerate={
+                profile?.role === "admin" || profile?.role === "moderador" || profile?.role === "super_moderador"
+              }
             />
           ))}
         </div>

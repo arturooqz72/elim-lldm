@@ -15,7 +15,7 @@ async function verifyCanModerate() {
     .eq("id", user.id)
     .single();
   const role = (profile as { role: string } | null)?.role;
-  if (role !== "admin" && role !== "moderador") return null;
+  if (role !== "admin" && role !== "moderador" && role !== "super_moderador") return null;
   return user;
 }
 
