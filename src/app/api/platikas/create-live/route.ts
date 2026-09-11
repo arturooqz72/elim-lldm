@@ -55,6 +55,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El título es requerido" }, { status: 400 });
   }
 
+  if (programaId && !["admin", "super_moderador"].includes(profile.role)) {
+    console.error(`${LOG_TAG} anfitrion attempted to use programa_id — Forbidden`, { role: profile.role, programaId });
+    return NextResponse.json({ error: "Solo un administrador o Super Moderador puede iniciar la transmisión de un programa" }, { status: 403 });
+  }
+
   console.log(`${LOG_TAG} inserting platika row...`);
   const { data: platika, error } = await supabase
     .from("platikas")
