@@ -57,8 +57,13 @@ export default async function LandingPage() {
   const recentArchive = archiveRaw as unknown as ArchiveRow[] | null;
   const livePláticas = upcoming?.filter((p) => p.status === "live") ?? [];
   const scheduledPláticas = upcoming?.filter((p) => p.status === "scheduled") ?? [];
+  // programa_nombre queda en null a propósito: esta consulta SSR no hace el
+  // join con programas (LiveBanner no lo usa hoy). useLivePlatika() sí lo trae
+  // en su primer refetch en el cliente si initial fuera null, pero como aquí
+  // pasamos un objeto no-null, no se autocorrige — si LiveBanner llega a
+  // necesitar el nombre del programa, este query debe agregar el join.
   const initialLive = livePláticas[0]
-    ? { id: livePláticas[0].id, title: livePláticas[0].title }
+    ? { id: livePláticas[0].id, title: livePláticas[0].title, programa_nombre: null }
     : null;
 
   return (
