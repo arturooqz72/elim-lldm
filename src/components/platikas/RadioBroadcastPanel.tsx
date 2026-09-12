@@ -227,15 +227,19 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
       return;
     }
 
-    // Cambiar de clip: soltar el anterior y cargar el nuevo.
+    // Cambiar de clip: soltar el anterior y cargar el nuevo. El volumen
+    // SIEMPRE arranca en 100% para el clip nuevo — si se dejaba el nivel
+    // del clip anterior (ej. lo bajaste para que se apagara solo), el
+    // siguiente audio heredaba ese mismo volumen bajo y "no se escuchaba".
     liveClipRef.current?.disconnect();
     liveClipRef.current = null;
     setLiveAudioId(audio.id);
     setLiveClipPlaying(false);
     setLiveClipLoading(true);
+    setLiveClipVolume(1);
     try {
       const clip = await mixer.loadClip(audio.audio_url);
-      clip.setVolume(liveClipVolume);
+      clip.setVolume(1);
       clip.onEnded = () => {
         setLiveClipPlaying(false);
       };
