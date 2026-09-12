@@ -130,7 +130,7 @@ export async function POST(request: Request) {
   const recordingEgressId = await startProgramRecording(roomName, programaId, id);
 
   console.log(`${LOG_TAG} updating platika row to live...`, { id });
-  const { error: updateError } = await supabase
+  let { error: updateError } = await supabase
     .from("platikas")
     .update({
       status: "live",
@@ -139,6 +139,16 @@ export async function POST(request: Request) {
       recording_egress_id: recordingEgressId,
     })
     .eq("id", id);
+
+  // recording_egress_id es una columna nueva (migración 0040) — si aún no
+  // se aplicó en producción, no se debe caer toda la transmisión por eso.
+  if (updateError) {
+    console.warn(`${LOG_TAG} update with recording_egress_id failed, retrying without it:`, updateError);
+    ({ error: updateError } = await supabase
+      .from("platikas")
+      .update({ status: "live", livekit_room_name: roomName, started_at: startedAt })
+      .eq("id", id));
+  }
 
   if (updateError) {
     console.error(`${LOG_TAG} failed to update platika row to live:`, updateError);

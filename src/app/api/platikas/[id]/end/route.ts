@@ -72,7 +72,8 @@ export async function POST(
     }
   }
 
-  await supabase
+  const endedAt = new Date().toISOString();
+  const { error: endUpdateError } = await supabase
     .from("platikas")
     .update({
       status: "ended",
@@ -81,9 +82,26 @@ export async function POST(
       facebook_egress_id: null,
       tiktok_egress_id: null,
       recording_egress_id: null,
-      ended_at: new Date().toISOString(),
+      ended_at: endedAt,
     })
     .eq("id", id);
+
+  // recording_egress_id es una columna nueva (migración 0040) — si aún no
+  // se aplicó en producción, no se debe dejar la sesión atorada en "live".
+  if (endUpdateError) {
+    console.warn("[api/platikas/end] update with recording_egress_id failed, retrying without it:", endUpdateError);
+    await supabase
+      .from("platikas")
+      .update({
+        status: "ended",
+        radio_output_active: false,
+        youtube_egress_id: null,
+        facebook_egress_id: null,
+        tiktok_egress_id: null,
+        ended_at: endedAt,
+      })
+      .eq("id", id);
+  }
 
   // Solo las sesiones de un Programa se graban (create-live lo exige).
   // Se finaliza después de responder para no dejar al host esperando
