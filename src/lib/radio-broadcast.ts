@@ -80,23 +80,112 @@ export class AudioMixer {
    * la mezcla que sale a la radio — no hacia las bocinas locales, igual
    * que el resto de las fuentes de este mixer. Resuelve cuando el clip
    * termina de sonar, para poder encadenar acciones (ej. desconectar
-   * después de la salida).
+   * después de la salida). Sin control de pausa/volumen — para eso usar
+   * loadClip() + LiveClip.
    */
   async playClip(url: string): Promise<void> {
+    const clip = await this.loadClip(url);
+    return new Promise((resolve) => {
+      clip.onEnded = resolve;
+      clip.play();
+    });
+  }
+
+  /**
+   * Descarga y decodifica un clip, devolviendo un control interactivo
+   * (play/pausa/detener/volumen) conectado a la mezcla que sale a la
+   * radio. A diferencia de playClip(), no empieza a sonar solo.
+   */
+  async loadClip(url: string): Promise<LiveClip> {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`No se pudo descargar el clip (${response.status})`);
     }
     const arrayBuffer = await response.arrayBuffer();
     const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+    return new LiveClip(this.context, this.destination, audioBuffer);
+  }
+}
 
-    return new Promise((resolve) => {
-      const source = this.context.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(this.destination);
-      source.onended = () => resolve();
-      source.start();
-    });
+/**
+ * Un clip de audio con transporte completo (play/pausa/detener/volumen)
+ * sonando hacia un AudioMixer. AudioBufferSourceNode nativo no soporta
+ * pausar — solo start()/stop() una sola vez — así que pause() recuerda
+ * en qué segundo iba (offset) y crea un nodo nuevo al reanudar.
+ */
+export class LiveClip {
+  private source: AudioBufferSourceNode | null = null;
+  private readonly gain: GainNode;
+  private offset = 0;
+  private startedAt = 0;
+  private playing = false;
+  onEnded?: () => void;
+
+  constructor(
+    private readonly context: AudioContext,
+    destination: AudioNode,
+    private readonly buffer: AudioBuffer
+  ) {
+    this.gain = context.createGain();
+    this.gain.connect(destination);
+  }
+
+  get isPlaying(): boolean {
+    return this.playing;
+  }
+
+  get duration(): number {
+    return this.buffer.duration;
+  }
+
+  play() {
+    if (this.playing) return;
+    if (this.offset >= this.buffer.duration) this.offset = 0;
+
+    const source = this.context.createBufferSource();
+    source.buffer = this.buffer;
+    source.connect(this.gain);
+    source.onended = () => {
+      // Un stop()/pause() manual también dispara onended — ignorar si ya
+      // no es el nodo activo (evita reportar "terminó" de un nodo viejo).
+      if (this.source !== source) return;
+      this.playing = false;
+      this.offset = 0;
+      this.source = null;
+      this.onEnded?.();
+    };
+    source.start(0, this.offset);
+    this.startedAt = this.context.currentTime;
+    this.source = source;
+    this.playing = true;
+  }
+
+  pause() {
+    if (!this.playing || !this.source) return;
+    this.offset += this.context.currentTime - this.startedAt;
+    this.source.onended = null;
+    this.source.stop();
+    this.source = null;
+    this.playing = false;
+  }
+
+  stop() {
+    if (this.source) {
+      this.source.onended = null;
+      this.source.stop();
+      this.source = null;
+    }
+    this.playing = false;
+    this.offset = 0;
+  }
+
+  setVolume(volume: number) {
+    this.gain.gain.value = Math.max(0, Math.min(1, volume));
+  }
+
+  disconnect() {
+    this.stop();
+    this.gain.disconnect();
   }
 }
 

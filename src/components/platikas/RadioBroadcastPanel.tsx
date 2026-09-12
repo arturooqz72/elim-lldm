@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useMaybeRoomContext, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, LogOut } from "lucide-react";
+import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, Pause, Volume2, LogOut } from "lucide-react";
 import {
   AudioMixer,
   captureTabAudio,
   connectRadioBridge,
   startStreamingToBridge,
+  type LiveClip,
 } from "@/lib/radio-broadcast";
 import { createClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
@@ -46,6 +47,15 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const previewRef = useRef<HTMLAudioElement | null>(null);
   const [playingClip, setPlayingClip] = useState(false);
 
+  // Clip interactivo del "Banco de audios" mientras se está en vivo — a
+  // diferencia de dispararSalidaYDesconectar (fuego y olvido), este sí se
+  // puede pausar/reanudar/detener y ajustar de volumen en tiempo real.
+  const [liveAudioId, setLiveAudioId] = useState<string | null>(null);
+  const [liveClipPlaying, setLiveClipPlaying] = useState(false);
+  const [liveClipLoading, setLiveClipLoading] = useState(false);
+  const [liveClipVolume, setLiveClipVolume] = useState(1);
+  const liveClipRef = useRef<LiveClip | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const mixerRef = useRef<AudioMixer | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -58,6 +68,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     recorderRef.current?.stop();
     recorderRef.current = null;
     wsRef.current = null;
+    liveClipRef.current?.disconnect();
+    liveClipRef.current = null;
     mixerRef.current?.close();
     mixerRef.current = null;
     pcTrackRef.current?.stop();
@@ -65,6 +77,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     setMicOn(false);
     setRoomOn(false);
     setPcOn(false);
+    setLiveAudioId(null);
+    setLiveClipPlaying(false);
 
     const supabase = createClient();
     void supabase.from("platikas").update({ radio_output_active: false }).eq("id", platikaId);
@@ -196,13 +210,56 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     await mixer.playClip(clip.audio_url);
   }
 
-  async function dispararAudioEnVivo(audio: ProgramaAudio) {
-    setPlayingClip(true);
-    try {
-      await mixerRef.current?.playClip(audio.audio_url);
-    } finally {
-      setPlayingClip(false);
+  async function toggleLiveClip(audio: ProgramaAudio) {
+    const mixer = mixerRef.current;
+    if (!mixer) return;
+
+    // Mismo clip ya cargado: play/pausa sin volver a descargarlo.
+    if (liveAudioId === audio.id && liveClipRef.current) {
+      const clip = liveClipRef.current;
+      if (clip.isPlaying) {
+        clip.pause();
+        setLiveClipPlaying(false);
+      } else {
+        clip.play();
+        setLiveClipPlaying(true);
+      }
+      return;
     }
+
+    // Cambiar de clip: soltar el anterior y cargar el nuevo.
+    liveClipRef.current?.disconnect();
+    liveClipRef.current = null;
+    setLiveAudioId(audio.id);
+    setLiveClipPlaying(false);
+    setLiveClipLoading(true);
+    try {
+      const clip = await mixer.loadClip(audio.audio_url);
+      clip.setVolume(liveClipVolume);
+      clip.onEnded = () => {
+        setLiveClipPlaying(false);
+      };
+      clip.play();
+      liveClipRef.current = clip;
+      setLiveClipPlaying(true);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "No se pudo cargar el audio");
+      setLiveAudioId(null);
+    } finally {
+      setLiveClipLoading(false);
+    }
+  }
+
+  function stopLiveClip() {
+    liveClipRef.current?.disconnect();
+    liveClipRef.current = null;
+    setLiveAudioId(null);
+    setLiveClipPlaying(false);
+  }
+
+  function changeLiveClipVolume(volume: number) {
+    setLiveClipVolume(volume);
+    liveClipRef.current?.setVolume(volume);
   }
 
   async function dispararSalidaYDesconectar(audio: ProgramaAudio) {
@@ -359,40 +416,82 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
             Banco de audios
           </p>
-          {audios.map((audio) => (
-            <div key={audio.id} className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => void dispararAudioEnVivo(audio)}
-                disabled={playingClip}
-                className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left"
-                style={{
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text)",
-                  opacity: playingClip ? 0.5 : 1,
-                }}
-              >
-                <Play size={11} />
-                {audio.titulo}
-              </button>
-              <button
-                type="button"
-                onClick={() => void dispararSalidaYDesconectar(audio)}
-                disabled={playingClip}
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{
-                  background: "rgba(248,113,113,0.1)",
-                  border: "1px solid rgba(248,113,113,0.3)",
-                  opacity: playingClip ? 0.5 : 1,
-                }}
-                aria-label="Usar como salida y desconectar"
-                title="Usar como salida y desconectar"
-              >
-                <LogOut size={11} style={{ color: "var(--color-destructive)" }} />
-              </button>
+          {audios.map((audio) => {
+            const isActive = liveAudioId === audio.id;
+            const isLoadingThis = isActive && liveClipLoading;
+            const isPlayingThis = isActive && liveClipPlaying;
+            return (
+              <div key={audio.id} className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void toggleLiveClip(audio)}
+                  disabled={liveClipLoading && !isActive}
+                  className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left"
+                  style={{
+                    background: isActive ? "rgba(212,160,23,0.15)" : "var(--color-surface)",
+                    border: `1px solid ${isActive ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
+                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
+                    opacity: liveClipLoading && !isActive ? 0.5 : 1,
+                  }}
+                >
+                  {isLoadingThis ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : isPlayingThis ? (
+                    <Pause size={11} />
+                  ) : (
+                    <Play size={11} />
+                  )}
+                  {audio.titulo}
+                </button>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={stopLiveClip}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+                    aria-label="Detener"
+                    title="Detener"
+                  >
+                    <Square size={10} style={{ color: "var(--color-text-muted)" }} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void dispararSalidaYDesconectar(audio)}
+                  disabled={playingClip}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    background: "rgba(248,113,113,0.1)",
+                    border: "1px solid rgba(248,113,113,0.3)",
+                    opacity: playingClip ? 0.5 : 1,
+                  }}
+                  aria-label="Usar como salida y desconectar"
+                  title="Usar como salida y desconectar"
+                >
+                  <LogOut size={11} style={{ color: "var(--color-destructive)" }} />
+                </button>
+              </div>
+            );
+          })}
+          {liveAudioId && (
+            <div className="flex items-center gap-2 px-0.5 pt-1">
+              <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={liveClipVolume}
+                onChange={(e) => changeLiveClipVolume(Number(e.target.value))}
+                className="flex-1 h-1"
+                style={{ accentColor: "var(--color-primary)" }}
+                aria-label="Volumen del audio en vivo"
+              />
+              <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+                {Math.round(liveClipVolume * 100)}%
+              </span>
             </div>
-          ))}
+          )}
         </div>
       )}
 
