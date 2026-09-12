@@ -6,14 +6,13 @@ import {
   ParticipantName,
   useLocalParticipant,
   useParticipantInfo,
-  useMediaDeviceSelect,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
-import type { Participant, LocalAudioTrack } from "livekit-client";
+import { Track, type Participant } from "livekit-client";
 import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2, MonitorUp, MonitorX, Settings2, Volume2 } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
-import { MicGainProcessor } from "@/lib/livekit/mic-gain-processor";
+import { ManagedMic } from "@/lib/livekit/managed-mic";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_IMAGE = "/icons/icon-512.png";
@@ -107,40 +106,80 @@ function CameraControls({
   cameraOffImageUrl: string | null;
   participantIdentity: string;
 }) {
-  const { localParticipant, isCameraEnabled, isScreenShareEnabled, isMicrophoneEnabled, microphoneTrack } =
-    useLocalParticipant();
+  const { localParticipant, isCameraEnabled, isScreenShareEnabled, microphoneTrack } = useLocalParticipant();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Elegir cuál micrófono usar (ej. cámara con mic integrado vs. diadema
-  // USB) y ajustar su volumen — LiveKit no trae control de ganancia de
-  // fábrica, así que se inserta un GainNode entre el mic y lo publicado
-  // (ver MicGainProcessor) y el cambio de dispositivo usa switchActiveDevice
-  // por debajo, vía este hook.
-  const { devices: micDevices, activeDeviceId: activeMicId, setActiveMediaDevice: setActiveMic } =
-    useMediaDeviceSelect({ kind: "audioinput" });
-  const micGainRef = useRef<MicGainProcessor>(new MicGainProcessor());
+  // Micrófono manejado a mano (ver ManagedMic) en vez de con
+  // localParticipant.setMicrophoneEnabled + useMediaDeviceSelect: esa
+  // combinación de LiveKit resultó frágil — al cambiar de dispositivo con
+  // un volumen custom aplicado, seguía sonando el dispositivo viejo aunque
+  // la UI ya mostrara el nuevo. Con ManagedMic el track publicado nunca
+  // cambia, así que no hay nada que LiveKit deba reiniciar.
+  const micRef = useRef<ManagedMic | null>(null);
+  const [micOn, setMicOn] = useState(true);
   const [micVolume, setMicVolume] = useState(1);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string | undefined>(undefined);
   const [showMicSettings, setShowMicSettings] = useState(false);
 
   useEffect(() => {
-    const track = microphoneTrack?.track as LocalAudioTrack | undefined;
-    if (!track) return;
-    void track.setProcessor(micGainRef.current);
-  }, [microphoneTrack]);
+    let cancelled = false;
+    const mic = new ManagedMic();
+
+    async function refreshDeviceList() {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      if (cancelled) return;
+      setMicDevices(list.filter((d) => d.kind === "audioinput"));
+    }
+
+    (async () => {
+      await mic.setDevice(undefined);
+      if (cancelled) {
+        mic.close();
+        return;
+      }
+      micRef.current = mic;
+      setSelectedMicId(mic.deviceId);
+      await localParticipant.publishTrack(mic.outputTrack, {
+        source: Track.Source.Microphone,
+        name: "microphone",
+        dtx: true,
+      });
+      await refreshDeviceList();
+    })();
+
+    navigator.mediaDevices.addEventListener("devicechange", refreshDeviceList);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices.removeEventListener("devicechange", refreshDeviceList);
+      if (micRef.current === mic) micRef.current = null;
+      mic.close();
+    };
+    // Solo una vez: el track publicado se queda fijo toda la sesión.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function toggleCamera() {
     await localParticipant.setCameraEnabled(!isCameraEnabled);
   }
 
-  async function toggleMic() {
-    await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+  function toggleMic() {
+    const next = !micOn;
+    setMicOn(next);
+    micRef.current?.setVolume(next ? micVolume : 0);
   }
 
   function changeMicVolume(volume: number) {
     setMicVolume(volume);
-    micGainRef.current.setVolume(volume);
+    if (micOn) micRef.current?.setVolume(volume);
+  }
+
+  async function changeMicDevice(deviceId: string) {
+    await micRef.current?.setDevice(deviceId);
+    setSelectedMicId(deviceId);
+    micRef.current?.setVolume(micOn ? micVolume : 0);
   }
 
   async function toggleScreenShare() {
@@ -207,18 +246,18 @@ function CameraControls({
       <button
         type="button"
         onClick={toggleMic}
-        aria-label={isMicrophoneEnabled ? "Apagar micrófono" : "Encender micrófono"}
+        aria-label={micOn ? "Apagar micrófono" : "Encender micrófono"}
         className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
         style={{ background: "rgba(10,10,18,0.75)" }}
       >
-        {isMicrophoneEnabled ? (
+        {micOn ? (
           <Mic size={13} style={{ color: "var(--color-text)" }} />
         ) : (
           <MicOff size={13} style={{ color: "var(--color-destructive)" }} />
         )}
       </button>
 
-      {isMicrophoneEnabled && (
+      {micOn && (
         <div
           className="h-7 px-1.5 rounded-full flex items-center backdrop-blur-sm"
           style={{ background: "rgba(10,10,18,0.75)" }}
@@ -227,7 +266,7 @@ function CameraControls({
         </div>
       )}
 
-      {isMicrophoneEnabled && (
+      {micOn && (
         <div className="relative">
           <button
             type="button"
@@ -250,8 +289,8 @@ function CameraControls({
                 </label>
                 {micDevices.length > 0 ? (
                   <select
-                    value={activeMicId}
-                    onChange={(e) => void setActiveMic(e.target.value)}
+                    value={selectedMicId}
+                    onChange={(e) => void changeMicDevice(e.target.value)}
                     className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
                     style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)" }}
                   >

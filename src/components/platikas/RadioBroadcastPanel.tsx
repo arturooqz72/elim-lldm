@@ -56,6 +56,15 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [liveClipVolume, setLiveClipVolume] = useState(1);
   const liveClipRef = useRef<LiveClip | null>(null);
 
+  // Música de fondo en loop, independiente del banco de audios — suena
+  // continuamente hasta que se detenga a mano, con su propio volumen para
+  // bajarla mientras se habla y subirla en los silencios.
+  const [bgMusicAudioId, setBgMusicAudioId] = useState<string>("");
+  const [bgMusicPlaying, setBgMusicPlaying] = useState(false);
+  const [bgMusicLoading, setBgMusicLoading] = useState(false);
+  const [bgMusicVolume, setBgMusicVolume] = useState(0.4);
+  const bgMusicRef = useRef<LiveClip | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const mixerRef = useRef<AudioMixer | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -70,6 +79,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     wsRef.current = null;
     liveClipRef.current?.disconnect();
     liveClipRef.current = null;
+    bgMusicRef.current?.disconnect();
+    bgMusicRef.current = null;
     mixerRef.current?.close();
     mixerRef.current = null;
     pcTrackRef.current?.stop();
@@ -79,6 +90,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     setPcOn(false);
     setLiveAudioId(null);
     setLiveClipPlaying(false);
+    setBgMusicPlaying(false);
 
     const supabase = createClient();
     void supabase.from("platikas").update({ radio_output_active: false }).eq("id", platikaId);
@@ -266,6 +278,53 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     liveClipRef.current?.setVolume(volume);
   }
 
+  async function toggleBgMusic() {
+    const mixer = mixerRef.current;
+    if (!mixer || !bgMusicAudioId) return;
+
+    // Ya cargada: solo play/pausa.
+    if (bgMusicRef.current) {
+      const clip = bgMusicRef.current;
+      if (clip.isPlaying) {
+        clip.pause();
+        setBgMusicPlaying(false);
+      } else {
+        clip.play();
+        setBgMusicPlaying(true);
+      }
+      return;
+    }
+
+    const audio = audios.find((a) => a.id === bgMusicAudioId);
+    if (!audio) return;
+
+    setBgMusicLoading(true);
+    try {
+      const clip = await mixer.loadClip(audio.audio_url);
+      clip.setLoop(true);
+      clip.setVolume(bgMusicVolume);
+      clip.play();
+      bgMusicRef.current = clip;
+      setBgMusicPlaying(true);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "No se pudo cargar la música de fondo");
+    } finally {
+      setBgMusicLoading(false);
+    }
+  }
+
+  function changeBgMusicTrack(audioId: string) {
+    bgMusicRef.current?.disconnect();
+    bgMusicRef.current = null;
+    setBgMusicAudioId(audioId);
+    setBgMusicPlaying(false);
+  }
+
+  function changeBgMusicVolume(volume: number) {
+    setBgMusicVolume(volume);
+    bgMusicRef.current?.setVolume(volume);
+  }
+
   if (status === "idle" || status === "connecting") {
     if (audios.length === 0) {
       return (
@@ -405,7 +464,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         meterTrack={pcOn ? pcTrackRef.current : null}
       />
 
-      {!micOn && !roomOn && !pcOn && !liveClipPlaying && (
+      {!micOn && !roomOn && !pcOn && !liveClipPlaying && !bgMusicPlaying && (
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
           style={{
@@ -416,6 +475,70 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         >
           <AlertCircle size={14} className="shrink-0" />
           Sin ninguna fuente activa — no se está transmitiendo nada real ahora mismo.
+        </div>
+      )}
+
+      {audios.length > 0 && (
+        <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
+            Música de fondo
+          </p>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={bgMusicAudioId}
+              onChange={(e) => changeBgMusicTrack(e.target.value)}
+              className="flex-1 rounded-lg px-2 py-1.5 text-xs outline-none"
+              style={{
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+              }}
+            >
+              <option value="">Elegir audio…</option>
+              {audios.map((audio) => (
+                <option key={audio.id} value={audio.id}>
+                  {audio.titulo}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => void toggleBgMusic()}
+              disabled={!bgMusicAudioId || bgMusicLoading}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{
+                background: bgMusicPlaying ? "rgba(212,160,23,0.2)" : "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                opacity: !bgMusicAudioId ? 0.5 : 1,
+              }}
+              aria-label={bgMusicPlaying ? "Pausar música de fondo" : "Reproducir música de fondo"}
+            >
+              {bgMusicLoading ? (
+                <Loader2 size={12} className="animate-spin" style={{ color: "var(--color-primary)" }} />
+              ) : bgMusicPlaying ? (
+                <Pause size={12} style={{ color: "var(--color-primary)" }} />
+              ) : (
+                <Play size={12} style={{ color: "var(--color-text)" }} />
+              )}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 px-0.5">
+            <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={bgMusicVolume}
+              onChange={(e) => changeBgMusicVolume(Number(e.target.value))}
+              className="flex-1 h-1"
+              style={{ accentColor: "var(--color-primary)" }}
+              aria-label="Volumen de la música de fondo"
+            />
+            <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+              {Math.round(bgMusicVolume * 100)}%
+            </span>
+          </div>
         </div>
       )}
 

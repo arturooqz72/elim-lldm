@@ -200,8 +200,8 @@ export function LiveKitRoom({
       token={tokenState.token}
       serverUrl={tokenState.wsUrl ?? defaultLkUrl}
       connect
-      audio
-      video={isHost || isSpeaker}
+      audio={false}
+      video={false}
       className="contents"
     >
       <RoomLayout stage={<StagePanel isHost={isHost} isSpeaker={isSpeaker} />} sidebar={sidebar} />

@@ -61,7 +61,7 @@ export class AudioMixer {
     const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < length; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.015;
+      data[i] = (Math.random() * 2 - 1) * 0.002;
     }
 
     const source = this.context.createBufferSource();
@@ -149,6 +149,7 @@ export class LiveClip {
   private offset = 0;
   private startedAt = 0;
   private playing = false;
+  private loop = false;
   onEnded?: () => void;
 
   constructor(
@@ -168,12 +169,19 @@ export class LiveClip {
     return this.buffer.duration;
   }
 
+  /** Si se activa, el clip se repite indefinidamente hasta stop() manual. */
+  setLoop(loop: boolean) {
+    this.loop = loop;
+    if (this.source) this.source.loop = loop;
+  }
+
   play() {
     if (this.playing) return;
-    if (this.offset >= this.buffer.duration) this.offset = 0;
+    if (this.offset >= this.buffer.duration) this.offset = this.offset % this.buffer.duration;
 
     const source = this.context.createBufferSource();
     source.buffer = this.buffer;
+    source.loop = this.loop;
     source.connect(this.gain);
     source.onended = () => {
       // Un stop()/pause() manual también dispara onended — ignorar si ya
