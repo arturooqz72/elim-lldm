@@ -38,6 +38,7 @@ export class AudioMixer {
   readonly context: AudioContext;
   readonly destination: MediaStreamAudioDestinationNode;
   private sources = new Map<string, MediaStreamAudioSourceNode>();
+  private gains = new Map<string, GainNode>();
   private keepAlive: AudioBufferSourceNode | null = null;
 
   constructor() {
@@ -80,8 +81,19 @@ export class AudioMixer {
       if (existingTrack === newTrack) return;
       existing.disconnect();
     }
+
+    // El gain de cada fuente se conserva entre reconexiones de la misma
+    // key (ej. "pc-audio" se vuelve a compartir) para que el volumen que
+    // el host ya ajustó no se resetee solo.
+    let gain = this.gains.get(key);
+    if (!gain) {
+      gain = this.context.createGain();
+      gain.connect(this.destination);
+      this.gains.set(key, gain);
+    }
+
     const source = this.context.createMediaStreamSource(stream);
-    source.connect(this.destination);
+    source.connect(gain);
     this.sources.set(key, source);
   }
 
@@ -96,9 +108,23 @@ export class AudioMixer {
     return this.sources.has(key);
   }
 
+  /** Volumen (0-2) de una fuente por su key — funciona antes o después de connect(). */
+  setVolume(key: string, volume: number) {
+    const clamped = Math.max(0, Math.min(2, volume));
+    let gain = this.gains.get(key);
+    if (!gain) {
+      gain = this.context.createGain();
+      gain.connect(this.destination);
+      this.gains.set(key, gain);
+    }
+    gain.gain.value = clamped;
+  }
+
   close() {
     this.sources.forEach((source) => source.disconnect());
     this.sources.clear();
+    this.gains.forEach((gain) => gain.disconnect());
+    this.gains.clear();
     this.keepAlive?.stop();
     this.keepAlive?.disconnect();
     this.keepAlive = null;

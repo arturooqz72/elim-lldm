@@ -40,6 +40,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [roomOn, setRoomOn] = useState(false);
   const [pcOn, setPcOn] = useState(false);
   const [pcLoading, setPcLoading] = useState(false);
+  const [pcVolume, setPcVolume] = useState(1);
 
   const audios = programaAudios ?? [];
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(audios[0]?.id ?? null);
@@ -185,6 +186,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
       const track = await captureTabAudio();
       pcTrackRef.current = track;
       mixer.connect("pc-audio", new MediaStream([track]));
+      mixer.setVolume("pc-audio", pcVolume);
       track.addEventListener("ended", () => {
         mixer.disconnect("pc-audio");
         pcTrackRef.current = null;
@@ -325,6 +327,11 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     bgMusicRef.current?.setVolume(volume);
   }
 
+  function changePcVolume(volume: number) {
+    setPcVolume(volume);
+    mixerRef.current?.setVolume("pc-audio", volume);
+  }
+
   if (status === "idle" || status === "connecting") {
     if (audios.length === 0) {
       return (
@@ -463,6 +470,25 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         onToggle={togglePc}
         meterTrack={pcOn ? pcTrackRef.current : null}
       />
+      {pcOn && (
+        <div className="flex items-center gap-2 px-0.5 -mt-1">
+          <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={pcVolume}
+            onChange={(e) => changePcVolume(Number(e.target.value))}
+            className="flex-1 h-1"
+            style={{ accentColor: "var(--color-primary)" }}
+            aria-label="Volumen del audio de la PC"
+          />
+          <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+            {Math.round(pcVolume * 100)}%
+          </span>
+        </div>
+      )}
 
       {!micOn && !roomOn && !pcOn && !liveClipPlaying && !bgMusicPlaying && (
         <div
