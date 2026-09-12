@@ -2,8 +2,9 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trash2 } from "lucide-react";
-import type { Programa, ProgramaAudio, ProgramaHost } from "@/types";
+import { ArrowLeft, Trash2, Download } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import type { Programa, ProgramaAudio, ProgramaHost, ProgramaGrabacion } from "@/types";
 import { AudioUploadForm } from "./AudioUploadForm";
 
 interface Props {
@@ -80,6 +81,13 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
     .eq("programa_id", id);
   const hosts = (hostsData ?? []) as ProgramaHost[];
 
+  const { data: grabacionesData } = await supabase
+    .from("programa_grabaciones")
+    .select("*")
+    .eq("programa_id", id)
+    .order("ended_at", { ascending: false });
+  const grabaciones = (grabacionesData ?? []) as ProgramaGrabacion[];
+
   const inputStyle = {
     background: "var(--color-surface-elevated)",
     border: "1px solid var(--color-border)",
@@ -139,6 +147,67 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
                   </form>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <h2
+              className="text-sm font-semibold uppercase tracking-wider mb-3"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Grabaciones anteriores ({grabaciones.length})
+            </h2>
+            <p className="text-xs mb-3" style={{ color: "var(--color-text-muted)" }}>
+              Cada sesión en vivo de este programa se graba sola. Se borran automáticamente 15 días
+              después de terminar — descárgalas o súbelas a YouTube antes de que venzan.
+            </p>
+            <div className="flex flex-col gap-2">
+              {grabaciones.length === 0 && (
+                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+                  Aún no hay grabaciones. Se crean solas la próxima vez que este programa salga en
+                  vivo.
+                </p>
+              )}
+              {grabaciones.map((grabacion) => {
+                const diasRestantes = Math.max(
+                  0,
+                  Math.ceil((new Date(grabacion.expires_at).getTime() - Date.now()) / 86_400_000)
+                );
+                return (
+                  <div
+                    key={grabacion.id}
+                    className="flex flex-col gap-2 p-3 rounded-xl"
+                    style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <audio controls src={grabacion.audio_url} className="h-8 flex-1 min-w-0" />
+                      <a
+                        href={grabacion.audio_url}
+                        download
+                        style={{ color: "var(--color-primary)" }}
+                        aria-label="Descargar"
+                      >
+                        <Download size={16} />
+                      </a>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+                        {formatDate(grabacion.ended_at)}
+                      </span>
+                      <span
+                        className="text-xs"
+                        style={{
+                          color: diasRestantes <= 3 ? "var(--color-destructive)" : "var(--color-text-muted)",
+                        }}
+                      >
+                        {diasRestantes === 0
+                          ? "Se borra hoy"
+                          : `Se borra en ${diasRestantes} día${diasRestantes === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

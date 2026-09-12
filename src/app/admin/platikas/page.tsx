@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { Plus, Mic, Radio } from "lucide-react";
+import { Mic, Radio } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = { title: "Estudio en Vivo — Admin" };
@@ -27,15 +27,14 @@ export default async function AdminPlatikaListPage() {
           <h1 className="text-3xl font-bold" style={{ color: "var(--color-text)" }}>
             Estudio en Vivo
           </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Historial de sesiones. Para salir en vivo, ve a{" "}
+            <Link href="/admin/programas" style={{ color: "var(--color-primary)" }}>
+              Programas
+            </Link>
+            .
+          </p>
         </div>
-        <Link
-          href="/admin/platikas/nueva"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-          style={{ background: "var(--color-primary)", color: "#000" }}
-        >
-          <Plus size={16} />
-          Nueva sesión
-        </Link>
       </div>
 
       {(["live", "scheduled", "ended"] as const).map((status) => {
@@ -116,7 +115,13 @@ export default async function AdminPlatikaListPage() {
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <Mic size={36} className="mb-3" style={{ color: "var(--color-text-muted)" }} />
-          <p style={{ color: "var(--color-text-muted)" }}>No hay sesiones de Estudio en Vivo. Crea la primera.</p>
+          <p style={{ color: "var(--color-text-muted)" }}>
+            No hay sesiones de Estudio en Vivo todavía. Ve a{" "}
+            <Link href="/admin/programas" style={{ color: "var(--color-primary)" }}>
+              Programas
+            </Link>{" "}
+            para salir en vivo.
+          </p>
         </div>
       )}
     </div>

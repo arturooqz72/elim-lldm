@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/purge-grabaciones",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

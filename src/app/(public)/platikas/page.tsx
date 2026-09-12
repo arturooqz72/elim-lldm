@@ -2,7 +2,6 @@ import { createClient, getProfile } from "@/lib/supabase/server";
 import { Mic, Radio, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GoLiveButton } from "@/components/platikas/GoLiveButton";
 import { PlatikaSessions, type PláticaRow } from "@/components/platikas/PlatikaSessions";
 
 export const metadata: Metadata = {
@@ -17,7 +16,6 @@ const SESSION_SELECT =
 export default async function PlatikaListPage() {
   const supabase = await createClient();
   const profile = await getProfile();
-  const canGoLive = profile?.role === "admin" || profile?.role === "anfitrion";
   const isAdmin = profile?.role === "admin";
   const canManagePrograms = profile?.role === "admin" || profile?.role === "super_moderador";
 
@@ -92,7 +90,6 @@ export default async function PlatikaListPage() {
                     Programas
                   </Link>
                 )}
-                {canGoLive && <GoLiveButton />}
               </div>
             </div>
 

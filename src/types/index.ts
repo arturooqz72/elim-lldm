@@ -395,3 +395,17 @@ export interface ProgramaAudio {
   orden: number;
   created_at: string;
 }
+
+export interface ProgramaGrabacion {
+  id: string;
+  programa_id: string;
+  platika_id: string | null;
+  titulo: string;
+  audio_url: string;
+  b2_file_name: string;
+  duration_seconds: number | null;
+  started_at: string;
+  ended_at: string;
+  expires_at: string;
+  created_at: string;
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { RoomServiceClient } from "livekit-server-sdk";
+import { startProgramRecording } from "@/lib/livekit/recording";
 
 const LOG_TAG = "[api/platikas/create-live]";
 
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     console.error(`${LOG_TAG} error fetching profile:`, profileError);
   }
 
-  if (!profile || !["admin", "anfitrion", "super_moderador"].includes(profile.role)) {
+  if (!profile || !["admin", "super_moderador"].includes(profile.role)) {
     console.error(`${LOG_TAG} role check failed — Forbidden`, { role: profile?.role });
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -55,9 +56,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El título es requerido" }, { status: 400 });
   }
 
-  if (programaId && !["admin", "super_moderador"].includes(profile.role)) {
-    console.error(`${LOG_TAG} anfitrion attempted to use programa_id — Forbidden`, { role: profile.role, programaId });
-    return NextResponse.json({ error: "Solo un administrador o Super Moderador puede iniciar la transmisión de un programa" }, { status: 403 });
+  // El Estudio en Vivo solo transmite Programas de radio ya creados — no
+  // se permiten sesiones sueltas sin programa (ver GoLiveProgramaButton).
+  if (!programaId) {
+    console.error(`${LOG_TAG} missing programa_id — bad request`);
+    return NextResponse.json(
+      { error: "Toda transmisión debe pertenecer a un Programa. Créalo primero en Programas." },
+      { status: 400 }
+    );
   }
 
   console.log(`${LOG_TAG} inserting platika row...`);
@@ -117,13 +123,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const startedAt = new Date().toISOString();
+
+  // Grabación automática (solo audio) — mejor esfuerzo: si B2/LiveKit no
+  // están configurados para esto, la transmisión sigue sin grabarse.
+  const recordingEgressId = await startProgramRecording(roomName, programaId, id);
+
   console.log(`${LOG_TAG} updating platika row to live...`, { id });
   const { error: updateError } = await supabase
     .from("platikas")
     .update({
       status: "live",
       livekit_room_name: roomName,
-      started_at: new Date().toISOString(),
+      started_at: startedAt,
+      recording_egress_id: recordingEgressId,
     })
     .eq("id", id);
 

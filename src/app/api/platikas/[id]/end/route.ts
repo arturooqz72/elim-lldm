@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EgressClient, RoomServiceClient } from "livekit-server-sdk";
+import { finalizeProgramRecording } from "@/lib/livekit/recording";
 
 const EGRESS_ID_COLUMNS = ["youtube_egress_id", "facebook_egress_id", "tiktok_egress_id"] as const;
+
+// La finalización de la grabación sondea a LiveKit hasta un minuto — no debe
+// contar contra el timeout de la función que responde al host.
+export const maxDuration = 60;
 
 export async function POST(
   _request: Request,
@@ -75,9 +80,25 @@ export async function POST(
       youtube_egress_id: null,
       facebook_egress_id: null,
       tiktok_egress_id: null,
+      recording_egress_id: null,
       ended_at: new Date().toISOString(),
     })
     .eq("id", id);
+
+  // Solo las sesiones de un Programa se graban (create-live lo exige).
+  // Se finaliza después de responder para no dejar al host esperando
+  // mientras LiveKit termina de subir el archivo a Backblaze.
+  if (pláticas.recording_egress_id && pláticas.programa_id) {
+    after(() =>
+      finalizeProgramRecording({
+        egressId: pláticas.recording_egress_id as string,
+        programaId: pláticas.programa_id as string,
+        platikaId: id,
+        titulo: pláticas.title as string,
+        startedAt: (pláticas.started_at as string | null) ?? new Date().toISOString(),
+      })
+    );
+  }
 
   return NextResponse.json({ success: true });
 }
