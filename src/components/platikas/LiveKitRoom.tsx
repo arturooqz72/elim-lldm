@@ -46,12 +46,13 @@ export function LiveKitRoom({
       return;
     }
 
-    const role = isHost ? "host" : isSpeaker ? "speaker" : "viewer";
-
+    // El rol real lo decide el servidor contra la base de datos (ver
+    // api/livekit/token) — isHost/isSpeaker aquí solo afectan qué se
+    // dibuja en pantalla mientras se espera el token real.
     fetch("/api/livekit/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomName, participantRole: role }),
+      body: JSON.stringify({ platikaId }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -64,7 +65,7 @@ export function LiveKitRoom({
       .catch(() => {
         setTokenState({ status: "error", message: "No se pudo obtener el token LiveKit" });
       });
-  }, [roomName, currentUserId, isHost, isSpeaker]);
+  }, [platikaId, currentUserId]);
 
   function handleSpeakerApproved(newToken: string, wsUrl: string) {
     setTokenState({ status: "ready", token: newToken, wsUrl });
