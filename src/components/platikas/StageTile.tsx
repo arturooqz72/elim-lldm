@@ -135,6 +135,16 @@ function CameraControls({
     }
 
     (async () => {
+      // Defensa extra: si por una reconexión (nuevo sid del participante
+      // local monta este componente de nuevo) quedó un mic viejo publicado
+      // sin que su cleanup alcanzara a correr, se retira antes de publicar
+      // el nuevo — evita el "publishing a second track with the same
+      // source: microphone" que dejaba dos micrófonos sonando a la vez.
+      const stale = localParticipant.getTrackPublication(Track.Source.Microphone);
+      if (stale?.track) {
+        await localParticipant.unpublishTrack(stale.track, true).catch(() => {});
+      }
+
       await mic.setDevice(undefined);
       if (cancelled) {
         mic.close();
@@ -155,9 +165,11 @@ function CameraControls({
       cancelled = true;
       navigator.mediaDevices.removeEventListener("devicechange", refreshDeviceList);
       if (micRef.current === mic) micRef.current = null;
+      void localParticipant.unpublishTrack(mic.outputTrack, false).catch(() => {});
       mic.close();
     };
-    // Solo una vez: el track publicado se queda fijo toda la sesión.
+    // Solo una vez por montaje: el track publicado se queda fijo mientras
+    // el componente exista.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
