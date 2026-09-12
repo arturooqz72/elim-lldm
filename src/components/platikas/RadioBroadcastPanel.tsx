@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMaybeRoomContext, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, Pause, Volume2, LogOut } from "lucide-react";
+import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, Pause, Volume2 } from "lucide-react";
 import {
   AudioMixer,
   captureTabAudio,
@@ -45,11 +45,11 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(audios[0]?.id ?? null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
-  const [playingClip, setPlayingClip] = useState(false);
 
-  // Clip interactivo del "Banco de audios" mientras se está en vivo — a
-  // diferencia de dispararSalidaYDesconectar (fuego y olvido), este sí se
-  // puede pausar/reanudar/detener y ajustar de volumen en tiempo real.
+  // Clip interactivo del "Banco de audios" mientras se está en vivo — se
+  // puede pausar/reanudar/detener y ajustar de volumen en tiempo real. Solo
+  // el botón explícito "Salir de la radio" corta la transmisión — ningún
+  // audio del banco la desconecta por sí solo.
   const [liveAudioId, setLiveAudioId] = useState<string | null>(null);
   const [liveClipPlaying, setLiveClipPlaying] = useState(false);
   const [liveClipLoading, setLiveClipLoading] = useState(false);
@@ -266,16 +266,6 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     liveClipRef.current?.setVolume(volume);
   }
 
-  async function dispararSalidaYDesconectar(audio: ProgramaAudio) {
-    setPlayingClip(true);
-    try {
-      await mixerRef.current?.playClip(audio.audio_url);
-    } finally {
-      setPlayingClip(false);
-      stopBroadcast();
-    }
-  }
-
   if (status === "idle" || status === "connecting") {
     if (audios.length === 0) {
       return (
@@ -459,21 +449,6 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
                     <Square size={10} style={{ color: "var(--color-text-muted)" }} />
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => void dispararSalidaYDesconectar(audio)}
-                  disabled={playingClip}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{
-                    background: "rgba(248,113,113,0.1)",
-                    border: "1px solid rgba(248,113,113,0.3)",
-                    opacity: playingClip ? 0.5 : 1,
-                  }}
-                  aria-label="Usar como salida y desconectar"
-                  title="Usar como salida y desconectar"
-                >
-                  <LogOut size={11} style={{ color: "var(--color-destructive)" }} />
-                </button>
               </div>
             );
           })}
