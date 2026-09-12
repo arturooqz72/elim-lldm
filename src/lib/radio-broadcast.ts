@@ -38,11 +38,38 @@ export class AudioMixer {
   readonly context: AudioContext;
   readonly destination: MediaStreamAudioDestinationNode;
   private sources = new Map<string, MediaStreamAudioSourceNode>();
+  private keepAlive: AudioBufferSourceNode | null = null;
 
   constructor() {
     this.context = new AudioContext();
     this.destination = this.context.createMediaStreamDestination();
     void this.context.resume();
+    this.startKeepAlive();
+  }
+
+  /**
+   * Ruido de piso casi imperceptible, siempre presente mientras dure la
+   * transmisión. Si se apagan mic/sala/PC y no suena ningún clip, la
+   * mezcla queda en silencio digital puro — y la estación (AzuraCast)
+   * puede detectarlo y caer sola a su programación normal (síntoma
+   * reportado: "apago el mic y empieza a sonar la radio normal"). Esto
+   * evita el silencio absoluto sin que se note al oído.
+   */
+  private startKeepAlive() {
+    const durationSeconds = 2;
+    const length = Math.floor(this.context.sampleRate * durationSeconds);
+    const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.015;
+    }
+
+    const source = this.context.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(this.destination);
+    source.start();
+    this.keepAlive = source;
   }
 
   connect(key: string, stream: MediaStream) {
@@ -72,6 +99,9 @@ export class AudioMixer {
   close() {
     this.sources.forEach((source) => source.disconnect());
     this.sources.clear();
+    this.keepAlive?.stop();
+    this.keepAlive?.disconnect();
+    this.keepAlive = null;
     this.context.close().catch(() => {});
   }
 

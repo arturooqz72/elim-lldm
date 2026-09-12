@@ -1,17 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   VideoTrack,
   ParticipantName,
   useLocalParticipant,
   useParticipantInfo,
+  useMediaDeviceSelect,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
-import type { Participant } from "livekit-client";
-import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2, MonitorUp, MonitorX } from "lucide-react";
+import type { Participant, LocalAudioTrack } from "livekit-client";
+import { Mic, MicOff, Video, VideoOff, ImagePlus, X, Loader2, MonitorUp, MonitorX, Settings2, Volume2 } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
+import { MicGainProcessor } from "@/lib/livekit/mic-gain-processor";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_IMAGE = "/icons/icon-512.png";
@@ -111,12 +113,34 @@ function CameraControls({
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Elegir cuál micrófono usar (ej. cámara con mic integrado vs. diadema
+  // USB) y ajustar su volumen — LiveKit no trae control de ganancia de
+  // fábrica, así que se inserta un GainNode entre el mic y lo publicado
+  // (ver MicGainProcessor) y el cambio de dispositivo usa switchActiveDevice
+  // por debajo, vía este hook.
+  const { devices: micDevices, activeDeviceId: activeMicId, setActiveMediaDevice: setActiveMic } =
+    useMediaDeviceSelect({ kind: "audioinput" });
+  const micGainRef = useRef<MicGainProcessor>(new MicGainProcessor());
+  const [micVolume, setMicVolume] = useState(1);
+  const [showMicSettings, setShowMicSettings] = useState(false);
+
+  useEffect(() => {
+    const track = microphoneTrack?.track as LocalAudioTrack | undefined;
+    if (!track) return;
+    void track.setProcessor(micGainRef.current);
+  }, [microphoneTrack]);
+
   async function toggleCamera() {
     await localParticipant.setCameraEnabled(!isCameraEnabled);
   }
 
   async function toggleMic() {
     await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+  }
+
+  function changeMicVolume(volume: number) {
+    setMicVolume(volume);
+    micGainRef.current.setVolume(volume);
   }
 
   async function toggleScreenShare() {
@@ -200,6 +224,72 @@ function CameraControls({
           style={{ background: "rgba(10,10,18,0.75)" }}
         >
           <AudioLevelMeter track={microphoneTrack?.track?.mediaStreamTrack} height={10} />
+        </div>
+      )}
+
+      {isMicrophoneEnabled && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMicSettings((v) => !v)}
+            aria-label="Elegir micrófono y volumen"
+            className="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+            style={{ background: showMicSettings ? "rgba(212,160,23,0.5)" : "rgba(10,10,18,0.75)" }}
+          >
+            <Settings2 size={12} style={{ color: "var(--color-text)" }} />
+          </button>
+
+          {showMicSettings && (
+            <div
+              className="absolute top-9 left-0 w-56 p-3 rounded-xl flex flex-col gap-3 backdrop-blur-sm z-10"
+              style={{ background: "rgba(10,10,18,0.92)", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <div>
+                <label className="block text-[10px] font-medium mb-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  Micrófono
+                </label>
+                {micDevices.length > 0 ? (
+                  <select
+                    value={activeMicId}
+                    onChange={(e) => void setActiveMic(e.target.value)}
+                    className="w-full rounded-lg px-2 py-1.5 text-xs outline-none"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)" }}
+                  >
+                    {micDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId} style={{ color: "#000" }}>
+                        {d.label || "Micrófono"}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    No se detectaron micrófonos.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  className="flex items-center gap-1.5 text-[10px] font-medium mb-1"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
+                  <Volume2 size={11} />
+                  Volumen ({Math.round(micVolume * 100)}%)
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={micVolume}
+                  onChange={(e) => changeMicVolume(Number(e.target.value))}
+                  className="w-full h-1"
+                  style={{ accentColor: "var(--color-primary)" }}
+                  aria-label="Volumen del micrófono"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

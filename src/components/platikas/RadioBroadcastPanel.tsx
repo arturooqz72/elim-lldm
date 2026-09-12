@@ -415,8 +415,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           }}
         >
           <AlertCircle size={14} className="shrink-0" />
-          Sin ninguna fuente activa — la radio va en silencio total. La estación puede caer sola a
-          su programación normal si esto dura mucho.
+          Sin ninguna fuente activa — no se está transmitiendo nada real ahora mismo.
         </div>
       )}
 
