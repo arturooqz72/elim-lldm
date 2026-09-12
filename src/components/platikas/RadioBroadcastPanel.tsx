@@ -405,6 +405,21 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         meterTrack={pcOn ? pcTrackRef.current : null}
       />
 
+      {!micOn && !roomOn && !pcOn && !liveClipPlaying && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+          style={{
+            background: "rgba(255,68,68,0.1)",
+            border: "1px solid rgba(255,68,68,0.3)",
+            color: "var(--color-live)",
+          }}
+        >
+          <AlertCircle size={14} className="shrink-0" />
+          Sin ninguna fuente activa — la radio va en silencio total. La estación puede caer sola a
+          su programación normal si esto dura mucho.
+        </div>
+      )}
+
       {audios.length > 0 && (
         <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
           <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
