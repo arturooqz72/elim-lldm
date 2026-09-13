@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { StopCircle, Mic, Loader2, PlaySquare, Globe, Music2 } from "lucide-react";
 import { RequestQueue } from "./RequestQueue";
 import { PlatformStreamCard } from "./PlatformStreamCard";
@@ -58,6 +59,7 @@ export function HostControls({
   onSpeakerApproved,
   programaAudios,
 }: HostControlsProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [streamEgressIds, setStreamEgressIds] = useState<Record<StreamPlatform, string | null>>({
     youtube: null,
@@ -112,7 +114,14 @@ export function HostControls({
     setLoading("live");
     try {
       const res = await fetch(`/api/platikas/${platikaId}/go-live`, { method: "POST" });
-      if (res.ok) onGoLive?.();
+      if (res.ok) {
+        onGoLive?.();
+        // El badge "BACKSTAGE" y demas texto de la pagina se calculan en
+        // el Server Component a partir de platikas.status — sin esto
+        // quedarian obsoletos aunque los controles del cliente ya
+        // cambiaron a "en vivo".
+        router.refresh();
+      }
     } finally {
       setLoading(null);
     }
@@ -124,6 +133,7 @@ export function HostControls({
     try {
       await fetch(`/api/platikas/${platikaId}/end`, { method: "POST" });
       onEnd?.();
+      router.refresh();
     } finally {
       setLoading(null);
     }
