@@ -47,7 +47,7 @@ export function DestinoCard({ destino, loading, onToggle, onEdit, onDelete }: De
         )}
       </button>
 
-      {!destino.isActive && (
+      {!destino.isActive && !destino.isYoutubeOAuth && (
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center gap-1.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
           style={{ background: "rgba(10,10,18,0.8)" }}

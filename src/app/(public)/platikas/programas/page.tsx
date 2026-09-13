@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { getProfile, createClient } from "@/lib/supabase/server";
 import { GoLiveProgramaButton } from "@/components/platikas/GoLiveProgramaButton";
 import type { Programa } from "@/types";
 
 export const metadata = { title: "Programas — Estudio en Vivo" };
 
-export default async function ProgramasEnVivoPage() {
+interface Props {
+  searchParams: Promise<{ youtubeConnected?: string; youtubeError?: string }>;
+}
+
+export default async function ProgramasEnVivoPage({ searchParams }: Props) {
+  const { youtubeConnected, youtubeError } = await searchParams;
   const profile = await getProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "super_moderador")) {
     redirect("/platikas");
@@ -37,6 +43,30 @@ export default async function ProgramasEnVivoPage() {
         <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--color-text)" }}>
           Programas
         </h1>
+
+        {youtubeConnected && (
+          <div
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+            style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.3)", color: "var(--color-success)" }}
+          >
+            <CheckCircle2 size={16} className="shrink-0" />
+            Canal de YouTube conectado: {youtubeConnected}
+          </div>
+        )}
+
+        {youtubeError && (
+          <div
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+            style={{
+              background: "rgba(248,113,113,0.1)",
+              border: "1px solid rgba(248,113,113,0.3)",
+              color: "var(--color-destructive)",
+            }}
+          >
+            <AlertTriangle size={16} className="shrink-0" />
+            No se pudo conectar YouTube: {youtubeError}
+          </div>
+        )}
 
         {programas.length === 0 && (
           <p style={{ color: "var(--color-text-muted)" }}>

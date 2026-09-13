@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, PlaySquare } from "lucide-react";
 import { DestinoCard } from "./DestinoCard";
 import { DestinoFormModal } from "./DestinoFormModal";
 import type { DestinoConEstado } from "@/types";
@@ -14,6 +14,9 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
   const [destinos, setDestinos] = useState<DestinoConEstado[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [modalDestino, setModalDestino] = useState<DestinoConEstado | null | "new">(null);
+  const [youtubeStatus, setYoutubeStatus] = useState<{ connected: boolean; channelTitle: string | null } | null>(
+    null
+  );
 
   async function loadDestinos() {
     const res = await fetch(`/api/platikas/${platikaId}/destinos`);
@@ -23,10 +26,25 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
     }
   }
 
+  async function loadYoutubeStatus() {
+    const res = await fetch("/api/youtube/status");
+    if (res.ok) setYoutubeStatus(await res.json());
+  }
+
   useEffect(() => {
     loadDestinos();
+    loadYoutubeStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platikaId]);
+
+  async function disconnectYoutube() {
+    if (!confirm("¿Desconectar el canal de YouTube? El destino automático dejará de estar disponible.")) return;
+    const res = await fetch("/api/youtube/disconnect", { method: "POST" });
+    if (res.ok) {
+      await loadYoutubeStatus();
+      await loadDestinos();
+    }
+  }
 
   async function toggleDestino(destino: DestinoConEstado) {
     setLoadingId(destino.id);
@@ -69,6 +87,20 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
           />
         ))}
 
+        {youtubeStatus && !youtubeStatus.connected && (
+          <a href="/api/youtube/oauth/start" className="flex flex-col items-center gap-1.5 w-16">
+            <span
+              className="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
+              style={{ border: "2px dashed #FF0000" }}
+            >
+              <PlaySquare size={20} style={{ color: "#FF0000" }} />
+            </span>
+            <span className="text-[10px] text-center leading-tight" style={{ color: "var(--color-text-muted)" }}>
+              Conectar YouTube
+            </span>
+          </a>
+        )}
+
         <div className="flex flex-col items-center gap-1.5 w-16">
           <button
             type="button"
@@ -84,6 +116,17 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
           </p>
         </div>
       </div>
+
+      {youtubeStatus?.connected && (
+        <button
+          type="button"
+          onClick={disconnectYoutube}
+          className="text-[10px] self-start"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          Canal de YouTube conectado: {youtubeStatus.channelTitle} · Desconectar
+        </button>
+      )}
 
       {modalDestino && (
         <DestinoFormModal

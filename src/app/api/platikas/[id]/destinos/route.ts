@@ -23,7 +23,7 @@ export async function GET(
 
   const { data: destinos, error: destinosError } = await supabase
     .from("destinos")
-    .select("id, nombre, plataforma, rtmp_url")
+    .select("id, nombre, plataforma, rtmp_url, youtube_connection_id")
     .eq("activo", true)
     .order("created_at", { ascending: true });
 
@@ -48,6 +48,7 @@ export async function GET(
     rtmp_url: d.rtmp_url,
     isActive: activosPorDestino.has(d.id),
     egresoId: activosPorDestino.get(d.id) ?? null,
+    isYoutubeOAuth: !!d.youtube_connection_id,
   }));
 
   return NextResponse.json({ destinos: resultado });

@@ -433,4 +433,7 @@ export interface DestinoConEstado {
   rtmp_url: string;
   isActive: boolean;
   egresoId: string | null;
+  // true si viene de un canal de YouTube conectado por OAuth — la URL
+  // y el stream key son manejados por Google, no se editan a mano.
+  isYoutubeOAuth: boolean;
 }
