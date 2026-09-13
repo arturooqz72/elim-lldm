@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LiveKitRoom as LKRoom } from "@livekit/components-react";
-import { Loader2, AlertCircle, Mic } from "lucide-react";
+import { Loader2, AlertCircle, Mic, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { StagePanel } from "./StagePanel";
 import { ChatPanel } from "./ChatPanel";
 import { HostControls } from "./HostControls";
@@ -43,6 +43,7 @@ export function LiveKitRoom({
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
   const [isLive, setIsLive] = useState(initialIsLive);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!currentUserId) {
@@ -143,6 +144,8 @@ export function LiveKitRoom({
           </div>
         }
         sidebar={sidebar}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
     );
   }
@@ -171,6 +174,8 @@ export function LiveKitRoom({
           </div>
         }
         sidebar={sidebar}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
     );
   }
@@ -195,6 +200,8 @@ export function LiveKitRoom({
           </div>
         }
         sidebar={sidebar}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
     );
   }
@@ -208,7 +215,12 @@ export function LiveKitRoom({
       video={false}
       className="contents"
     >
-      <RoomLayout stage={<StagePanel isHost={isHost} isSpeaker={isSpeaker} />} sidebar={sidebar} />
+      <RoomLayout
+        stage={<StagePanel isHost={isHost} isSpeaker={isSpeaker} />}
+        sidebar={sidebar}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+      />
     </LKRoom>
   );
 }
@@ -216,16 +228,37 @@ export function LiveKitRoom({
 function RoomLayout({
   stage,
   sidebar,
+  sidebarOpen,
+  onToggleSidebar,
 }: {
   stage: React.ReactNode;
   sidebar: React.ReactNode;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }) {
   return (
-    <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "600px" }}>
-      <div className="flex-1 min-h-64 lg:min-h-0">{stage}</div>
-      <div className="w-full lg:w-80 shrink-0 flex flex-col" style={{ maxHeight: "80vh" }}>
-        {sidebar}
+    <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "680px" }}>
+      <div className="relative flex-1 min-h-64 lg:min-h-0">
+        {stage}
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Ocultar panel lateral" : "Mostrar panel lateral"}
+          className="hidden lg:flex absolute top-3 right-3 z-10 w-9 h-9 rounded-full items-center justify-center backdrop-blur-md transition-colors"
+          style={{ background: "rgba(10,10,18,0.75)", border: "1px solid rgba(255,255,255,0.12)" }}
+        >
+          {sidebarOpen ? (
+            <PanelRightClose size={16} style={{ color: "#fff" }} />
+          ) : (
+            <PanelRightOpen size={16} style={{ color: "#fff" }} />
+          )}
+        </button>
       </div>
+      {sidebarOpen && (
+        <div className="w-full lg:w-80 shrink-0 flex flex-col" style={{ maxHeight: "80vh" }}>
+          {sidebar}
+        </div>
+      )}
     </div>
   );
 }
