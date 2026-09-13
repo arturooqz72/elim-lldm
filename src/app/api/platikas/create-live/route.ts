@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { RoomServiceClient } from "livekit-server-sdk";
-import { startProgramRecording } from "@/lib/livekit/recording";
 
 const LOG_TAG = "[api/platikas/create-live]";
 
@@ -125,33 +124,23 @@ export async function POST(request: Request) {
 
   const startedAt = new Date().toISOString();
 
-  // Grabación automática (solo audio) — mejor esfuerzo: si B2/LiveKit no
-  // están configurados para esto, la transmisión sigue sin grabarse.
-  const recordingEgressId = await startProgramRecording(roomName, programaId, id);
-
-  console.log(`${LOG_TAG} updating platika row to live...`, { id });
-  let { error: updateError } = await supabase
+  // La sesión nace en "backstage": el host ya puede probar mic/cámara
+  // (la sala de LiveKit ya existe), pero nadie más la ve, no se graba y
+  // no sale a ninguna plataforma hasta que el host le dé "Salir al
+  // aire" (api/platikas/[id]/go-live) — ver
+  // docs/superpowers/specs/2026-09-12-backstage-design.md.
+  console.log(`${LOG_TAG} updating platika row to backstage...`, { id });
+  const { error: updateError } = await supabase
     .from("platikas")
     .update({
-      status: "live",
+      status: "backstage",
       livekit_room_name: roomName,
       started_at: startedAt,
-      recording_egress_id: recordingEgressId,
     })
     .eq("id", id);
 
-  // recording_egress_id es una columna nueva (migración 0040) — si aún no
-  // se aplicó en producción, no se debe caer toda la transmisión por eso.
   if (updateError) {
-    console.warn(`${LOG_TAG} update with recording_egress_id failed, retrying without it:`, updateError);
-    ({ error: updateError } = await supabase
-      .from("platikas")
-      .update({ status: "live", livekit_room_name: roomName, started_at: startedAt })
-      .eq("id", id));
-  }
-
-  if (updateError) {
-    console.error(`${LOG_TAG} failed to update platika row to live:`, updateError);
+    console.error(`${LOG_TAG} failed to update platika row to backstage:`, updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
