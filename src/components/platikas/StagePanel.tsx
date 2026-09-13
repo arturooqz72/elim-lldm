@@ -4,6 +4,7 @@ import { useTracks, useParticipants, AudioTrack, VideoTrack, ParticipantName } f
 import { Track } from "livekit-client";
 import { Mic } from "lucide-react";
 import { StageTile } from "./StageTile";
+import { StudioControlBar } from "./StudioControlBar";
 
 interface StagePanelProps {
   isHost: boolean;
@@ -56,7 +57,9 @@ export function StagePanel({ isHost, isSpeaker }: StagePanelProps) {
   });
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="relative flex flex-col gap-3 h-full">
+      {(isHost || isSpeaker) && <StudioControlBar />}
+
       {/* Audio renderer for all participants */}
       {audioTracks.map((trackRef) =>
         trackRef.publication ? (
