@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { EgressClient, RoomServiceClient } from "livekit-server-sdk";
 import { finalizeProgramRecording } from "@/lib/livekit/recording";
 
-const EGRESS_ID_COLUMNS = ["youtube_egress_id", "facebook_egress_id", "tiktok_egress_id"] as const;
-
 // La finalización de la grabación sondea a LiveKit hasta un minuto — no debe
 // contar contra el timeout de la función que responde al host.
 export const maxDuration = 60;
@@ -37,25 +35,36 @@ export async function POST(
   const isAdmin = profile?.role === "admin";
   if (!isHost && !isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // Stop any active stream egresses (YouTube, Facebook, TikTok)
-  const activeEgressIds = EGRESS_ID_COLUMNS.map((column) => pláticas[column] as string | null).filter(
-    (egressId): egressId is string => !!egressId
-  );
+  // Detener cualquier destino de streaming todavía activo (ver
+  // docs/superpowers/specs/2026-09-13-destinos-multiples-design.md).
+  const { data: egresosActivos } = await supabase
+    .from("platikas_stream_egresos")
+    .select("id, egress_id")
+    .eq("platika_id", id)
+    .is("stopped_at", null);
 
-  if (activeEgressIds.length > 0) {
+  if (egresosActivos && egresosActivos.length > 0) {
     const egressClient = new EgressClient(
       process.env.LIVEKIT_URL!,
       process.env.LIVEKIT_API_KEY!,
       process.env.LIVEKIT_API_SECRET!
     );
 
-    for (const egressId of activeEgressIds) {
+    for (const egreso of egresosActivos) {
       try {
-        await egressClient.stopEgress(egressId);
+        await egressClient.stopEgress(egreso.egress_id);
       } catch {
         // Egress may already have stopped/finished
       }
     }
+
+    await supabase
+      .from("platikas_stream_egresos")
+      .update({ stopped_at: new Date().toISOString() })
+      .in(
+        "id",
+        egresosActivos.map((e) => e.id)
+      );
   }
 
   // Delete LiveKit room
@@ -78,9 +87,6 @@ export async function POST(
     .update({
       status: "ended",
       radio_output_active: false,
-      youtube_egress_id: null,
-      facebook_egress_id: null,
-      tiktok_egress_id: null,
       recording_egress_id: null,
       ended_at: endedAt,
     })
@@ -95,9 +101,6 @@ export async function POST(
       .update({
         status: "ended",
         radio_output_active: false,
-        youtube_egress_id: null,
-        facebook_egress_id: null,
-        tiktok_egress_id: null,
         ended_at: endedAt,
       })
       .eq("id", id);
