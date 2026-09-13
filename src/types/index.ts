@@ -2,6 +2,8 @@ export type Role = "admin" | "anfitrion" | "participante" | "moderador" | "super
 
 export type PláticaStatus = "scheduled" | "backstage" | "live" | "ended";
 
+export type StageLayout = "solo" | "lado_a_lado" | "grid" | "pantalla";
+
 export type GameStatus = "lobby" | "in_progress" | "finished";
 
 export type RequestStatus = "pending" | "approved" | "rejected" | "completed";
@@ -46,6 +48,7 @@ export interface Pláticas {
   status: PláticaStatus;
   livekit_room_name: string | null;
   radio_output_active: boolean;
+  stage_layout: StageLayout;
   thumbnail_url: string | null;
   scheduled_at: string | null;
   started_at: string | null;
