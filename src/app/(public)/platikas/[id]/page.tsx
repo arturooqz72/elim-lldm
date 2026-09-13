@@ -96,6 +96,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
   }
 
   const isLive = p.status === "live";
+  const isBackstage = p.status === "backstage";
   const isScheduled = p.status === "scheduled";
   const isEnded = p.status === "ended";
 
@@ -159,6 +160,19 @@ export default async function PlatikaRoomPage({ params }: Props) {
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
                   EN VIVO
+                </span>
+              )}
+              {isBackstage && isHost && (
+                <span
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                  style={{
+                    background: "rgba(212,160,23,0.1)",
+                    border: "1px solid rgba(212,160,23,0.2)",
+                    color: "var(--color-primary)",
+                  }}
+                >
+                  <Clock size={11} />
+                  BACKSTAGE — solo tú la ves
                 </span>
               )}
               {isScheduled && (
@@ -259,7 +273,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
 
         {/* Room / state area */}
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {isLive && p.livekit_room_name ? (
+          {(isLive || (isBackstage && isHost)) && p.livekit_room_name ? (
             <LiveKitRoom
               platikaId={id}
               roomName={p.livekit_room_name}
@@ -268,7 +282,10 @@ export default async function PlatikaRoomPage({ params }: Props) {
               currentUserId={currentUserId}
               canModerateChat={canModerateChat}
               programaAudios={programaAudios}
+              initialIsLive={isLive}
             />
+          ) : isBackstage ? (
+            <BackstageBlockedState />
           ) : isScheduled ? (
             <ScheduledState scheduledAt={p.scheduled_at} />
           ) : isEnded ? (
@@ -281,6 +298,33 @@ export default async function PlatikaRoomPage({ params }: Props) {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────────
+
+function BackstageBlockedState() {
+  return (
+    <div
+      className="flex flex-col items-center justify-center py-20 rounded-2xl gap-6"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div
+        className="w-20 h-20 rounded-2xl flex items-center justify-center"
+        style={{
+          background: "rgba(212,160,23,0.08)",
+          border: "1px solid rgba(212,160,23,0.2)",
+        }}
+      >
+        <Clock size={32} style={{ color: "var(--color-primary)" }} />
+      </div>
+      <div className="text-center max-w-sm">
+        <p className="font-semibold mb-1" style={{ color: "var(--color-text)" }}>
+          Todavía no está en vivo
+        </p>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          El conductor está preparando esta transmisión. Vuelve a intentarlo en unos minutos.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
   const date = scheduledAt ? new Date(scheduledAt) : null;
