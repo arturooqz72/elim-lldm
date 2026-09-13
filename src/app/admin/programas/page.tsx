@@ -1,14 +1,15 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Radio } from "lucide-react";
+import { Radio, AlertTriangle } from "lucide-react";
 import type { Programa } from "@/types";
 import { DeleteProgramaForm } from "./DeleteProgramaForm";
 
 export const metadata = { title: "Programas — Admin" };
 
 interface Props {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; deleteError?: string }>;
 }
 
 async function addPrograma(formData: FormData) {
@@ -51,15 +52,26 @@ async function deletePrograma(formData: FormData) {
   "use server";
   const id = formData.get("id") as string;
   const supabase = await createServiceClient();
-  // Si el programa tiene transmisiones (platikas) vinculadas, la FK en
-  // modo RESTRICT rechaza el borrado — se ignora el error para no tumbar
-  // la página; el programa simplemente sigue en la lista.
-  await supabase.from("programas").delete().eq("id", id);
+
+  const { error } = await supabase.from("programas").delete().eq("id", id);
+
+  if (error) {
+    // La FK en platikas.programa_id es RESTRICT — un programa con
+    // transmisiones vinculadas no se puede borrar. Se cuenta cuántas
+    // para mostrar un mensaje útil en vez de fallar en silencio.
+    const { count } = await supabase
+      .from("platikas")
+      .select("id", { count: "exact", head: true })
+      .eq("programa_id", id);
+    redirect(`/admin/programas?deleteError=${count ?? 0}`);
+  }
+
   revalidatePath("/admin/programas");
 }
 
 export default async function ProgramasAdminPage({ searchParams }: Props) {
-  const { edit: editId } = await searchParams;
+  const { edit: editId, deleteError } = await searchParams;
+  const deleteErrorCount = deleteError !== undefined ? Number(deleteError) : undefined;
   const supabase = await createClient();
 
   const { data } = await supabase.from("programas").select("*").order("nombre", { ascending: true });
@@ -81,6 +93,24 @@ export default async function ProgramasAdminPage({ searchParams }: Props) {
           Programas
         </h1>
       </div>
+
+      {deleteErrorCount !== undefined && (
+        <div
+          className="flex items-start gap-3 mb-6 px-4 py-3 rounded-2xl text-sm"
+          style={{
+            background: "rgba(248,113,113,0.1)",
+            border: "1px solid rgba(248,113,113,0.3)",
+            color: "var(--color-destructive)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <p>
+            No se pudo eliminar: tiene {deleteErrorCount}{" "}
+            {deleteErrorCount === 1 ? "transmisión vinculada" : "transmisiones vinculadas"}. Borra
+            esas transmisiones primero, o desactiva el programa en vez de eliminarlo.
+          </p>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-3">
