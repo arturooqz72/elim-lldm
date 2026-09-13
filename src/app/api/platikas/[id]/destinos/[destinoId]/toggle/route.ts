@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EgressClient, StreamOutput, StreamProtocol } from "livekit-server-sdk";
 import { decryptStreamKey } from "@/lib/crypto/destinos";
+import { getValidYoutubeAccessToken } from "@/lib/youtube/oauth";
+import { createAndBindBroadcast, completeBroadcast } from "@/lib/youtube/live";
 
 export async function POST(
   request: Request,
@@ -48,7 +50,7 @@ export async function POST(
   if (action === "stop") {
     const { data: egreso } = await supabase
       .from("platikas_stream_egresos")
-      .select("id, egress_id")
+      .select("id, egress_id, youtube_broadcast_id")
       .eq("platika_id", id)
       .eq("destino_id", destinoId)
       .is("stopped_at", null)
@@ -65,6 +67,15 @@ export async function POST(
       await egressClient.stopEgress(egreso.egress_id);
     } catch {
       // El egress puede haber terminado ya por su cuenta
+    }
+
+    if (egreso.youtube_broadcast_id) {
+      try {
+        const accessToken = await getValidYoutubeAccessToken();
+        await completeBroadcast(accessToken, egreso.youtube_broadcast_id as string);
+      } catch {
+        // Mejor esfuerzo — enableAutoStop lo termina solo de todas formas
+      }
     }
 
     await supabase
@@ -96,12 +107,41 @@ export async function POST(
 
   const { data: destino } = await supabase
     .from("destinos")
-    .select("rtmp_url, stream_key_cifrado")
+    .select("rtmp_url, stream_key_cifrado, youtube_connection_id")
     .eq("id", destinoId)
     .eq("activo", true)
     .single();
 
   if (!destino) return NextResponse.json({ error: "Destino no encontrado" }, { status: 404 });
+
+  // Destino OAuth de YouTube: se crea un liveBroadcast nuevo vinculado
+  // a la ingestión persistente antes de arrancar el egress — así
+  // aparece en el canal con el título de la sesión y se cierra solo al
+  // perder la señal (enableAutoStart/enableAutoStop).
+  let youtubeBroadcastId: string | null = null;
+  if (destino.youtube_connection_id) {
+    try {
+      const accessToken = await getValidYoutubeAccessToken();
+      const { data: connection } = await supabase
+        .from("youtube_connections")
+        .select("stream_id")
+        .eq("id", destino.youtube_connection_id)
+        .single();
+      if (!connection?.stream_id) {
+        return NextResponse.json({ error: "El canal de YouTube no tiene una ingestión configurada" }, { status: 400 });
+      }
+      youtubeBroadcastId = await createAndBindBroadcast(
+        accessToken,
+        connection.stream_id,
+        pláticas.title as string
+      );
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Error al crear la transmisión de YouTube" },
+        { status: 500 }
+      );
+    }
+  }
 
   const streamKey = decryptStreamKey(destino.stream_key_cifrado);
   const separator = destino.rtmp_url.endsWith("/") ? "" : "/";
@@ -121,6 +161,7 @@ export async function POST(
       platika_id: id,
       destino_id: destinoId,
       egress_id: egressInfo.egressId,
+      youtube_broadcast_id: youtubeBroadcastId,
     });
 
     return NextResponse.json({ isActive: true, egresoId: egressInfo.egressId });
