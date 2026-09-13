@@ -1,23 +1,36 @@
 "use client";
 
-import { useTracks, useParticipants, AudioTrack, VideoTrack, ParticipantName } from "@livekit/components-react";
+import {
+  useTracks,
+  useParticipants,
+  useRoomInfo,
+  useSpeakingParticipants,
+  AudioTrack,
+  VideoTrack,
+  ParticipantName,
+} from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { Mic } from "lucide-react";
 import { StageTile } from "./StageTile";
 import { StudioControlBar } from "./StudioControlBar";
+import { LayoutPicker, parseStageLayout } from "./LayoutPicker";
 
 interface StagePanelProps {
+  platikaId: string;
   isHost: boolean;
   isSpeaker: boolean;
 }
 
-export function StagePanel({ isHost, isSpeaker }: StagePanelProps) {
+export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
   const participants = useParticipants();
   const cameraTracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }]);
   const micTracks = useTracks([{ source: Track.Source.Microphone, withPlaceholder: false }]);
   const screenTracks = useTracks([{ source: Track.Source.ScreenShare, withPlaceholder: false }]);
   const screenAudioTracks = useTracks([{ source: Track.Source.ScreenShareAudio, withPlaceholder: false }]);
   const screenShare = screenTracks[0];
+  const { metadata } = useRoomInfo();
+  const stageLayout = parseStageLayout(metadata);
+  const speakingParticipants = useSpeakingParticipants();
 
   if (participants.length === 0) {
     return (
@@ -56,9 +69,24 @@ export function StagePanel({ isHost, isSpeaker }: StagePanelProps) {
     return { id: participant.sid, trackRef, participant, hasVideo, isMuted, canControlCamera };
   });
 
+  let visibleTiles = cameraTiles;
+  let gridColsClass = participants.length === 1 ? "grid-cols-1" : participants.length <= 4 ? "grid-cols-2" : "grid-cols-3";
+
+  if (stageLayout === "solo") {
+    const speakingTile = cameraTiles.find((tile) =>
+      speakingParticipants.some((p) => p.sid === tile.participant.sid)
+    );
+    visibleTiles = (speakingTile ? [speakingTile] : cameraTiles.slice(0, 1));
+    gridColsClass = "grid-cols-1";
+  } else if (stageLayout === "lado_a_lado") {
+    visibleTiles = cameraTiles.slice(0, 2);
+    gridColsClass = "grid-cols-2";
+  }
+
   return (
     <div className="relative flex flex-col gap-3 h-full">
       {(isHost || isSpeaker) && <StudioControlBar />}
+      {isHost && <LayoutPicker platikaId={platikaId} />}
 
       {/* Audio renderer for all participants */}
       {audioTracks.map((trackRef) =>
@@ -98,16 +126,8 @@ export function StagePanel({ isHost, isSpeaker }: StagePanelProps) {
           </div>
         </>
       ) : (
-        <div
-          className={`grid gap-3 flex-1 ${
-            participants.length === 1
-              ? "grid-cols-1"
-              : participants.length <= 4
-              ? "grid-cols-2"
-              : "grid-cols-3"
-          }`}
-        >
-          {cameraTiles.map((tile) => (
+        <div className={`grid gap-3 flex-1 ${gridColsClass}`}>
+          {visibleTiles.map((tile) => (
             <StageTile key={tile.id} {...tile} />
           ))}
         </div>

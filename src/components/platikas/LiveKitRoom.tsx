@@ -216,7 +216,7 @@ export function LiveKitRoom({
       className="contents"
     >
       <RoomLayout
-        stage={<StagePanel isHost={isHost} isSpeaker={isSpeaker} />}
+        stage={<StagePanel platikaId={platikaId} isHost={isHost} isSpeaker={isSpeaker} />}
         sidebar={sidebar}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
