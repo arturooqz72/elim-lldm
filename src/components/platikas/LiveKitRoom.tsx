@@ -237,7 +237,7 @@ function RoomLayout({
   onToggleSidebar: () => void;
 }) {
   return (
-    <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "680px" }}>
+    <div className="flex flex-col lg:flex-row gap-4 h-full min-h-0" style={{ minHeight: "min(680px, 100%)" }}>
       <div className="relative flex-1 min-h-64 lg:min-h-0">
         {stage}
         <button
@@ -255,7 +255,7 @@ function RoomLayout({
         </button>
       </div>
       {sidebarOpen && (
-        <div className="w-full lg:w-80 shrink-0 flex flex-col" style={{ maxHeight: "80vh" }}>
+        <div className="w-full lg:w-80 shrink-0 flex flex-col lg:h-full lg:max-h-full overflow-y-auto" style={{ maxHeight: "80vh" }}>
           {sidebar}
         </div>
       )}

@@ -99,201 +99,107 @@ export default async function PlatikaRoomPage({ params }: Props) {
   const isBackstage = p.status === "backstage";
   const isScheduled = p.status === "scheduled";
   const isEnded = p.status === "ended";
+  const inStudio = (isLive || isBackstage) && !!p.livekit_room_name;
 
   return (
-    <>
-      <style>{`
-        .back-link:hover { color: var(--color-primary) !important; }
-        .recording-btn:hover { box-shadow: 0 0 20px rgba(212,160,23,0.4); }
-      `}</style>
-      <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-
-        {/* Thumbnail banner */}
-        {p.thumbnail_url && (
-          <div className="relative w-full overflow-hidden" style={{ height: "220px" }}>
-            <img
-              src={p.thumbnail_url}
-              alt={p.title}
-              className="w-full h-full object-cover"
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(to bottom, rgba(10,10,18,0.2) 0%, rgba(10,10,18,0.96) 100%)",
-              }}
-            />
-          </div>
-        )}
-
-        {/* Header */}
-        <div
-          className="px-4 py-6"
-          style={{
-            background: p.thumbnail_url
-              ? "var(--color-bg)"
-              : "linear-gradient(to bottom, rgba(212,160,23,0.04) 0%, transparent 100%)",
-            borderBottom: "1px solid var(--color-border)",
-            ...(p.thumbnail_url
-              ? { marginTop: "-52px", position: "relative", zIndex: 10 }
-              : {}),
-          }}
+    <div className="h-screen flex flex-col" style={{ background: "var(--color-bg)" }}>
+      {/* Barra superior mínima — reemplaza el menú completo del sitio para
+          que el estudio se sienta como una aplicación propia, no una
+          página más de elimlldm.net (igual que StreamYard). */}
+      <div
+        className="flex items-center justify-between gap-3 px-4 py-2.5 shrink-0"
+        style={{ borderBottom: "1px solid var(--color-border)" }}
+      >
+        <Link
+          href="/platikas"
+          className="flex items-center gap-2 shrink-0"
+          style={{ color: "var(--color-text-muted)" }}
         >
-          <div className="max-w-7xl mx-auto flex flex-col gap-4">
+          <ArrowLeft size={16} />
+          <span
+            className="text-sm font-bold tracking-wide"
+            style={{ fontFamily: "var(--font-cinzel)", color: "var(--color-primary)" }}
+          >
+            Elim LLDM
+          </span>
+        </Link>
 
-            {/* Breadcrumb */}
-            <Link
-              href="/platikas"
-              className="back-link flex items-center gap-1.5 text-sm transition-colors w-fit"
-              style={{ color: "var(--color-text-muted)" }}
+        <div className="flex items-center gap-2 min-w-0">
+          {isLive && (
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse shrink-0"
+              style={{ background: "var(--color-live)", color: "#fff" }}
             >
-              <ArrowLeft size={14} />
-              Estudio en Vivo
-            </Link>
-
-            {/* Status badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {isLive && (
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-pulse"
-                  style={{ background: "var(--color-live)", color: "#fff" }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-                  EN VIVO
-                </span>
-              )}
-              {isBackstage && isHost && (
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    background: "rgba(212,160,23,0.1)",
-                    border: "1px solid rgba(212,160,23,0.2)",
-                    color: "var(--color-primary)",
-                  }}
-                >
-                  <Clock size={11} />
-                  BACKSTAGE — solo tú la ves
-                </span>
-              )}
-              {isScheduled && (
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    background: "rgba(212,160,23,0.1)",
-                    border: "1px solid rgba(212,160,23,0.2)",
-                    color: "var(--color-primary)",
-                  }}
-                >
-                  <Clock size={11} />
-                  PRÓXIMA
-                </span>
-              )}
-              {isEnded && (
-                <span
-                  className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    background: "var(--color-surface-elevated)",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  TERMINADA
-                </span>
-              )}
-              {isLive && p.radio_output_active && (
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    background: "rgba(96,165,250,0.1)",
-                    border: "1px solid rgba(96,165,250,0.2)",
-                    color: "#60A5FA",
-                  }}
-                >
-                  <Radio size={11} />
-                  En radio
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h1
-              className="text-2xl md:text-3xl font-bold leading-snug"
-              style={{ color: "var(--color-text)" }}
+              <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+              EN VIVO
+            </span>
+          )}
+          {isBackstage && isHost && (
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+              style={{
+                background: "rgba(212,160,23,0.1)",
+                border: "1px solid rgba(212,160,23,0.2)",
+                color: "var(--color-primary)",
+              }}
             >
-              {p.title}
-            </h1>
-
-            {/* Host + date row */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                {p.profiles?.avatar_url ? (
-                  <img
-                    src={p.profiles.avatar_url}
-                    alt={p.profiles.display_name}
-                    className="w-7 h-7 rounded-full object-cover"
-                    style={{ border: "1px solid rgba(212,160,23,0.3)" }}
-                  />
-                ) : (
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{ background: "var(--color-primary)", color: "#000" }}
-                  >
-                    {p.profiles?.display_name?.[0]?.toUpperCase() ?? "A"}
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <Mic size={12} style={{ color: "var(--color-primary)" }} />
-                  <span className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
-                    {p.profiles?.display_name ?? "Anfitrión"}
-                  </span>
-                </div>
-              </div>
-
-              {isScheduled && p.scheduled_at && (
-                <div
-                  className="flex items-center gap-1.5 text-sm"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  <Calendar size={12} />
-                  <span>{formatDate(p.scheduled_at)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Description */}
-            {p.description && (
-              <p
-                className="text-sm max-w-2xl leading-relaxed"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {p.description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Room / state area */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {(isLive || (isBackstage && isHost)) && p.livekit_room_name ? (
-            <LiveKitRoom
-              platikaId={id}
-              roomName={p.livekit_room_name}
-              isHost={isHost}
-              isSpeaker={isSpeaker}
-              currentUserId={currentUserId}
-              canModerateChat={canModerateChat}
-              programaAudios={programaAudios}
-              initialIsLive={isLive}
-            />
-          ) : isBackstage ? (
-            <BackstageBlockedState />
-          ) : isScheduled ? (
-            <ScheduledState scheduledAt={p.scheduled_at} />
-          ) : isEnded ? (
-            <EndedState recordingUrl={p.recording_url} />
-          ) : null}
+              <Clock size={11} />
+              BACKSTAGE
+            </span>
+          )}
+          {isLive && p.radio_output_active && (
+            <span
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+              style={{
+                background: "rgba(96,165,250,0.1)",
+                border: "1px solid rgba(96,165,250,0.2)",
+                color: "#60A5FA",
+              }}
+            >
+              <Radio size={11} />
+              En radio
+            </span>
+          )}
+          <span
+            className="text-sm font-medium truncate"
+            style={{ color: "var(--color-text)" }}
+            title={p.title}
+          >
+            {p.title}
+          </span>
         </div>
       </div>
-    </>
+
+      {inStudio ? (
+        <div className="flex-1 min-h-0 p-3">
+          <LiveKitRoom
+            platikaId={id}
+            roomName={p.livekit_room_name!}
+            isHost={isHost}
+            isSpeaker={isSpeaker}
+            currentUserId={currentUserId}
+            canModerateChat={canModerateChat}
+            programaAudios={programaAudios}
+            initialIsLive={isLive}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-4">
+          {isBackstage ? (
+            <BackstageBlockedState />
+          ) : isScheduled ? (
+            <ScheduledState
+              title={p.title}
+              description={p.description}
+              scheduledAt={p.scheduled_at}
+              hostName={p.profiles?.display_name ?? "Anfitrión"}
+            />
+          ) : isEnded ? (
+            <EndedState recordingUrl={p.recording_url} title={p.title} />
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -302,7 +208,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
 function BackstageBlockedState() {
   return (
     <div
-      className="flex flex-col items-center justify-center py-20 rounded-2xl gap-6"
+      className="flex flex-col items-center justify-center py-16 px-8 rounded-2xl gap-6 max-w-md"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <div
@@ -326,7 +232,17 @@ function BackstageBlockedState() {
   );
 }
 
-function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
+function ScheduledState({
+  title,
+  description,
+  scheduledAt,
+  hostName,
+}: {
+  title: string;
+  description: string | null;
+  scheduledAt: string | null;
+  hostName: string;
+}) {
   const date = scheduledAt ? new Date(scheduledAt) : null;
 
   const dateStr = date
@@ -344,7 +260,7 @@ function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
 
   return (
     <div
-      className="flex flex-col items-center justify-center py-20 rounded-2xl gap-6"
+      className="flex flex-col items-center justify-center py-16 px-8 rounded-2xl gap-6 max-w-lg"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <div
@@ -358,12 +274,20 @@ function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
       </div>
 
       <div className="text-center flex flex-col gap-2 max-w-sm px-4">
-        <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
-          Esta sesión del Estudio en Vivo aún no ha comenzado
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          {hostName}
         </p>
+        <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
+          {title}
+        </p>
+        {description && (
+          <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+            {description}
+          </p>
+        )}
         {dateStr && (
           <p
-            className="text-base font-semibold capitalize"
+            className="text-base font-semibold capitalize mt-2"
             style={{ color: "var(--color-primary)" }}
           >
             {dateStr}
@@ -395,10 +319,10 @@ function ScheduledState({ scheduledAt }: { scheduledAt: string | null }) {
   );
 }
 
-function EndedState({ recordingUrl }: { recordingUrl: string | null }) {
+function EndedState({ recordingUrl, title }: { recordingUrl: string | null; title: string }) {
   return (
     <div
-      className="flex flex-col items-center justify-center py-20 rounded-2xl gap-6"
+      className="flex flex-col items-center justify-center py-16 px-8 rounded-2xl gap-6 max-w-lg"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <div
@@ -413,7 +337,10 @@ function EndedState({ recordingUrl }: { recordingUrl: string | null }) {
 
       <div className="text-center flex flex-col gap-2 max-w-sm px-4">
         <p className="text-xl font-bold" style={{ color: "var(--color-text)" }}>
-          Esta sesión del Estudio en Vivo ha terminado
+          {title}
+        </p>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Esta sesión del Estudio en Vivo ha terminado.
         </p>
         {recordingUrl ? (
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -436,7 +363,7 @@ function EndedState({ recordingUrl }: { recordingUrl: string | null }) {
             href={recordingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="recording-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
             style={{ background: "var(--color-primary)", color: "#000" }}
           >
             Ver grabación
