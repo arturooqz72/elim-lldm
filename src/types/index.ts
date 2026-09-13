@@ -1,6 +1,6 @@
 export type Role = "admin" | "anfitrion" | "participante" | "moderador" | "super_moderador";
 
-export type PláticaStatus = "scheduled" | "live" | "ended";
+export type PláticaStatus = "scheduled" | "backstage" | "live" | "ended";
 
 export type GameStatus = "lobby" | "in_progress" | "finished";
 
