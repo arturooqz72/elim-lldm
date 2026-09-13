@@ -12,77 +12,62 @@ interface DestinoCardProps {
   onDelete: () => void;
 }
 
+// Chip circular estilo StreamYard: un click prende/apaga el destino: al
+// pasar el mouse (y solo si no está transmitiendo) aparecen editar/borrar
+// encima, en vez de los botones de texto que tenía la versión anterior.
 export function DestinoCard({ destino, loading, onToggle, onEdit, onDelete }: DestinoCardProps) {
   const estilo = DESTINO_ESTILOS[destino.plataforma];
   const Icon = estilo.icon;
 
   return (
-    <div
-      className="rounded-xl p-3 flex flex-col gap-2.5"
-      style={{
-        background: "var(--color-surface-elevated)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: `${estilo.accentColor}1A` }}
-        >
-          <Icon size={14} style={{ color: estilo.accentColor }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text)" }}>
-            {destino.nombre}
-          </p>
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {estilo.label}
-          </p>
-        </div>
-        <span
-          className={`w-2 h-2 rounded-full shrink-0 ${destino.isActive ? "animate-pulse" : ""}`}
-          style={{ background: destino.isActive ? "var(--color-success)" : "var(--color-border)" }}
-          title={destino.isActive ? "Transmitiendo" : "Inactivo"}
-        />
-      </div>
+    <div className="relative flex flex-col items-center gap-1.5 w-16 group">
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={loading}
+        aria-label={destino.isActive ? `Detener ${destino.nombre}` : `Iniciar ${destino.nombre}`}
+        className="relative w-14 h-14 rounded-full flex items-center justify-center transition-all"
+        style={{
+          background: `${estilo.accentColor}1A`,
+          border: destino.isActive ? "2px solid var(--color-success)" : "2px solid var(--color-border)",
+          boxShadow: destino.isActive ? "0 0 12px rgba(74,222,128,0.35)" : "none",
+        }}
+      >
+        {loading ? (
+          <Loader2 size={18} className="animate-spin" style={{ color: estilo.accentColor }} />
+        ) : (
+          <Icon size={22} style={{ color: estilo.accentColor }} />
+        )}
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onToggle}
-          disabled={loading}
-          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all"
-          style={
-            destino.isActive
-              ? {
-                  background: "rgba(248,113,113,0.15)",
-                  border: "1px solid rgba(248,113,113,0.3)",
-                  color: "var(--color-destructive)",
-                }
-              : { background: "var(--color-primary)", color: "#000" }
-          }
+        {destino.isActive && (
+          <span
+            className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full animate-pulse"
+            style={{ background: "var(--color-success)", border: "2px solid var(--color-surface)" }}
+          />
+        )}
+      </button>
+
+      {!destino.isActive && (
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center gap-1.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
+          style={{ background: "rgba(10,10,18,0.8)" }}
         >
-          {loading && <Loader2 size={13} className="animate-spin" />}
-          {destino.isActive ? "Detener" : "Iniciar transmisión"}
-        </button>
-        <button
-          onClick={onEdit}
-          disabled={destino.isActive}
-          className="p-2 rounded-lg disabled:opacity-30"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-          title="Editar destino"
-        >
-          <Pencil size={13} style={{ color: "var(--color-text-muted)" }} />
-        </button>
-        <button
-          onClick={onDelete}
-          disabled={destino.isActive}
-          className="p-2 rounded-lg disabled:opacity-30"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-          title="Borrar destino"
-        >
-          <Trash2 size={13} style={{ color: "var(--color-destructive)" }} />
-        </button>
-      </div>
+          <button type="button" onClick={onEdit} aria-label="Editar destino" className="p-1">
+            <Pencil size={13} style={{ color: "#fff" }} />
+          </button>
+          <button type="button" onClick={onDelete} aria-label="Borrar destino" className="p-1">
+            <Trash2 size={13} style={{ color: "var(--color-destructive)" }} />
+          </button>
+        </div>
+      )}
+
+      <p
+        className="text-[10px] text-center leading-tight truncate w-full"
+        style={{ color: "var(--color-text-muted)" }}
+        title={destino.nombre}
+      >
+        {destino.nombre}
+      </p>
     </div>
   );
 }

@@ -53,26 +53,11 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
       className="rounded-2xl p-4 flex flex-col gap-3"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-          Transmisión a plataformas
-        </p>
-        <button
-          onClick={() => setModalDestino("new")}
-          className="flex items-center gap-1 text-xs font-semibold"
-          style={{ color: "var(--color-primary)" }}
-        >
-          <Plus size={14} />
-          Agregar destino
-        </button>
-      </div>
+      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+        Transmisión a plataformas
+      </p>
 
-      <div className="flex flex-col gap-2.5">
-        {destinos.length === 0 && (
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            No hay destinos guardados todavía.
-          </p>
-        )}
+      <div className="flex flex-wrap gap-3 items-start">
         {destinos.map((destino) => (
           <DestinoCard
             key={destino.id}
@@ -83,6 +68,21 @@ export function DestinationsPanel({ platikaId }: DestinationsPanelProps) {
             onDelete={() => deleteDestino(destino)}
           />
         ))}
+
+        <div className="flex flex-col items-center gap-1.5 w-16">
+          <button
+            type="button"
+            onClick={() => setModalDestino("new")}
+            aria-label="Agregar destino"
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-colors"
+            style={{ border: "2px dashed var(--color-border)" }}
+          >
+            <Plus size={20} style={{ color: "var(--color-text-muted)" }} />
+          </button>
+          <p className="text-[10px] text-center leading-tight" style={{ color: "var(--color-text-muted)" }}>
+            Agregar
+          </p>
+        </div>
       </div>
 
       {modalDestino && (
