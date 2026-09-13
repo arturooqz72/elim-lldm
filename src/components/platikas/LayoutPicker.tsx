@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRoomInfo } from "@livekit/components-react";
 import { User, Columns2, Grid2x2, ScreenShare } from "lucide-react";
+import { parseRoomMetadata } from "@/lib/livekit/room-metadata";
 import type { StageLayout } from "@/types";
 
 interface LayoutPickerProps {
@@ -21,16 +22,8 @@ const LAYOUTS: {
 ];
 
 export function parseStageLayout(metadata: string | undefined): StageLayout {
-  if (!metadata) return "grid";
-  try {
-    const parsed = JSON.parse(metadata) as { layout?: string };
-    if (LAYOUTS.some((l) => l.value === parsed.layout)) {
-      return parsed.layout as StageLayout;
-    }
-  } catch {
-    // metadata sin layout válido — se usa el default
-  }
-  return "grid";
+  const layout = parseRoomMetadata(metadata).layout;
+  return LAYOUTS.some((l) => l.value === layout) ? (layout as StageLayout) : "grid";
 }
 
 // Selector de layout del anfitrión — vive sobre el escenario (no en el

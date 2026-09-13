@@ -14,6 +14,8 @@ import { Mic } from "lucide-react";
 import { StageTile } from "./StageTile";
 import { StudioControlBar } from "./StudioControlBar";
 import { LayoutPicker, parseStageLayout } from "./LayoutPicker";
+import { LowerThirdControl, parseLowerThird } from "./LowerThirdControl";
+import { LowerThird } from "./LowerThird";
 
 interface StagePanelProps {
   platikaId: string;
@@ -30,6 +32,7 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
   const screenShare = screenTracks[0];
   const { metadata } = useRoomInfo();
   const stageLayout = parseStageLayout(metadata);
+  const lowerThird = parseLowerThird(metadata);
   const speakingParticipants = useSpeakingParticipants();
 
   if (participants.length === 0) {
@@ -87,6 +90,13 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
     <div className="relative flex flex-col gap-3 h-full">
       {(isHost || isSpeaker) && <StudioControlBar />}
       {isHost && <LayoutPicker platikaId={platikaId} />}
+      {isHost && <LowerThirdControl platikaId={platikaId} />}
+      {lowerThird.visible && <LowerThird title={lowerThird.title} subtitle={lowerThird.subtitle} />}
+      <img
+        src="/icons/icon-512.png"
+        alt=""
+        className="absolute bottom-3 right-3 z-10 w-8 h-8 rounded-md opacity-60 pointer-events-none"
+      />
 
       {/* Audio renderer for all participants */}
       {audioTracks.map((trackRef) =>

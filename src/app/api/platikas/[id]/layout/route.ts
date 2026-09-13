@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EgressClient, RoomServiceClient } from "livekit-server-sdk";
+import { patchRoomMetadata } from "@/lib/livekit/room-metadata";
 import type { StageLayout } from "@/types";
 
 const LAYOUTS: StageLayout[] = ["solo", "lado_a_lado", "grid", "pantalla"];
@@ -65,10 +66,9 @@ export async function POST(
     process.env.LIVEKIT_API_KEY!,
     process.env.LIVEKIT_API_SECRET!
   );
-  await roomService.updateRoomMetadata(
-    pláticas.livekit_room_name,
-    JSON.stringify({ layout })
-  );
+  await patchRoomMetadata(roomService, pláticas.livekit_room_name, {
+    layout: layout as StageLayout,
+  });
 
   // También se actualiza el layout de cada egress de streaming ya
   // activo, para que el video que sale a las plataformas coincida —
