@@ -37,3 +37,8 @@ export function decryptStreamKey(payload: string): string {
   ]);
   return plaintext.toString("utf8");
 }
+
+// Mismo AES-256-GCM, nombre genérico para cuando lo que se cifra no es
+// un stream key (ej. tokens OAuth de YouTube) — ver src/lib/youtube/oauth.ts.
+export const encryptSecret = encryptStreamKey;
+export const decryptSecret = decryptStreamKey;
