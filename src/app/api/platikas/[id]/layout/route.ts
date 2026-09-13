@@ -2,19 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EgressClient, RoomServiceClient } from "livekit-server-sdk";
 import { patchRoomMetadata } from "@/lib/livekit/room-metadata";
+import { EGRESS_TEMPLATE_BY_LAYOUT } from "@/lib/livekit/stage-layout";
 import type { StageLayout } from "@/types";
 
 const LAYOUTS: StageLayout[] = ["solo", "lado_a_lado", "grid", "pantalla"];
-
-// Plantillas nativas de composite egress de LiveKit — no hay una
-// plantilla "lado a lado" propia, así que se mapea a "grid" (con 2
-// participantes se ve prácticamente igual).
-const EGRESS_TEMPLATE: Record<StageLayout, string> = {
-  solo: "single-speaker",
-  lado_a_lado: "grid",
-  grid: "grid",
-  pantalla: "speaker",
-};
 
 export async function POST(
   request: Request,
@@ -70,30 +61,29 @@ export async function POST(
     layout: layout as StageLayout,
   });
 
-  // También se actualiza el layout de cada egress de streaming ya
-  // activo, para que el video que sale a las plataformas coincida —
-  // la grabación de radio es solo audio, no le aplica.
+  // Todos los destinos activos de una plática comparten un único
+  // egress (ver toggle/route.ts) — basta con actualizar su layout una
+  // vez. La grabación de radio es solo audio, no le aplica.
   const { data: egresosActivos } = await supabase
     .from("platikas_stream_egresos")
     .select("egress_id")
     .eq("platika_id", id)
-    .is("stopped_at", null);
+    .is("stopped_at", null)
+    .limit(1);
 
-  const template = EGRESS_TEMPLATE[layout as StageLayout];
-  if (egresosActivos && egresosActivos.length > 0) {
+  const sharedEgressId = egresosActivos?.[0]?.egress_id as string | undefined;
+  if (sharedEgressId) {
     const egressClient = new EgressClient(
       process.env.LIVEKIT_URL!,
       process.env.LIVEKIT_API_KEY!,
       process.env.LIVEKIT_API_SECRET!
     );
 
-    await Promise.all(
-      egresosActivos.map((e) =>
-        egressClient.updateLayout(e.egress_id as string, template).catch(() => {
-          // El egress puede haber terminado por su cuenta justo antes
-        })
-      )
-    );
+    await egressClient
+      .updateLayout(sharedEgressId, EGRESS_TEMPLATE_BY_LAYOUT[layout as StageLayout])
+      .catch(() => {
+        // El egress puede haber terminado por su cuenta justo antes
+      });
   }
 
   return NextResponse.json({ ok: true });

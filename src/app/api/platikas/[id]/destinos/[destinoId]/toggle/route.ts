@@ -4,6 +4,8 @@ import { EgressClient, StreamOutput, StreamProtocol } from "livekit-server-sdk";
 import { decryptStreamKey } from "@/lib/crypto/destinos";
 import { getValidYoutubeAccessToken } from "@/lib/youtube/oauth";
 import { createAndBindBroadcast, completeBroadcast } from "@/lib/youtube/live";
+import { EGRESS_TEMPLATE_BY_LAYOUT } from "@/lib/livekit/stage-layout";
+import type { StageLayout } from "@/types";
 
 export async function POST(
   request: Request,
@@ -47,6 +49,13 @@ export async function POST(
     process.env.LIVEKIT_API_SECRET!
   );
 
+  // Todos los destinos activos de una misma plática comparten UN solo
+  // proceso de egress (varias URLs de salida en el mismo StreamOutput)
+  // en vez de uno por destino — LiveKit cobra por minuto de egress
+  // corriendo, así que 3 destinos en un egress compartido cuestan 1x,
+  // no 3x. Se agregan/quitan URLs con updateStream() en vez de
+  // arrancar/parar procesos nuevos cada vez.
+
   if (action === "stop") {
     const { data: egreso } = await supabase
       .from("platikas_stream_egresos")
@@ -63,10 +72,22 @@ export async function POST(
       );
     }
 
-    try {
-      await egressClient.stopEgress(egreso.egress_id);
-    } catch {
-      // El egress puede haber terminado ya por su cuenta
+    const { data: destino } = await supabase
+      .from("destinos")
+      .select("rtmp_url, stream_key_cifrado")
+      .eq("id", destinoId)
+      .single();
+
+    if (destino) {
+      const streamKey = decryptStreamKey(destino.stream_key_cifrado);
+      const separator = destino.rtmp_url.endsWith("/") ? "" : "/";
+      const streamUrl = `${destino.rtmp_url}${separator}${streamKey}`;
+
+      try {
+        await egressClient.updateStream(egreso.egress_id, undefined, [streamUrl]);
+      } catch {
+        // El egress compartido puede haber terminado ya por su cuenta
+      }
     }
 
     if (egreso.youtube_broadcast_id) {
@@ -82,6 +103,24 @@ export async function POST(
       .from("platikas_stream_egresos")
       .update({ stopped_at: new Date().toISOString() })
       .eq("id", egreso.id);
+
+    // Si no queda ningún otro destino activo compartiendo este mismo
+    // egress, se termina del todo — dejarlo corriendo sin ninguna URL
+    // de salida seguiría gastando minutos sin transmitir nada.
+    const { data: otrosActivos } = await supabase
+      .from("platikas_stream_egresos")
+      .select("id")
+      .eq("platika_id", id)
+      .is("stopped_at", null)
+      .limit(1);
+
+    if (!otrosActivos || otrosActivos.length === 0) {
+      try {
+        await egressClient.stopEgress(egreso.egress_id);
+      } catch {
+        // Ya se detuvo solo
+      }
+    }
 
     return NextResponse.json({ isActive: false });
   }
@@ -147,24 +186,45 @@ export async function POST(
   const separator = destino.rtmp_url.endsWith("/") ? "" : "/";
   const streamUrl = `${destino.rtmp_url}${separator}${streamKey}`;
 
+  // ¿Ya hay un egress compartido corriendo para esta plática (otro
+  // destino ya activo)? Si lo hay, solo se le agrega esta URL en vez
+  // de arrancar un proceso nuevo.
+  const { data: sharedActive } = await supabase
+    .from("platikas_stream_egresos")
+    .select("egress_id")
+    .eq("platika_id", id)
+    .is("stopped_at", null)
+    .limit(1);
+
+  const existingEgressId = sharedActive?.[0]?.egress_id as string | undefined;
+
   try {
-    const egressInfo = await egressClient.startRoomCompositeEgress(
-      pláticas.livekit_room_name,
-      new StreamOutput({
-        protocol: StreamProtocol.RTMP,
-        urls: [streamUrl],
-      }),
-      { layout: "speaker" }
-    );
+    let egressId: string;
+
+    if (existingEgressId) {
+      await egressClient.updateStream(existingEgressId, [streamUrl]);
+      egressId = existingEgressId;
+    } else {
+      const layout = EGRESS_TEMPLATE_BY_LAYOUT[(pláticas.stage_layout as StageLayout) ?? "grid"];
+      const egressInfo = await egressClient.startRoomCompositeEgress(
+        pláticas.livekit_room_name,
+        new StreamOutput({
+          protocol: StreamProtocol.RTMP,
+          urls: [streamUrl],
+        }),
+        { layout }
+      );
+      egressId = egressInfo.egressId;
+    }
 
     await supabase.from("platikas_stream_egresos").insert({
       platika_id: id,
       destino_id: destinoId,
-      egress_id: egressInfo.egressId,
+      egress_id: egressId,
       youtube_broadcast_id: youtubeBroadcastId,
     });
 
-    return NextResponse.json({ isActive: true, egresoId: egressInfo.egressId });
+    return NextResponse.json({ isActive: true, egresoId: egressId });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Error al iniciar la transmisión" },
