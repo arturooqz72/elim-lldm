@@ -16,6 +16,7 @@ export default async function AdminPlatikaListPage() {
 
   const byStatus = {
     live: (platikas ?? []).filter((p: { status: string }) => p.status === "live"),
+    backstage: (platikas ?? []).filter((p: { status: string }) => p.status === "backstage"),
     scheduled: (platikas ?? []).filter((p: { status: string }) => p.status === "scheduled"),
     ended: (platikas ?? []).filter((p: { status: string }) => p.status === "ended"),
   };
@@ -37,13 +38,19 @@ export default async function AdminPlatikaListPage() {
         </div>
       </div>
 
-      {(["live", "scheduled", "ended"] as const).map((status) => {
+      {(["live", "backstage", "scheduled", "ended"] as const).map((status) => {
         const items = byStatus[status];
         if (items.length === 0) return null;
         return (
           <section key={status} className="mb-8">
             <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--color-text-muted)" }}>
-              {status === "live" ? "En vivo" : status === "scheduled" ? "Programadas" : "Terminadas"}
+              {status === "live"
+                ? "En vivo"
+                : status === "backstage"
+                ? "En backstage"
+                : status === "scheduled"
+                ? "Programadas"
+                : "Terminadas"}
               <span className="ml-2 font-normal normal-case">({items.length})</span>
             </h2>
             <div className="flex flex-col gap-2">
@@ -88,18 +95,28 @@ export default async function AdminPlatikaListPage() {
                         background:
                           p.status === "live"
                             ? "rgba(255,68,68,0.15)"
+                            : p.status === "backstage"
+                            ? "rgba(212,160,23,0.15)"
                             : p.status === "scheduled"
                             ? "rgba(212,160,23,0.1)"
                             : "var(--color-surface-elevated)",
                         color:
                           p.status === "live"
                             ? "var(--color-live)"
+                            : p.status === "backstage"
+                            ? "var(--color-primary)"
                             : p.status === "scheduled"
                             ? "var(--color-primary)"
                             : "var(--color-text-muted)",
                       }}
                     >
-                      {p.status === "live" ? "EN VIVO" : p.status === "scheduled" ? "PROGRAMADA" : "TERMINADA"}
+                      {p.status === "live"
+                        ? "EN VIVO"
+                        : p.status === "backstage"
+                        ? "BACKSTAGE"
+                        : p.status === "scheduled"
+                        ? "PROGRAMADA"
+                        : "TERMINADA"}
                     </span>
                   </div>
                 </Link>
