@@ -409,3 +409,25 @@ export interface ProgramaGrabacion {
   expires_at: string;
   created_at: string;
 }
+
+// ── Destinos múltiples de transmisión ──────────────────────────────────────────
+
+export type DestinoPlataforma = "youtube" | "facebook" | "tiktok" | "otro";
+
+export interface Destino {
+  id: string;
+  nombre: string;
+  plataforma: DestinoPlataforma;
+  rtmp_url: string;
+  activo: boolean;
+  created_at: string;
+}
+
+export interface DestinoConEstado {
+  id: string;
+  nombre: string;
+  plataforma: DestinoPlataforma;
+  rtmp_url: string;
+  isActive: boolean;
+  egresoId: string | null;
+}
