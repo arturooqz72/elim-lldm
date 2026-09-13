@@ -170,21 +170,26 @@ export function HostControls({
 
         <div className="flex flex-col gap-2">
           {!isLive ? (
-            <button
-              onClick={goLive}
-              disabled={loading === "live"}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all"
-              style={{ background: "var(--color-primary)", color: "#000" }}
-              onMouseEnter={(e) => {
-                if (loading !== "live") (e.currentTarget as HTMLElement).style.boxShadow = "0 0 20px rgba(212,160,23,0.4)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.boxShadow = "none";
-              }}
-            >
-              {loading === "live" ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}
-              Ir en Vivo
-            </button>
+            <>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Estás en backstage: prueba tu mic y cámara. Nadie más te ve ni te escucha todavía.
+              </p>
+              <button
+                onClick={goLive}
+                disabled={loading === "live"}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all"
+                style={{ background: "var(--color-primary)", color: "#000" }}
+                onMouseEnter={(e) => {
+                  if (loading !== "live") (e.currentTarget as HTMLElement).style.boxShadow = "0 0 20px rgba(212,160,23,0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                }}
+              >
+                {loading === "live" ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}
+                Salir al aire
+              </button>
+            </>
           ) : (
             <button
               onClick={endPlatica}
