@@ -108,8 +108,10 @@ export default async function PlatikaRoomPage({ params }: Props) {
           platikaId={id}
           roomName={p.livekit_room_name!}
           title={p.title}
+          description={p.description}
           isHost={isHost}
           isSpeaker={isSpeaker}
+          isAdmin={profile?.role === "admin"}
           currentUserId={currentUserId}
           canModerateChat={canModerateChat}
           programaAudios={programaAudios}

@@ -5,14 +5,17 @@ import Link from "next/link";
 import { ArrowLeft, Clock, Radio } from "lucide-react";
 import { LiveKitRoom } from "./LiveKitRoom";
 import { StudioGoLiveButton } from "./StudioGoLiveButton";
+import { StudioEditButton } from "./StudioEditButton";
 import type { ProgramaAudio } from "@/types";
 
 interface StudioShellProps {
   platikaId: string;
   roomName: string;
   title: string;
+  description: string | null;
   isHost: boolean;
   isSpeaker: boolean;
+  isAdmin: boolean;
   currentUserId: string | null;
   canModerateChat: boolean;
   programaAudios?: ProgramaAudio[];
@@ -28,9 +31,11 @@ interface StudioShellProps {
 export function StudioShell({
   platikaId,
   roomName,
-  title,
+  title: initialTitle,
+  description,
   isHost,
   isSpeaker,
+  isAdmin,
   currentUserId,
   canModerateChat,
   programaAudios,
@@ -38,6 +43,7 @@ export function StudioShell({
   radioActive,
 }: StudioShellProps) {
   const [isLive, setIsLive] = useState(initialIsLive);
+  const [title, setTitle] = useState(initialTitle);
 
   return (
     <>
@@ -103,9 +109,19 @@ export function StudioShell({
           </span>
         </div>
 
-        {isHost && (
-          <StudioGoLiveButton platikaId={platikaId} isLive={isLive} onLiveChange={setIsLive} />
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {isAdmin && (
+            <StudioEditButton
+              platikaId={platikaId}
+              initialTitle={title}
+              initialDescription={description}
+              onTitleChange={setTitle}
+            />
+          )}
+          {isHost && (
+            <StudioGoLiveButton platikaId={platikaId} isLive={isLive} onLiveChange={setIsLive} />
+          )}
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 p-3">
