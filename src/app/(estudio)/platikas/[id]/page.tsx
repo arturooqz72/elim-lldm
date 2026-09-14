@@ -102,7 +102,31 @@ export default async function PlatikaRoomPage({ params }: Props) {
   const inStudio = (isLive || isBackstage) && !!p.livekit_room_name;
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: "var(--color-bg)" }}>
+    <div
+      className="h-screen flex flex-col"
+      style={
+        {
+          background: "var(--color-bg)",
+          // El estudio usa su propio tema claro/dorado (distinto del resto
+          // del sitio, que es oscuro) — se redefinen aquí las mismas
+          // variables CSS que ya usa todo /components/platikas, así que
+          // cada componente se ve claro automáticamente sin tocar sus
+          // estilos uno por uno.
+          "--color-bg": "#FAF8F3",
+          "--color-surface": "#FFFFFF",
+          "--color-surface-elevated": "#FFFFFF",
+          "--color-border": "#E8E1CE",
+          "--color-primary": "#D4A017",
+          "--color-primary-light": "#EDB84A",
+          "--color-primary-dark": "#A07810",
+          "--color-text": "#1C1917",
+          "--color-text-muted": "#6B6558",
+          "--color-live": "#FF4444",
+          "--color-success": "#16A34A",
+          "--color-destructive": "#DC2626",
+        } as React.CSSProperties
+      }
+    >
       {/* Barra superior mínima — reemplaza el menú completo del sitio para
           que el estudio se sienta como una aplicación propia, no una
           página más de elimlldm.net (igual que StreamYard). */}
