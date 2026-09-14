@@ -15,7 +15,7 @@ interface ScenesPanelProps {
 // queda el escenario, no solo un glifo abstracto (mismo espíritu que
 // las miniaturas de Scenes de StreamYard).
 function SceneThumbnail({ layout, color }: { layout: StageLayout; color: string }) {
-  const block = <div className="rounded-[3px]" style={{ background: color }} />;
+  const block = <div className="w-full h-full rounded-[3px]" style={{ background: color }} />;
 
   if (layout === "solo") {
     return <div className="w-3/5 h-3/5">{block}</div>;
