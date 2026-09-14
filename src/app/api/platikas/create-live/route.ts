@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   console.log(`${LOG_TAG} role check passed`, { role: profile.role });
 
-  let body: { title?: string; programa_id?: string };
+  let body: { title?: string; programa_id?: string; description?: string; visibilidad?: string };
   try {
     body = await request.json();
   } catch (err) {
@@ -48,7 +48,11 @@ export async function POST(request: Request) {
 
   const title = body.title?.trim();
   const programaId = body.programa_id?.trim() || null;
-  console.log(`${LOG_TAG} parsed body`, { title, programaId });
+  const description = body.description?.trim() || null;
+  const visibilidad = ["publico", "oculto", "privado"].includes(body.visibilidad ?? "")
+    ? body.visibilidad
+    : "publico";
+  console.log(`${LOG_TAG} parsed body`, { title, programaId, visibilidad });
 
   if (!title) {
     console.error(`${LOG_TAG} missing title — bad request`);
@@ -70,6 +74,8 @@ export async function POST(request: Request) {
     .from("platikas")
     .insert({
       title,
+      description,
+      visibilidad,
       host_id: user.id,
       status: "scheduled",
       programa_id: programaId,
