@@ -120,7 +120,7 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
             <VideoTrack trackRef={{ ...screenShare, publication: screenShare.publication }} className="w-full h-full object-contain" />
             <div
               className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold backdrop-blur-sm"
-              style={{ background: "rgba(10,10,18,0.75)", color: "var(--color-text)" }}
+              style={{ background: "rgba(10,10,18,0.75)", color: "#fff" }}
             >
               <ParticipantName participant={screenShare.participant} /> está compartiendo pantalla
             </div>

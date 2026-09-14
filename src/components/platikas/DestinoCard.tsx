@@ -56,7 +56,7 @@ export function DestinoCard({ destino, loading, onToggle, onEdit, onDelete }: De
             <Pencil size={13} style={{ color: "#fff" }} />
           </button>
           <button type="button" onClick={onDelete} aria-label="Borrar destino" className="p-1">
-            <Trash2 size={13} style={{ color: "var(--color-destructive)" }} />
+            <Trash2 size={13} style={{ color: "#F87171" }} />
           </button>
         </div>
       )}

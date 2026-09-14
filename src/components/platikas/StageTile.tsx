@@ -37,7 +37,7 @@ export function StageTile({ trackRef, participant, hasVideo, isMuted, canControl
       <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center justify-between">
         <div
           className="px-2 py-0.5 rounded-md text-xs font-semibold backdrop-blur-sm"
-          style={{ background: "rgba(10,10,18,0.75)", color: "var(--color-text)" }}
+          style={{ background: "rgba(10,10,18,0.75)", color: "#fff" }}
         >
           <ParticipantName participant={participant} />
         </div>

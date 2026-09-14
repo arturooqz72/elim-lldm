@@ -322,7 +322,7 @@ export function StudioControlBar() {
       {error && (
         <div
           className="absolute -top-9 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-md text-[11px] whitespace-nowrap backdrop-blur-sm"
-          style={{ background: "rgba(10,10,18,0.9)", color: "var(--color-destructive)" }}
+          style={{ background: "rgba(10,10,18,0.9)", color: "#F87171" }}
         >
           {error}
         </div>
