@@ -10,7 +10,7 @@ interface LayoutPickerProps {
   platikaId: string;
 }
 
-export const LAYOUTS: {
+const LAYOUTS: {
   value: StageLayout;
   label: string;
   icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
@@ -26,13 +26,11 @@ export function parseStageLayout(metadata: string | undefined): StageLayout {
   return LAYOUTS.some((l) => l.value === layout) ? (layout as StageLayout) : "grid";
 }
 
-// Selector de layout del anfitrión — vive en StagePanel (no en el
+// Selector de layout del anfitrión — vive sobre el escenario (no en el
 // sidebar) porque usa useRoomInfo(), que solo funciona dentro del
 // <LiveKitRoom> ya conectado; StagePanel es el único lugar donde eso
 // está garantizado (el sidebar se reutiliza también en las pantallas
-// de "conectando"/"error", antes de que exista esa conexión). Se
-// muestra en una fila debajo del canvas, no como overlay — mismo
-// patrón que la fila de layouts de StreamYard.
+// de "conectando"/"error", antes de que exista esa conexión).
 export function LayoutPicker({ platikaId }: LayoutPickerProps) {
   const { metadata } = useRoomInfo();
   const currentLayout = parseStageLayout(metadata);
@@ -54,8 +52,8 @@ export function LayoutPicker({ platikaId }: LayoutPickerProps) {
 
   return (
     <div
-      className="flex items-center gap-1 p-1 rounded-full shrink-0"
-      style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+      className="absolute top-3 left-3 z-10 flex items-center gap-1 p-1 rounded-full backdrop-blur-md"
+      style={{ background: "rgba(10,10,18,0.75)", border: "1px solid rgba(255,255,255,0.1)" }}
     >
       {LAYOUTS.map(({ value, label, icon: Icon }) => {
         const active = currentLayout === value;
@@ -70,7 +68,7 @@ export function LayoutPicker({ platikaId }: LayoutPickerProps) {
             className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
             style={{ background: active ? "var(--color-primary)" : "transparent" }}
           >
-            <Icon size={15} style={{ color: active ? "#000" : "var(--color-text-muted)" }} />
+            <Icon size={15} style={{ color: active ? "#000" : "#fff" }} />
           </button>
         );
       })}

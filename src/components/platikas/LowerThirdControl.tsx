@@ -18,11 +18,9 @@ export function parseLowerThird(metadata: string | undefined): LowerThirdState {
   };
 }
 
-// Control del banner de nombre — igual que LayoutPicker, vive en
-// StagePanel (no en el sidebar) porque useRoomInfo() solo funciona
-// dentro del <LiveKitRoom> ya conectado. El popup abre hacia arriba
-// (bottom-11) porque el botón vive en la fila debajo del canvas, con
-// la barra de controles justo debajo.
+// Control del banner de nombre — igual que LayoutPicker, vive sobre el
+// escenario (no en el sidebar) porque useRoomInfo() solo funciona
+// dentro del <LiveKitRoom> ya conectado.
 export function LowerThirdControl({ platikaId }: LowerThirdControlProps) {
   const { metadata } = useRoomInfo();
   const current = parseLowerThird(metadata);
@@ -57,24 +55,24 @@ export function LowerThirdControl({ platikaId }: LowerThirdControlProps) {
   }
 
   return (
-    <div className="relative shrink-0">
+    <div className="absolute top-14 left-3 z-10">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Banner de nombre"
         title="Banner de nombre"
-        className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+        className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
         style={{
-          background: current.visible ? "var(--color-primary)" : "var(--color-surface-elevated)",
-          border: "1px solid var(--color-border)",
+          background: current.visible ? "var(--color-primary)" : "rgba(10,10,18,0.75)",
+          border: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        <Type size={15} style={{ color: current.visible ? "#000" : "var(--color-text-muted)" }} />
+        <Type size={15} style={{ color: current.visible ? "#000" : "#fff" }} />
       </button>
 
       {open && (
         <div
-          className="absolute bottom-11 left-0 w-64 p-3 rounded-xl flex flex-col gap-2.5 backdrop-blur-md z-10"
+          className="absolute top-11 left-0 w-64 p-3 rounded-xl flex flex-col gap-2.5 backdrop-blur-md z-10"
           style={{ background: "rgba(10,10,18,0.92)", border: "1px solid rgba(255,255,255,0.1)" }}
         >
           <div className="flex flex-col gap-1">
