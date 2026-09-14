@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { LiveKitRoom } from "@/components/platikas/LiveKitRoom";
+import { UnderConstruction } from "@/components/platikas/UnderConstruction";
 import { Mic, Calendar, Radio, ArrowLeft, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -73,6 +74,10 @@ export default async function PlatikaRoomPage({ params }: Props) {
   ]);
   const currentUserId = profile?.id ?? null;
   const programaAudios: ProgramaAudio[] = audiosResult.data ?? [];
+
+  // El Estudio en Vivo se está reconstruyendo — solo administradores
+  // pueden verlo mientras tanto (ver UnderConstruction.tsx).
+  if (profile?.role !== "admin") return <UnderConstruction />;
 
   const isHost = currentUserId === p.host_id;
   // Además del anfitrión de ESTA plática: admin y moderador pueden borrar

@@ -3,6 +3,7 @@ import { Mic, Radio, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlatikaSessions, type PláticaRow } from "@/components/platikas/PlatikaSessions";
+import { UnderConstruction } from "@/components/platikas/UnderConstruction";
 
 export const metadata: Metadata = {
   title: "Estudio en Vivo — Elim LLDM",
@@ -14,9 +15,14 @@ const SESSION_SELECT =
   "id, title, description, status, scheduled_at, started_at, ended_at, thumbnail_url, radio_output_active, host_id, profiles(display_name, avatar_url)";
 
 export default async function PlatikaListPage() {
-  const supabase = await createClient();
   const profile = await getProfile();
   const isAdmin = profile?.role === "admin";
+
+  // El Estudio en Vivo se está reconstruyendo — solo administradores
+  // pueden verlo mientras tanto (ver UnderConstruction.tsx).
+  if (!isAdmin) return <UnderConstruction />;
+
+  const supabase = await createClient();
   const canManagePrograms = profile?.role === "admin" || profile?.role === "super_moderador";
 
   const [{ data: activeRaw }, { data: endedRaw }] = await Promise.all([
