@@ -45,7 +45,7 @@ export function StudioShell({
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <Link
-          href="/platikas"
+          href="/"
           className="flex items-center gap-2 shrink-0"
           style={{ color: "var(--color-text-muted)" }}
         >
