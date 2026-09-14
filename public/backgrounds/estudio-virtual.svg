@@ -63,8 +63,8 @@
   <!-- Resplandor dorado detrás del logo -->
   <circle cx="960" cy="430" r="420" fill="url(#glow)" filter="url(#blurSoft)"/>
 
-  <!-- Logo Elim LLDM -->
-  <image href="/icons/icon-512.png" x="710" y="260" width="500" height="500" preserveAspectRatio="xMidYMid meet"/>
+  <!-- Logo Elim LLDM (fondo removido) -->
+  <image href="/backgrounds/elim-logo-transparent.png" x="710" y="330" width="500" height="154" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- Texto RADIO ELIM LLDM -->
   <text x="960" y="640" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="86" font-weight="700" letter-spacing="10" fill="#D4A017">RADIO ELIM LLDM</text>
