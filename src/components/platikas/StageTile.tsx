@@ -27,10 +27,12 @@ export function StageTile({ trackRef, participant, hasVideo, isMuted, canControl
     >
       {trackRef.publication && hasVideo ? (
         <VideoTrack trackRef={trackRef} className="w-full h-full object-cover" />
-      ) : cameraOffImageUrl ? (
-        <img src={cameraOffImageUrl} alt="" className="w-full h-full object-cover" />
       ) : (
-        <img src={DEFAULT_CAMERA_OFF_IMAGE} alt="" className="w-20 h-20 object-contain opacity-80" />
+        <img
+          src={cameraOffImageUrl ?? DEFAULT_CAMERA_OFF_IMAGE}
+          alt=""
+          className="w-full h-full object-cover"
+        />
       )}
 
       {/* Participant info bar */}

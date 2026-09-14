@@ -4,7 +4,7 @@
 // (la sube/quita).
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-export const DEFAULT_CAMERA_OFF_IMAGE = "/icons/icon-512.png";
+export const DEFAULT_CAMERA_OFF_IMAGE = "/backgrounds/estudio-virtual.svg";
 
 export interface CameraOffMetadata {
   cameraOffImageUrl?: string;

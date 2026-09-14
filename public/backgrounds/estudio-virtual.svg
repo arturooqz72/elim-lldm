@@ -1,0 +1,75 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panelA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b2118"/>
+      <stop offset="100%" stop-color="#1a140e"/>
+    </linearGradient>
+    <linearGradient id="panelB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#352819"/>
+      <stop offset="100%" stop-color="#221a11"/>
+    </linearGradient>
+    <linearGradient id="ceiling" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0805"/>
+      <stop offset="100%" stop-color="#0a0805" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="deskFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a12" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a12" stop-opacity="0.95"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#D4A017" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#D4A017" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blurSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="blurStrip" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo base -->
+  <rect width="1920" height="1080" fill="#1a140e"/>
+
+  <!-- Paneles de madera verticales -->
+  <g>
+    <rect x="0"    y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="160"  y="0" width="160" height="1080" fill="url(#panelB)"/>
+    <rect x="320"  y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="480"  y="0" width="160" height="1080" fill="url(#panelB)"/>
+    <rect x="640"  y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="800"  y="0" width="160" height="1080" fill="url(#panelB)"/>
+    <rect x="960"  y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="1120" y="0" width="160" height="1080" fill="url(#panelB)"/>
+    <rect x="1280" y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="1440" y="0" width="160" height="1080" fill="url(#panelB)"/>
+    <rect x="1600" y="0" width="160" height="1080" fill="url(#panelA)"/>
+    <rect x="1760" y="0" width="160" height="1080" fill="url(#panelB)"/>
+  </g>
+
+  <!-- Tiras de luz ámbar entre paneles -->
+  <g filter="url(#blurStrip)" opacity="0.8">
+    <rect x="156"  y="40" width="8" height="1000" fill="#D4A017"/>
+    <rect x="476"  y="40" width="8" height="1000" fill="#EDB84A"/>
+    <rect x="796"  y="40" width="8" height="1000" fill="#D4A017"/>
+    <rect x="1116" y="40" width="8" height="1000" fill="#EDB84A"/>
+    <rect x="1436" y="40" width="8" height="1000" fill="#D4A017"/>
+    <rect x="1756" y="40" width="8" height="1000" fill="#EDB84A"/>
+  </g>
+
+  <!-- Techo oscuro -->
+  <rect x="0" y="0" width="1920" height="220" fill="url(#ceiling)"/>
+
+  <!-- Resplandor dorado detrás del logo -->
+  <circle cx="960" cy="430" r="420" fill="url(#glow)" filter="url(#blurSoft)"/>
+
+  <!-- Logo Elim LLDM -->
+  <image href="/icons/icon-512.png" x="710" y="260" width="500" height="500" preserveAspectRatio="xMidYMid meet"/>
+
+  <!-- Texto RADIO ELIM LLDM -->
+  <text x="960" y="640" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="86" font-weight="700" letter-spacing="10" fill="#D4A017">RADIO ELIM LLDM</text>
+  <text x="960" y="640" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="86" font-weight="700" letter-spacing="10" fill="#D4A017" opacity="0.5" filter="url(#blurSoft)">RADIO ELIM LLDM</text>
+
+  <!-- Sombra hacia el escritorio (parte inferior) -->
+  <rect x="0" y="780" width="1920" height="300" fill="url(#deskFade)"/>
+</svg>
