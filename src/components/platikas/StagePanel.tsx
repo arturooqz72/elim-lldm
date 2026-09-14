@@ -16,6 +16,7 @@ import { StudioControlBar } from "./StudioControlBar";
 import { LayoutPicker, parseStageLayout } from "./LayoutPicker";
 import { LowerThirdControl, parseLowerThird } from "./LowerThirdControl";
 import { LowerThird } from "./LowerThird";
+import { ParticipantTray } from "./ParticipantTray";
 
 interface StagePanelProps {
   platikaId: string;
@@ -162,6 +163,10 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
           <LowerThirdControl platikaId={platikaId} />
         </div>
       )}
+
+      {/* Tira de participantes — visibles aunque el layout activo (Solo,
+          Lado a lado) no los muestre en el canvas. */}
+      {isHost && <ParticipantTray tiles={cameraTiles} />}
 
       {/* Barra de controles de ancho completo — mismo patrón que la
           barra inferior de StreamYard. */}
