@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Radio } from "lucide-react";
 import { getProfile, createClient } from "@/lib/supabase/server";
-import { GoLiveProgramaButton } from "@/components/platikas/GoLiveProgramaButton";
 import type { Programa } from "@/types";
 
 export const metadata = { title: "Programas — Estudio en Vivo" };
@@ -101,7 +100,14 @@ export default async function ProgramasEnVivoPage({ searchParams }: Props) {
                   Continuar
                 </Link>
               ) : (
-                <GoLiveProgramaButton programaId={programa.id} nombre={programa.nombre} />
+                <Link
+                  href={`/platikas/programas/${programa.id}/nueva`}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0"
+                  style={{ background: "var(--color-primary)", color: "#000" }}
+                >
+                  <Radio size={14} />
+                  Ir en vivo
+                </Link>
               )}
             </div>
           );

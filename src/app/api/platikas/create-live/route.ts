@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   // El Estudio en Vivo solo transmite Programas de radio ya creados — no
-  // se permiten sesiones sueltas sin programa (ver GoLiveProgramaButton).
+  // se permiten sesiones sueltas sin programa (ver NuevaTransmisionForm).
   if (!programaId) {
     console.error(`${LOG_TAG} missing programa_id — bad request`);
     return NextResponse.json(
