@@ -92,8 +92,12 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
       style={{ border: "1px solid var(--color-border)" }}
     >
       {/* Canvas — video/pantalla compartida + overlays que sí pertenecen
-          a la imagen en sí (banner de nombre, marca de agua). */}
-      <div className="relative flex-1 min-h-0" style={{ background: "#000" }}>
+          a la imagen en sí (banner de nombre, marca de agua). overflow-
+          hidden es necesario: un StageTile con aspect-video puede pedir
+          más alto de lo que cabe (p. ej. una sola tarjeta a ancho
+          completo) y sin recortarlo aquí se derrama visualmente sobre
+          la fila de layouts y la barra de controles de abajo. */}
+      <div className="relative flex-1 min-h-0 overflow-hidden" style={{ background: "#000" }}>
         {lowerThird.visible && <LowerThird title={lowerThird.title} subtitle={lowerThird.subtitle} />}
         <img
           src="/icons/icon-512.png"
@@ -114,7 +118,7 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
         )}
 
         {screenShare && screenShare.publication ? (
-          <div className="flex flex-col gap-2 h-full p-3">
+          <div className="flex flex-col gap-2 h-full min-h-0 p-3">
             {/* Pantalla compartida (grande) */}
             <div
               className="relative rounded-xl overflow-hidden flex-1 min-h-0 flex items-center justify-center"
@@ -139,7 +143,7 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
             </div>
           </div>
         ) : (
-          <div className={`grid gap-3 p-3 h-full ${gridColsClass}`}>
+          <div className={`grid gap-3 p-3 h-full min-h-0 ${gridColsClass}`}>
             {visibleTiles.map((tile) => (
               <StageTile key={tile.id} {...tile} />
             ))}
