@@ -44,16 +44,32 @@ export function StudioGoLiveButton({ platikaId, isLive, onLiveChange }: StudioGo
 
   if (!isLive) {
     return (
-      <button
-        type="button"
-        onClick={goLive}
-        disabled={loading}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all shrink-0"
-        style={{ background: "var(--color-primary)", color: "#000" }}
-      >
-        {loading ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
-        Salir al aire
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={endPlatica}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl font-medium text-sm transition-all shrink-0"
+          style={{
+            background: "rgba(220,38,38,0.1)",
+            border: "1px solid rgba(220,38,38,0.3)",
+            color: "var(--color-destructive)",
+          }}
+        >
+          <StopCircle size={15} />
+          Terminar
+        </button>
+        <button
+          type="button"
+          onClick={goLive}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all shrink-0"
+          style={{ background: "var(--color-primary)", color: "#000" }}
+        >
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
+          Salir al aire
+        </button>
+      </div>
     );
   }
 
