@@ -21,9 +21,10 @@ interface LiveKitRoomProps {
   // debe afectar el botón de moderar del chat, no los controles de sala.
   canModerateChat: boolean;
   programaAudios?: ProgramaAudio[];
-  // false mientras la sesión está en backstage — HostControls muestra
-  // "Salir al aire" en vez del panel de radio/streaming/cola de espera.
-  initialIsLive: boolean;
+  // Controlado por StudioShell (no estado interno) — el botón "Salir
+  // al aire"/"Terminar" vive en la barra superior del estudio, fuera
+  // de este componente, y ambos necesitan ver el mismo estado.
+  isLive: boolean;
 }
 
 type TokenState =
@@ -39,10 +40,9 @@ export function LiveKitRoom({
   currentUserId,
   canModerateChat,
   programaAudios,
-  initialIsLive,
+  isLive,
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
-  const [isLive, setIsLive] = useState(initialIsLive);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -84,8 +84,6 @@ export function LiveKitRoom({
         <HostControls
           platikaId={platikaId}
           isLive={isLive}
-          onGoLive={() => setIsLive(true)}
-          onEnd={() => setIsLive(false)}
           onSpeakerApproved={handleSpeakerApproved}
           programaAudios={programaAudios}
         />

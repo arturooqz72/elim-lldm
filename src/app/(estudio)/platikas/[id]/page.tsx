@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { LiveKitRoom } from "@/components/platikas/LiveKitRoom";
+import { StudioShell } from "@/components/platikas/StudioShell";
 import { UnderConstruction } from "@/components/platikas/UnderConstruction";
-import { Mic, Calendar, Radio, ArrowLeft, Clock } from "lucide-react";
+import { Mic, Calendar, ArrowLeft, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -132,101 +132,81 @@ export default async function PlatikaRoomPage({ params }: Props) {
         } as React.CSSProperties
       }
     >
-      {/* Barra superior mínima — reemplaza el menú completo del sitio para
-          que el estudio se sienta como una aplicación propia, no una
-          página más de elimlldm.net (igual que StreamYard). */}
-      <div
-        className="flex items-center justify-between gap-3 px-4 py-2.5 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
-        <Link
-          href="/platikas"
-          className="flex items-center gap-2 shrink-0"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          <ArrowLeft size={16} />
-          <span
-            className="text-sm font-bold tracking-wide"
-            style={{ fontFamily: "var(--font-cinzel)", color: "var(--color-primary)" }}
-          >
-            Elim LLDM
-          </span>
-        </Link>
-
-        <div className="flex items-center gap-2 min-w-0">
-          {isLive && (
-            <span
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse shrink-0"
-              style={{ background: "var(--color-live)", color: "#fff" }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
-              EN VIVO
-            </span>
-          )}
-          {isBackstage && isHost && (
-            <span
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
-              style={{
-                background: "rgba(212,160,23,0.1)",
-                border: "1px solid rgba(212,160,23,0.2)",
-                color: "var(--color-primary)",
-              }}
-            >
-              <Clock size={11} />
-              BACKSTAGE
-            </span>
-          )}
-          {isLive && p.radio_output_active && (
-            <span
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
-              style={{
-                background: "rgba(96,165,250,0.1)",
-                border: "1px solid rgba(96,165,250,0.2)",
-                color: "#60A5FA",
-              }}
-            >
-              <Radio size={11} />
-              En radio
-            </span>
-          )}
-          <span
-            className="text-sm font-medium truncate"
-            style={{ color: "var(--color-text)" }}
-            title={p.title}
-          >
-            {p.title}
-          </span>
-        </div>
-      </div>
-
       {inStudio ? (
-        <div className="flex-1 min-h-0 p-3">
-          <LiveKitRoom
-            platikaId={id}
-            roomName={p.livekit_room_name!}
-            isHost={isHost}
-            isSpeaker={isSpeaker}
-            currentUserId={currentUserId}
-            canModerateChat={canModerateChat}
-            programaAudios={programaAudios}
-            initialIsLive={isLive}
-          />
-        </div>
+        <StudioShell
+          platikaId={id}
+          roomName={p.livekit_room_name!}
+          title={p.title}
+          isHost={isHost}
+          isSpeaker={isSpeaker}
+          currentUserId={currentUserId}
+          canModerateChat={canModerateChat}
+          programaAudios={programaAudios}
+          initialIsLive={isLive}
+          radioActive={p.radio_output_active}
+        />
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-4">
-          {isBackstage ? (
-            <BackstageBlockedState />
-          ) : isScheduled ? (
-            <ScheduledState
-              title={p.title}
-              description={p.description}
-              scheduledAt={p.scheduled_at}
-              hostName={p.profiles?.display_name ?? "Anfitrión"}
-            />
-          ) : isEnded ? (
-            <EndedState recordingUrl={p.recording_url} title={p.title} />
-          ) : null}
-        </div>
+        <>
+          {/* Barra superior mínima — reemplaza el menú completo del sitio
+              para que el estudio se sienta como una aplicación propia, no
+              una página más de elimlldm.net. */}
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 shrink-0"
+            style={{ borderBottom: "1px solid var(--color-border)" }}
+          >
+            <Link
+              href="/platikas"
+              className="flex items-center gap-2 shrink-0"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              <ArrowLeft size={16} />
+              <span
+                className="text-sm font-bold tracking-wide"
+                style={{ fontFamily: "var(--font-cinzel)", color: "var(--color-primary)" }}
+              >
+                Elim LLDM
+              </span>
+            </Link>
+
+            <div className="flex items-center gap-2 min-w-0">
+              {isBackstage && isHost && (
+                <span
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+                  style={{
+                    background: "rgba(212,160,23,0.1)",
+                    border: "1px solid rgba(212,160,23,0.2)",
+                    color: "var(--color-primary)",
+                  }}
+                >
+                  <Clock size={11} />
+                  BACKSTAGE
+                </span>
+              )}
+              <span
+                className="text-sm font-medium truncate"
+                style={{ color: "var(--color-text)" }}
+                title={p.title}
+              >
+                {p.title}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-4">
+            {isBackstage ? (
+              <BackstageBlockedState />
+            ) : isScheduled ? (
+              <ScheduledState
+                title={p.title}
+                description={p.description}
+                scheduledAt={p.scheduled_at}
+                hostName={p.profiles?.display_name ?? "Anfitrión"}
+              />
+            ) : isEnded ? (
+              <EndedState recordingUrl={p.recording_url} title={p.title} />
+            ) : null}
+          </div>
+        </>
       )}
     </div>
   );
