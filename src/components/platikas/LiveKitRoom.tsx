@@ -6,7 +6,11 @@ import { Loader2, AlertCircle, Mic, PanelRightClose, PanelRightOpen } from "luci
 import { StagePanel } from "./StagePanel";
 import { ChatPanel } from "./ChatPanel";
 import { HostControls } from "./HostControls";
+import { DestinationsPanel } from "./DestinationsPanel";
+import { SpeakerControls } from "./SpeakerControls";
+import { RequestQueue } from "./RequestQueue";
 import { RequestButton } from "./RequestButton";
+import { StudioSidebar } from "./StudioSidebar";
 import type { ProgramaAudio } from "@/types";
 
 interface LiveKitRoomProps {
@@ -78,19 +82,8 @@ export function LiveKitRoom({
 
   const defaultLkUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "";
 
-  const sidebar = (
-    <div className="flex flex-col gap-3 h-full">
-      {isHost && (
-        <HostControls
-          platikaId={platikaId}
-          isLive={isLive}
-          onGoLive={() => setIsLive(true)}
-          onEnd={() => setIsLive(false)}
-          onSpeakerApproved={handleSpeakerApproved}
-          programaAudios={programaAudios}
-        />
-      )}
-
+  const chatContent = (
+    <>
       <div className="flex-1 min-h-0">
         <ChatPanel
           platikaId={platikaId}
@@ -98,11 +91,37 @@ export function LiveKitRoom({
           canModerate={canModerateChat}
         />
       </div>
-
       {currentUserId && !isHost && !isSpeaker && (
         <RequestButton platikaId={platikaId} currentUserId={currentUserId} />
       )}
-    </div>
+    </>
+  );
+
+  const sidebar = (
+    <StudioSidebar
+      isHost={isHost}
+      chatContent={chatContent}
+      controlesContent={
+        <HostControls
+          platikaId={platikaId}
+          isLive={isLive}
+          onGoLive={() => setIsLive(true)}
+          onEnd={() => setIsLive(false)}
+          programaAudios={programaAudios}
+        />
+      }
+      destinosContent={isLive ? <DestinationsPanel platikaId={platikaId} /> : <NotLiveYet />}
+      invitadosContent={
+        isLive ? (
+          <>
+            <SpeakerControls platikaId={platikaId} />
+            <RequestQueue platikaId={platikaId} onApprove={handleSpeakerApproved} />
+          </>
+        ) : (
+          <NotLiveYet />
+        )
+      }
+    />
   );
 
   // Unauthenticated viewer: show login prompt + chat in read-only mode
@@ -255,10 +274,21 @@ function RoomLayout({
         </button>
       </div>
       {sidebarOpen && (
-        <div className="w-full lg:w-80 shrink-0 flex flex-col lg:h-full lg:max-h-full overflow-y-auto" style={{ maxHeight: "80vh" }}>
+        <div className="w-full lg:w-96 shrink-0 flex flex-col lg:h-full lg:max-h-full overflow-hidden" style={{ maxHeight: "80vh" }}>
           {sidebar}
         </div>
       )}
+    </div>
+  );
+}
+
+function NotLiveYet() {
+  return (
+    <div
+      className="flex-1 flex items-center justify-center text-center p-6 rounded-2xl text-sm"
+      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
+    >
+      Disponible al salir al aire.
     </div>
   );
 }
