@@ -10,7 +10,7 @@ interface LayoutPickerProps {
   platikaId: string;
 }
 
-const LAYOUTS: {
+export const LAYOUTS: {
   value: StageLayout;
   label: string;
   icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;

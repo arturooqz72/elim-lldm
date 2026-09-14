@@ -153,13 +153,19 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
       </div>
 
       {/* Fila de layout + banner de nombre — debajo del canvas, no como
-          overlay — mismo patrón que la fila de layouts de StreamYard. */}
+          overlay — mismo patrón que la fila de layouts de StreamYard.
+          El selector de layout se oculta en pantallas grandes porque
+          ahí ya está el panel de Escenas a la izquierda (ScenesPanel);
+          en móvil, donde ese panel no cabe, sigue siendo la única
+          forma de cambiar de layout. */}
       {isHost && (
         <div
           className="flex items-center gap-2 px-3 py-2 shrink-0"
           style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}
         >
-          <LayoutPicker platikaId={platikaId} />
+          <div className="lg:hidden">
+            <LayoutPicker platikaId={platikaId} />
+          </div>
           <LowerThirdControl platikaId={platikaId} />
         </div>
       )}

@@ -11,6 +11,7 @@ import { SpeakerControls } from "./SpeakerControls";
 import { RequestQueue } from "./RequestQueue";
 import { RequestButton } from "./RequestButton";
 import { StudioSidebar } from "./StudioSidebar";
+import { ScenesPanel } from "./ScenesPanel";
 import type { ProgramaAudio } from "@/types";
 
 interface LiveKitRoomProps {
@@ -229,6 +230,7 @@ export function LiveKitRoom({
       className="contents"
     >
       <RoomLayout
+        scenes={isHost ? <ScenesPanel platikaId={platikaId} /> : undefined}
         stage={<StagePanel platikaId={platikaId} isHost={isHost} isSpeaker={isSpeaker} />}
         sidebar={sidebar}
         sidebarOpen={sidebarOpen}
@@ -239,11 +241,13 @@ export function LiveKitRoom({
 }
 
 function RoomLayout({
+  scenes,
   stage,
   sidebar,
   sidebarOpen,
   onToggleSidebar,
 }: {
+  scenes?: React.ReactNode;
   stage: React.ReactNode;
   sidebar: React.ReactNode;
   sidebarOpen: boolean;
@@ -251,6 +255,7 @@ function RoomLayout({
 }) {
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-full min-h-0" style={{ minHeight: "min(680px, 100%)" }}>
+      {scenes}
       <div className="relative flex-1 min-h-64 lg:min-h-0">
         {stage}
         <button
