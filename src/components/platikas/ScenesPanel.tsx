@@ -10,6 +10,43 @@ interface ScenesPanelProps {
   platikaId: string;
 }
 
+// Mini-diagrama de bloques por layout en vez de un ícono genérico —
+// para que cada miniatura se lea como una vista previa real de cómo
+// queda el escenario, no solo un glifo abstracto (mismo espíritu que
+// las miniaturas de Scenes de StreamYard).
+function SceneThumbnail({ layout, color }: { layout: StageLayout; color: string }) {
+  const block = <div className="rounded-[3px]" style={{ background: color }} />;
+
+  if (layout === "solo") {
+    return <div className="w-3/5 h-3/5">{block}</div>;
+  }
+  if (layout === "lado_a_lado") {
+    return (
+      <div className="w-4/5 h-3/5 grid grid-cols-2 gap-1">
+        {block}
+        {block}
+      </div>
+    );
+  }
+  if (layout === "pantalla") {
+    return (
+      <div className="relative w-4/5 h-3/5">
+        {block}
+        <div className="absolute bottom-0 right-0 w-1/3 h-1/2 translate-x-1/4 translate-y-1/4">{block}</div>
+      </div>
+    );
+  }
+  // grid
+  return (
+    <div className="w-4/5 h-3/5 grid grid-cols-2 grid-rows-2 gap-1">
+      {block}
+      {block}
+      {block}
+      {block}
+    </div>
+  );
+}
+
 // Columna de "Escenas" a la izquierda del escenario — mismo lugar
 // visual que el panel de Scenes de StreamYard. Cada "escena" acá es en
 // realidad uno de los layouts existentes (no tenemos fondos/overlays
@@ -50,7 +87,7 @@ export function ScenesPanel({ platikaId }: ScenesPanelProps) {
         Escenas
       </p>
       <div className="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-2">
-        {LAYOUTS.map(({ value, label, icon: Icon }) => {
+        {LAYOUTS.map(({ value, label }) => {
           const active = currentLayout === value;
           return (
             <button
@@ -68,7 +105,7 @@ export function ScenesPanel({ platikaId }: ScenesPanelProps) {
                 className="relative w-full aspect-video rounded-lg flex items-center justify-center"
                 style={{ background: "#000" }}
               >
-                <Icon size={20} style={{ color: active ? "var(--color-primary)" : "var(--color-text-muted)" }} />
+                <SceneThumbnail layout={value} color={active ? "var(--color-primary)" : "var(--color-text-muted)"} />
                 {active && (
                   <div
                     className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center"

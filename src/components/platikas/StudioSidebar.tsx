@@ -53,7 +53,7 @@ export function StudioSidebar({
       </div>
 
       <div
-        className="flex flex-col items-center gap-1.5 py-3 px-1.5 shrink-0 rounded-2xl"
+        className="flex flex-col items-center gap-1 py-3 px-1.5 shrink-0 rounded-2xl w-16"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         {tabs.map(({ key, label, icon: Icon }) => {
@@ -65,13 +65,14 @@ export function StudioSidebar({
               onClick={() => setTab(key)}
               title={label}
               aria-label={label}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+              className="w-full py-2 rounded-xl flex flex-col items-center gap-1 transition-colors"
               style={{
                 background: active ? "rgba(212,160,23,0.15)" : "transparent",
                 color: active ? "var(--color-primary)" : "var(--color-text-muted)",
               }}
             >
-              <Icon size={18} />
+              <Icon size={17} />
+              <span className="text-[9px] font-medium leading-none">{label}</span>
             </button>
           );
         })}

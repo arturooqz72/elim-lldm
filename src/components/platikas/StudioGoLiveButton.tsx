@@ -47,10 +47,10 @@ export function StudioGoLiveButton({ platikaId, isLive, onLiveChange }: StudioGo
         type="button"
         onClick={goLive}
         disabled={loading}
-        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-semibold text-xs transition-all shrink-0"
+        className="flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition-all shrink-0"
         style={{ background: "var(--color-primary)", color: "#000" }}
       >
-        {loading ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
+        {loading ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
         Salir al aire
       </button>
     );
@@ -61,14 +61,14 @@ export function StudioGoLiveButton({ platikaId, isLive, onLiveChange }: StudioGo
       type="button"
       onClick={endPlatica}
       disabled={loading}
-      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-semibold text-xs transition-all shrink-0"
+      className="flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition-all shrink-0"
       style={{
         background: "rgba(248,113,113,0.15)",
         border: "1px solid rgba(248,113,113,0.3)",
         color: "var(--color-destructive)",
       }}
     >
-      {loading ? <Loader2 size={13} className="animate-spin" /> : <StopCircle size={13} />}
+      {loading ? <Loader2 size={15} className="animate-spin" /> : <StopCircle size={15} />}
       Terminar
     </button>
   );
