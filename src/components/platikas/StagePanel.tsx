@@ -87,59 +87,83 @@ export function StagePanel({ platikaId, isHost, isSpeaker }: StagePanelProps) {
   }
 
   return (
-    <div className="relative flex flex-col gap-3 h-full">
-      {(isHost || isSpeaker) && <StudioControlBar />}
-      {isHost && <LayoutPicker platikaId={platikaId} />}
-      {isHost && <LowerThirdControl platikaId={platikaId} />}
-      {lowerThird.visible && <LowerThird title={lowerThird.title} subtitle={lowerThird.subtitle} />}
-      <img
-        src="/icons/icon-512.png"
-        alt=""
-        className="absolute bottom-3 right-3 z-10 w-8 h-8 rounded-md opacity-60 pointer-events-none"
-      />
+    <div
+      className="flex flex-col h-full min-h-0 rounded-2xl overflow-hidden"
+      style={{ border: "1px solid var(--color-border)" }}
+    >
+      {/* Canvas — video/pantalla compartida + overlays que sí pertenecen
+          a la imagen en sí (banner de nombre, marca de agua). */}
+      <div className="relative flex-1 min-h-0" style={{ background: "#000" }}>
+        {lowerThird.visible && <LowerThird title={lowerThird.title} subtitle={lowerThird.subtitle} />}
+        <img
+          src="/icons/icon-512.png"
+          alt=""
+          className="absolute bottom-3 right-3 z-10 w-8 h-8 rounded-md opacity-60 pointer-events-none"
+        />
 
-      {/* Audio renderer for all participants */}
-      {audioTracks.map((trackRef) =>
-        trackRef.publication ? (
-          <AudioTrack key={trackRef.participant.sid + "-audio"} trackRef={trackRef} className="hidden" />
-        ) : null
-      )}
-      {screenAudioTracks.map((trackRef) =>
-        trackRef.publication ? (
-          <AudioTrack key={trackRef.participant.sid + "-screen-audio"} trackRef={trackRef} className="hidden" />
-        ) : null
-      )}
+        {/* Audio renderer for all participants */}
+        {audioTracks.map((trackRef) =>
+          trackRef.publication ? (
+            <AudioTrack key={trackRef.participant.sid + "-audio"} trackRef={trackRef} className="hidden" />
+          ) : null
+        )}
+        {screenAudioTracks.map((trackRef) =>
+          trackRef.publication ? (
+            <AudioTrack key={trackRef.participant.sid + "-screen-audio"} trackRef={trackRef} className="hidden" />
+          ) : null
+        )}
 
-      {screenShare && screenShare.publication ? (
-        <>
-          {/* Pantalla compartida (grande) */}
-          <div
-            className="relative rounded-xl overflow-hidden flex-1 min-h-0 flex items-center justify-center"
-            style={{ background: "#000", border: "1px solid var(--color-border)" }}
-          >
-            <VideoTrack trackRef={{ ...screenShare, publication: screenShare.publication }} className="w-full h-full object-contain" />
+        {screenShare && screenShare.publication ? (
+          <div className="flex flex-col gap-2 h-full p-3">
+            {/* Pantalla compartida (grande) */}
             <div
-              className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold backdrop-blur-sm"
-              style={{ background: "rgba(10,10,18,0.75)", color: "var(--color-text)" }}
+              className="relative rounded-xl overflow-hidden flex-1 min-h-0 flex items-center justify-center"
+              style={{ background: "#000", border: "1px solid var(--color-border)" }}
             >
-              <ParticipantName participant={screenShare.participant} /> está compartiendo pantalla
+              <VideoTrack trackRef={{ ...screenShare, publication: screenShare.publication }} className="w-full h-full object-contain" />
+              <div
+                className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold backdrop-blur-sm"
+                style={{ background: "rgba(10,10,18,0.75)", color: "var(--color-text)" }}
+              >
+                <ParticipantName participant={screenShare.participant} /> está compartiendo pantalla
+              </div>
+            </div>
+
+            {/* Cámaras (miniaturas) */}
+            <div className="flex gap-2 shrink-0 overflow-x-auto" style={{ height: "88px" }}>
+              {cameraTiles.map((tile) => (
+                <div key={tile.id} className="w-32 h-full shrink-0">
+                  <StageTile {...tile} />
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Cámaras (miniaturas) */}
-          <div className="flex gap-2 shrink-0 overflow-x-auto" style={{ height: "88px" }}>
-            {cameraTiles.map((tile) => (
-              <div key={tile.id} className="w-32 h-full shrink-0">
-                <StageTile {...tile} />
-              </div>
+        ) : (
+          <div className={`grid gap-3 p-3 h-full ${gridColsClass}`}>
+            {visibleTiles.map((tile) => (
+              <StageTile key={tile.id} {...tile} />
             ))}
           </div>
-        </>
-      ) : (
-        <div className={`grid gap-3 flex-1 ${gridColsClass}`}>
-          {visibleTiles.map((tile) => (
-            <StageTile key={tile.id} {...tile} />
-          ))}
+        )}
+      </div>
+
+      {/* Fila de layout + banner de nombre — debajo del canvas, no como
+          overlay — mismo patrón que la fila de layouts de StreamYard. */}
+      {isHost && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 shrink-0"
+          style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}
+        >
+          <LayoutPicker platikaId={platikaId} />
+          <LowerThirdControl platikaId={platikaId} />
+        </div>
+      )}
+
+      {/* Barra de controles de ancho completo — mismo patrón que la
+          barra inferior de StreamYard. */}
+      {(isHost || isSpeaker) && (
+        <div className="shrink-0" style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+          <StudioControlBar />
         </div>
       )}
     </div>

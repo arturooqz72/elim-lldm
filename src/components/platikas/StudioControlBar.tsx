@@ -25,10 +25,12 @@ import {
   type CameraOffMetadata,
 } from "@/lib/livekit/camera-off-image";
 
-// Barra de controles flotante del anfitrión/orador — mic, cámara y
-// pantalla compartida en un solo lugar, independiente de en qué
-// posición de la cuadrícula caiga su propio video (antes vivían
-// amontonados en la esquina del tile local, ver StageTile.tsx).
+// Barra de controles del anfitrión/orador — mic, cámara y pantalla
+// compartida en un solo lugar, independiente de en qué posición de la
+// cuadrícula caiga su propio video (antes vivían amontonados en la
+// esquina del tile local, ver StageTile.tsx). Ocupa el ancho completo
+// del escenario, debajo del canvas — mismo patrón que la barra
+// inferior de StreamYard (antes era un pill flotante centrado).
 export function StudioControlBar() {
   const { localParticipant, isCameraEnabled, isScreenShareEnabled, microphoneTrack } =
     useLocalParticipant();
@@ -172,7 +174,7 @@ export function StudioControlBar() {
   const hasVideo = isCameraEnabled;
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+    <div className="relative flex items-center justify-center gap-2 w-full py-3 px-3 shrink-0">
       <input
         ref={fileInputRef}
         type="file"
