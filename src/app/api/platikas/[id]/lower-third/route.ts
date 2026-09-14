@@ -19,7 +19,9 @@ export async function POST(
     .single();
 
   if (!pláticas) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (pláticas.status !== "live") {
+  // Igual que /layout: el anfitrión debe poder dejar listo el banner
+  // de nombre desde backstage, no solo una vez en vivo.
+  if (pláticas.status !== "live" && pláticas.status !== "backstage") {
     return NextResponse.json({ error: "Pláticas not live" }, { status: 400 });
   }
 

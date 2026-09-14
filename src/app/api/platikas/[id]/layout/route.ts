@@ -23,7 +23,11 @@ export async function POST(
     .single();
 
   if (!pláticas) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (pláticas.status !== "live") {
+  // El anfitrión ya prueba mic y cámara en backstage antes de salir al
+  // aire — debe poder probar/dejar listo el layout ahí también, no
+  // solo una vez en vivo (antes esto bloqueaba con 400 en backstage,
+  // dejando el panel de Escenas sin responder durante toda la prueba).
+  if (pláticas.status !== "live" && pláticas.status !== "backstage") {
     return NextResponse.json({ error: "Pláticas not live" }, { status: 400 });
   }
 
