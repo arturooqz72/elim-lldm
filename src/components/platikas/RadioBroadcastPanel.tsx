@@ -487,6 +487,19 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
             {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
             {status === "connecting" ? "Conectando…" : "Salir al aire a la radio"}
           </button>
+          <SaludosEnVivoSection
+            saludos={saludos}
+            activeSaludoId={activeSaludoId}
+            saludoLoading={saludoLoading}
+            saludoPlaying={saludoPlaying}
+            saludoVolume={saludoVolume}
+            linkCopied={linkCopied}
+            canPlay={false}
+            onCopyLink={copyLiveGreetingLink}
+            onToggle={toggleSaludo}
+            onStop={stopSaludo}
+            onVolumeChange={changeSaludoVolume}
+          />
         </div>
       );
     }
@@ -494,6 +507,19 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     return (
       <div className="flex flex-col gap-2">
         <MicSoundcheck track={localMicTrack} volume={micVolume} onVolumeChange={setMicVolume} />
+        <SaludosEnVivoSection
+          saludos={saludos}
+          activeSaludoId={activeSaludoId}
+          saludoLoading={saludoLoading}
+          saludoPlaying={saludoPlaying}
+          saludoVolume={saludoVolume}
+          linkCopied={linkCopied}
+          canPlay={false}
+          onCopyLink={copyLiveGreetingLink}
+          onToggle={toggleSaludo}
+          onStop={stopSaludo}
+          onVolumeChange={changeSaludoVolume}
+        />
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
           Elige tu intro
         </p>
@@ -796,91 +822,19 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
-        <div className="flex items-center justify-between pt-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-            Saludos en vivo
-          </p>
-          <button
-            type="button"
-            onClick={copyLiveGreetingLink}
-            className="flex items-center gap-1 text-[10px] font-medium"
-            style={{ color: "var(--color-primary)" }}
-            title="Copiar link para compartir por WhatsApp"
-          >
-            {linkCopied ? <Check size={11} /> : <Copy size={11} />}
-            {linkCopied ? "¡Copiado!" : "Copiar link"}
-          </button>
-        </div>
-
-        {saludos.length === 0 ? (
-          <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
-            Comparte el link por WhatsApp — los saludos que dejen aparecerán aquí solos.
-          </p>
-        ) : (
-          saludos.map((saludo) => {
-            const isActive = activeSaludoId === saludo.id;
-            const isLoadingThis = isActive && saludoLoading;
-            const isPlayingThis = isActive && saludoPlaying;
-            return (
-              <div key={saludo.id} className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => void toggleSaludo(saludo)}
-                  disabled={(saludoLoading && !isActive) || !saludo.signedUrl}
-                  className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left min-w-0"
-                  style={{
-                    background: isActive ? "rgba(212,160,23,0.15)" : "var(--color-surface)",
-                    border: `1px solid ${isActive ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
-                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
-                    opacity: saludoLoading && !isActive ? 0.5 : 1,
-                  }}
-                >
-                  {isLoadingThis ? (
-                    <Loader2 size={11} className="shrink-0 animate-spin" />
-                  ) : isPlayingThis ? (
-                    <Pause size={11} className="shrink-0" />
-                  ) : (
-                    <MessageCircleHeart size={11} className="shrink-0" style={{ color: saludo.played_at ? "var(--color-text-muted)" : "var(--color-primary)" }} />
-                  )}
-                  <span className="truncate">{saludo.nombre}</span>
-                </button>
-                {isActive && (
-                  <button
-                    type="button"
-                    onClick={stopSaludo}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
-                    aria-label="Detener"
-                    title="Detener"
-                  >
-                    <Square size={10} style={{ color: "var(--color-text-muted)" }} />
-                  </button>
-                )}
-              </div>
-            );
-          })
-        )}
-        {activeSaludoId && (
-          <div className="flex items-center gap-2 px-0.5 pt-1">
-            <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={saludoVolume}
-              onChange={(e) => changeSaludoVolume(Number(e.target.value))}
-              className="flex-1 h-1"
-              style={{ accentColor: "var(--color-primary)" }}
-              aria-label="Volumen del saludo"
-            />
-            <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
-              {Math.round(saludoVolume * 100)}%
-            </span>
-          </div>
-        )}
-      </div>
+      <SaludosEnVivoSection
+        saludos={saludos}
+        activeSaludoId={activeSaludoId}
+        saludoLoading={saludoLoading}
+        saludoPlaying={saludoPlaying}
+        saludoVolume={saludoVolume}
+        linkCopied={linkCopied}
+        canPlay
+        onCopyLink={copyLiveGreetingLink}
+        onToggle={toggleSaludo}
+        onStop={stopSaludo}
+        onVolumeChange={changeSaludoVolume}
+      />
 
       {errorMsg && (
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
@@ -939,6 +893,136 @@ function MicSoundcheck({
         <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
           Activa tu micrófono en los controles de abajo para probar el sonido antes de salir al aire a la radio.
         </p>
+      )}
+    </div>
+  );
+}
+
+// Cola de saludos de esta transmisión — visible siempre (backstage
+// incluido), no solo una vez conectado a la radio, para que el
+// anfitrión vea desde antes lo que ya le fueron dejando. Reproducir
+// (canPlay) solo es posible una vez conectado, porque necesita el
+// mixer de audio que arranca con la conexión al bridge.
+function SaludosEnVivoSection({
+  saludos,
+  activeSaludoId,
+  saludoLoading,
+  saludoPlaying,
+  saludoVolume,
+  linkCopied,
+  canPlay,
+  onCopyLink,
+  onToggle,
+  onStop,
+  onVolumeChange,
+}: {
+  saludos: SaludoEnVivo[];
+  activeSaludoId: string | null;
+  saludoLoading: boolean;
+  saludoPlaying: boolean;
+  saludoVolume: number;
+  linkCopied: boolean;
+  canPlay: boolean;
+  onCopyLink: () => void;
+  onToggle: (saludo: SaludoEnVivo) => void;
+  onStop: () => void;
+  onVolumeChange: (volume: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+          Saludos en vivo
+        </p>
+        <button
+          type="button"
+          onClick={onCopyLink}
+          className="flex items-center gap-1 text-[10px] font-medium"
+          style={{ color: "var(--color-primary)" }}
+          title="Copiar link para compartir por WhatsApp"
+        >
+          {linkCopied ? <Check size={11} /> : <Copy size={11} />}
+          {linkCopied ? "¡Copiado!" : "Copiar link"}
+        </button>
+      </div>
+
+      {saludos.length === 0 ? (
+        <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+          Comparte el link por WhatsApp — los saludos que dejen aparecerán aquí solos.
+        </p>
+      ) : (
+        <>
+          {!canPlay && (
+            <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+              Conéctate a la radio para reproducirlos al aire.
+            </p>
+          )}
+          {saludos.map((saludo) => {
+            const isActive = canPlay && activeSaludoId === saludo.id;
+            const isLoadingThis = isActive && saludoLoading;
+            const isPlayingThis = isActive && saludoPlaying;
+            return (
+              <div key={saludo.id} className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onToggle(saludo)}
+                  disabled={!canPlay || (saludoLoading && !isActive) || !saludo.signedUrl}
+                  className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left min-w-0"
+                  style={{
+                    background: isActive ? "rgba(212,160,23,0.15)" : "var(--color-surface)",
+                    border: `1px solid ${isActive ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
+                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
+                    opacity: !canPlay ? 0.6 : saludoLoading && !isActive ? 0.5 : 1,
+                  }}
+                >
+                  {isLoadingThis ? (
+                    <Loader2 size={11} className="shrink-0 animate-spin" />
+                  ) : isPlayingThis ? (
+                    <Pause size={11} className="shrink-0" />
+                  ) : (
+                    <MessageCircleHeart
+                      size={11}
+                      className="shrink-0"
+                      style={{ color: saludo.played_at ? "var(--color-text-muted)" : "var(--color-primary)" }}
+                    />
+                  )}
+                  <span className="truncate">{saludo.nombre}</span>
+                </button>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={onStop}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+                    aria-label="Detener"
+                    title="Detener"
+                  >
+                    <Square size={10} style={{ color: "var(--color-text-muted)" }} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+      {canPlay && activeSaludoId && (
+        <div className="flex items-center gap-2 px-0.5 pt-1">
+          <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={saludoVolume}
+            onChange={(e) => onVolumeChange(Number(e.target.value))}
+            className="flex-1 h-1"
+            style={{ accentColor: "var(--color-primary)" }}
+            aria-label="Volumen del saludo"
+          />
+          <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+            {Math.round(saludoVolume * 100)}%
+          </span>
+        </div>
       )}
     </div>
   );
