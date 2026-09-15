@@ -37,6 +37,8 @@ export interface Saludo {
   audio_path: string;
   duration_seconds: number;
   contacto: string | null;
+  platika_id: string | null;
+  played_at: string | null;
   created_at: string;
 }
 

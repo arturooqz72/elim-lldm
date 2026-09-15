@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMaybeRoomContext, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, Pause, Volume2 } from "lucide-react";
+import { Radio, Mic, Users, MonitorSpeaker, Loader2, AlertCircle, Square, Play, Pause, Volume2, Copy, Check, MessageCircleHeart } from "lucide-react";
 import {
   AudioMixer,
   captureTabAudio,
@@ -13,7 +13,11 @@ import {
 } from "@/lib/radio-broadcast";
 import { createClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
-import type { ProgramaAudio } from "@/types";
+import type { ProgramaAudio, Saludo } from "@/types";
+
+interface SaludoEnVivo extends Saludo {
+  signedUrl: string | null;
+}
 
 type Status = "idle" | "connecting" | "live" | "error";
 
@@ -67,6 +71,18 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [bgMusicVolume, setBgMusicVolume] = useState(0.4);
   const bgMusicRef = useRef<LiveClip | null>(null);
 
+  // Saludos que la gente deja en vivo por /platikas/[id]/saludo (compartido
+  // por WhatsApp) mientras esta transmisión está activa — llegan por
+  // Realtime y se reproducen igual que un clip del banco de audios, pero en
+  // su propio slot independiente.
+  const [saludos, setSaludos] = useState<SaludoEnVivo[]>([]);
+  const [activeSaludoId, setActiveSaludoId] = useState<string | null>(null);
+  const [saludoPlaying, setSaludoPlaying] = useState(false);
+  const [saludoLoading, setSaludoLoading] = useState(false);
+  const [saludoVolume, setSaludoVolume] = useState(1);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const activeSaludoRef = useRef<LiveClip | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const mixerRef = useRef<AudioMixer | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -83,6 +99,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     liveClipRef.current = null;
     bgMusicRef.current?.disconnect();
     bgMusicRef.current = null;
+    activeSaludoRef.current?.disconnect();
+    activeSaludoRef.current = null;
     mixerRef.current?.close();
     mixerRef.current = null;
     pcTrackRef.current?.stop();
@@ -93,6 +111,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     setLiveAudioId(null);
     setLiveClipPlaying(false);
     setBgMusicPlaying(false);
+    setActiveSaludoId(null);
+    setSaludoPlaying(false);
 
     const supabase = createClient();
     void supabase.from("platikas").update({ radio_output_active: false }).eq("id", platikaId);
@@ -126,6 +146,120 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [micTracks, micOn, roomOn, micVolume, status]);
+
+  // Carga los saludos ya dejados para esta transmisión y se suscribe a los
+  // nuevos por Realtime, para que aparezcan en la cola sin recargar la
+  // página mientras alguien los va dejando desde /platikas/[id]/saludo.
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function signAndAdd(row: Saludo) {
+      const { data } = await supabase.storage.from("saludos").createSignedUrl(row.audio_path, 3600);
+      if (cancelled) return;
+      setSaludos((prev) => {
+        if (prev.some((s) => s.id === row.id)) return prev;
+        return [...prev, { ...row, signedUrl: data?.signedUrl ?? null }];
+      });
+    }
+
+    async function loadInitial() {
+      const { data } = await supabase
+        .from("saludos")
+        .select("*")
+        .eq("platika_id", platikaId)
+        .order("created_at", { ascending: true });
+      if (cancelled || !data) return;
+      const withUrls = await Promise.all(
+        (data as Saludo[]).map(async (row) => {
+          const { data: signed } = await supabase.storage.from("saludos").createSignedUrl(row.audio_path, 3600);
+          return { ...row, signedUrl: signed?.signedUrl ?? null };
+        })
+      );
+      if (!cancelled) setSaludos(withUrls);
+    }
+
+    void loadInitial();
+
+    const channel = supabase
+      .channel(`saludos-en-vivo-${platikaId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "saludos", filter: `platika_id=eq.${platikaId}` },
+        (payload) => void signAndAdd(payload.new as Saludo)
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [platikaId]);
+
+  async function markSaludoPlayed(id: string) {
+    const supabase = createClient();
+    const playedAt = new Date().toISOString();
+    setSaludos((prev) => prev.map((s) => (s.id === id ? { ...s, played_at: playedAt } : s)));
+    await supabase.from("saludos").update({ played_at: playedAt }).eq("id", id);
+  }
+
+  async function toggleSaludo(item: SaludoEnVivo) {
+    const mixer = mixerRef.current;
+    if (!mixer || !item.signedUrl) return;
+
+    if (activeSaludoId === item.id && activeSaludoRef.current) {
+      const clip = activeSaludoRef.current;
+      if (clip.isPlaying) {
+        clip.pause();
+        setSaludoPlaying(false);
+      } else {
+        clip.play();
+        setSaludoPlaying(true);
+      }
+      return;
+    }
+
+    activeSaludoRef.current?.disconnect();
+    activeSaludoRef.current = null;
+    setActiveSaludoId(item.id);
+    setSaludoPlaying(false);
+    setSaludoLoading(true);
+    setSaludoVolume(1);
+    try {
+      const clip = await mixer.loadClip(item.signedUrl);
+      clip.setVolume(1);
+      clip.onEnded = () => setSaludoPlaying(false);
+      clip.play();
+      activeSaludoRef.current = clip;
+      setSaludoPlaying(true);
+      if (!item.played_at) void markSaludoPlayed(item.id);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "No se pudo cargar el saludo");
+      setActiveSaludoId(null);
+    } finally {
+      setSaludoLoading(false);
+    }
+  }
+
+  function stopSaludo() {
+    activeSaludoRef.current?.disconnect();
+    activeSaludoRef.current = null;
+    setActiveSaludoId(null);
+    setSaludoPlaying(false);
+  }
+
+  function changeSaludoVolume(volume: number) {
+    setSaludoVolume(volume);
+    activeSaludoRef.current?.setVolume(volume);
+  }
+
+  function copyLiveGreetingLink() {
+    const url = `${window.location.origin}/platikas/${platikaId}/saludo`;
+    void navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  }
 
   async function startBroadcast() {
     setStatus("connecting");
@@ -661,6 +795,92 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           )}
         </div>
       )}
+
+      <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            Saludos en vivo
+          </p>
+          <button
+            type="button"
+            onClick={copyLiveGreetingLink}
+            className="flex items-center gap-1 text-[10px] font-medium"
+            style={{ color: "var(--color-primary)" }}
+            title="Copiar link para compartir por WhatsApp"
+          >
+            {linkCopied ? <Check size={11} /> : <Copy size={11} />}
+            {linkCopied ? "¡Copiado!" : "Copiar link"}
+          </button>
+        </div>
+
+        {saludos.length === 0 ? (
+          <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+            Comparte el link por WhatsApp — los saludos que dejen aparecerán aquí solos.
+          </p>
+        ) : (
+          saludos.map((saludo) => {
+            const isActive = activeSaludoId === saludo.id;
+            const isLoadingThis = isActive && saludoLoading;
+            const isPlayingThis = isActive && saludoPlaying;
+            return (
+              <div key={saludo.id} className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void toggleSaludo(saludo)}
+                  disabled={(saludoLoading && !isActive) || !saludo.signedUrl}
+                  className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left min-w-0"
+                  style={{
+                    background: isActive ? "rgba(212,160,23,0.15)" : "var(--color-surface)",
+                    border: `1px solid ${isActive ? "rgba(212,160,23,0.4)" : "var(--color-border)"}`,
+                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
+                    opacity: saludoLoading && !isActive ? 0.5 : 1,
+                  }}
+                >
+                  {isLoadingThis ? (
+                    <Loader2 size={11} className="shrink-0 animate-spin" />
+                  ) : isPlayingThis ? (
+                    <Pause size={11} className="shrink-0" />
+                  ) : (
+                    <MessageCircleHeart size={11} className="shrink-0" style={{ color: saludo.played_at ? "var(--color-text-muted)" : "var(--color-primary)" }} />
+                  )}
+                  <span className="truncate">{saludo.nombre}</span>
+                </button>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={stopSaludo}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+                    aria-label="Detener"
+                    title="Detener"
+                  >
+                    <Square size={10} style={{ color: "var(--color-text-muted)" }} />
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+        {activeSaludoId && (
+          <div className="flex items-center gap-2 px-0.5 pt-1">
+            <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={saludoVolume}
+              onChange={(e) => changeSaludoVolume(Number(e.target.value))}
+              className="flex-1 h-1"
+              style={{ accentColor: "var(--color-primary)" }}
+              aria-label="Volumen del saludo"
+            />
+            <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+              {Math.round(saludoVolume * 100)}%
+            </span>
+          </div>
+        )}
+      </div>
 
       {errorMsg && (
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>

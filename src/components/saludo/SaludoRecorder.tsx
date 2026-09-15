@@ -11,7 +11,13 @@ const MAX_SECONDS = 60;
 
 type Status = "idle" | "recording" | "recorded" | "submitting" | "success";
 
-export function SaludoRecorder() {
+interface SaludoRecorderProps {
+  /** Si viene de /platikas/[id]/saludo, liga el saludo a esa transmisión
+   * para que aparezca en tiempo real en el panel de radio del estudio. */
+  platikaId?: string;
+}
+
+export function SaludoRecorder({ platikaId }: SaludoRecorderProps = {}) {
   const [nombre, setNombre] = useState("");
   const [contacto, setContacto] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -150,6 +156,7 @@ export function SaludoRecorder() {
       audio_path: path,
       duration_seconds: elapsed,
       contacto: contacto.trim() || null,
+      platika_id: platikaId ?? null,
     });
 
     if (insertError) {
