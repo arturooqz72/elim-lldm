@@ -82,7 +82,7 @@ export function StudioShell({
               </span>
             )
           )}
-          {isLive && radioActive && (
+          {radioActive && (
             <span
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
               style={{

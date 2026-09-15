@@ -18,7 +18,10 @@ export async function POST(
     .single();
 
   if (!pláticas) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (pláticas.status !== "live") {
+  // La radio es independiente de "salir al aire" a las plataformas — se
+  // puede conectar desde backstage para probar sonido antes de anunciarse,
+  // o para transmitir solo a la radio sin ir en vivo a YouTube/Facebook.
+  if (pláticas.status !== "live" && pláticas.status !== "backstage") {
     return NextResponse.json({ error: "Pláticas not live" }, { status: 400 });
   }
 

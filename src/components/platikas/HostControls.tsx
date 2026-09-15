@@ -36,15 +36,16 @@ export function HostControls({
           Controles del anfitrión
         </p>
 
-        <div className="flex flex-col gap-2">
-          {!isLive ? (
+        <div className="flex flex-col gap-3">
+          {!isLive && (
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
               Estás en backstage: prueba tu mic y cámara. Nadie más te ve ni te escucha
-              todavía. Usa &quot;Salir al aire&quot; en la parte superior cuando estés listo.
+              todavía en video. Usa &quot;Salir al aire&quot; arriba cuando estés listo para
+              plataformas — la radio es independiente y puedes conectarla aquí abajo
+              cuando quieras, sin salir al aire a YouTube/Facebook.
             </p>
-          ) : (
-            <RadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />
           )}
+          <RadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />
         </div>
       </div>
 

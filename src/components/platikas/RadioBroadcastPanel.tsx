@@ -38,6 +38,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [errorMsg, setErrorMsg] = useState("");
   const [micOn, setMicOn] = useState(false);
   const [roomOn, setRoomOn] = useState(false);
+  const [micVolume, setMicVolume] = useState(1);
   const [pcOn, setPcOn] = useState(false);
   const [pcLoading, setPcLoading] = useState(false);
   const [pcVolume, setPcVolume] = useState(1);
@@ -118,12 +119,13 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
 
       if (shouldBeOn) {
         mixer.connect(key, new MediaStream([mediaTrack]));
+        if (ref.participant.isLocal) mixer.setVolume(key, micVolume);
       } else if (mixer.has(key)) {
         mixer.disconnect(key);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [micTracks, micOn, roomOn, status]);
+  }, [micTracks, micOn, roomOn, micVolume, status]);
 
   async function startBroadcast() {
     setStatus("connecting");
@@ -335,25 +337,29 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   if (status === "idle" || status === "connecting") {
     if (audios.length === 0) {
       return (
-        <button
-          type="button"
-          onClick={startBroadcast}
-          disabled={status === "connecting"}
-          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all"
-          style={{
-            background: "var(--color-surface-elevated)",
-            border: "1px solid var(--color-border)",
-            color: "var(--color-text-muted)",
-          }}
-        >
-          {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
-          {status === "connecting" ? "Conectando…" : "Salida a radio"}
-        </button>
+        <div className="flex flex-col gap-2">
+          <MicSoundcheck track={localMicTrack} volume={micVolume} onVolumeChange={setMicVolume} />
+          <button
+            type="button"
+            onClick={startBroadcast}
+            disabled={status === "connecting"}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: "1px solid var(--color-border)",
+              color: "var(--color-text-muted)",
+            }}
+          >
+            {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
+            {status === "connecting" ? "Conectando…" : "Salir al aire a la radio"}
+          </button>
+        </div>
       );
     }
 
     return (
       <div className="flex flex-col gap-2">
+        <MicSoundcheck track={localMicTrack} volume={micVolume} onVolumeChange={setMicVolume} />
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
           Elige tu intro
         </p>
@@ -397,7 +403,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           style={{ background: "var(--color-primary)", color: "#000", opacity: !selectedAudioId ? 0.6 : 1 }}
         >
           {status === "connecting" ? <Loader2 size={14} className="animate-spin" /> : <Radio size={14} />}
-          {status === "connecting" ? "Conectando…" : "Entrar a la radio"}
+          {status === "connecting" ? "Conectando…" : "Salir al aire a la radio"}
         </button>
       </div>
     );
@@ -461,6 +467,25 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         onToggle={() => setMicOn((v) => !v)}
         meterTrack={micOn ? localMicTrack : null}
       />
+      {micOn && (
+        <div className="flex items-center gap-2 px-0.5 -mt-1">
+          <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={micVolume}
+            onChange={(e) => setMicVolume(Number(e.target.value))}
+            className="flex-1 h-1"
+            style={{ accentColor: "var(--color-primary)" }}
+            aria-label="Volumen de mi micrófono"
+          />
+          <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+            {Math.round(micVolume * 100)}%
+          </span>
+        </div>
+      )}
       <SourceToggle icon={Users} label="Sala completa" active={roomOn} onToggle={() => setRoomOn((v) => !v)} />
       <SourceToggle
         icon={MonitorSpeaker}
@@ -640,6 +665,59 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
       {errorMsg && (
         <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
           {errorMsg}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Chequeo de sonido antes de salir al aire — mismo medidor y control de
+// volumen que se usa ya conectado (ver SourceToggle "Mi micrófono" más
+// abajo), pero disponible desde antes de presionar el botón de conectar.
+// El volumen elegido aquí se aplica en cuanto arranca la transmisión.
+function MicSoundcheck({
+  track,
+  volume,
+  onVolumeChange,
+}: {
+  track: MediaStreamTrack | null | undefined;
+  volume: number;
+  onVolumeChange: (volume: number) => void;
+}) {
+  const hasSignal = !!track && track.readyState === "live" && !track.muted;
+
+  return (
+    <div
+      className="rounded-xl p-3 flex flex-col gap-2"
+      style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium flex items-center gap-1.5" style={{ color: "var(--color-text)" }}>
+          <Mic size={13} />
+          Prueba de sonido
+        </span>
+        <AudioLevelMeter track={track} height={14} activeColor="var(--color-primary)" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Volume2 size={12} style={{ color: "var(--color-text-muted)" }} />
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.05}
+          value={volume}
+          onChange={(e) => onVolumeChange(Number(e.target.value))}
+          className="flex-1 h-1"
+          style={{ accentColor: "var(--color-primary)" }}
+          aria-label="Volumen de mi micrófono"
+        />
+        <span className="text-[10px] w-8 text-right shrink-0" style={{ color: "var(--color-text-muted)" }}>
+          {Math.round(volume * 100)}%
+        </span>
+      </div>
+      {!hasSignal && (
+        <p className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+          Activa tu micrófono en los controles de abajo para probar el sonido antes de salir al aire a la radio.
         </p>
       )}
     </div>
