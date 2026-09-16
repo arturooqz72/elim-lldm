@@ -8,7 +8,11 @@ import {
   startStreamingToBridge,
   SALUDO_DIRECTO_DURATION_MS,
 } from "@/lib/radio-broadcast";
-import { createClient } from "@/lib/supabase/client";
+// createFreshClient(), no el singleton: su initializePromise puede
+// quedarse colgado indefinidamente (ver comentario en client.ts), lo que
+// dejaría el botón trabado en "Conectando…" para siempre — mismo motivo
+// que OpinionForm.tsx, LikeButton.tsx, etc.
+import { createFreshClient } from "@/lib/supabase/client";
 
 type Status = "idle" | "connecting" | "live" | "error";
 
@@ -71,7 +75,7 @@ export function SaludoDirectoButton() {
         setStatus("idle");
       });
 
-      const supabase = createClient();
+      const supabase = createFreshClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         try {
