@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, Fragment } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle, Volume2 } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import { whatsappHref } from "@/lib/whatsapp";
@@ -17,6 +17,7 @@ const WHATSAPP_GREEN = "#25D366";
 const NAV_LINKS = [
   { href: "/radio", label: "Radio", icon: Radio },
   { href: "/saludo", label: "Saludos", icon: AudioLines },
+  { href: "/saludo-directo", label: "Saludo Directo", icon: Volume2 },
   { href: "/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/juegos", label: "Juegos en línea", icon: Gamepad2 },
   { href: "/archivo", label: "Archivo", icon: Archive },
