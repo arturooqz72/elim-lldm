@@ -42,6 +42,7 @@ export function RoleSelect({ defaultValue }: RoleSelectProps) {
       }}
     >
       <option value="participante">Participante</option>
+      <option value="oyente_plus">Oyente Plus</option>
       <option value="anfitrion">Anfitrión</option>
       <option value="moderador">Moderador</option>
       <option value="super_moderador">Super Moderador</option>
