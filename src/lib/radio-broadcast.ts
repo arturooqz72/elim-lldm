@@ -1,4 +1,13 @@
-export function connectRadioBridge(wsUrl: string, key: string): Promise<WebSocket> {
+/**
+ * Duración fija del Saludo Directo (/saludo-directo) — un solo lugar para
+ * ajustarla si se decide cambiarla más adelante. El corte real a los 5s lo
+ * hace el propio componente con un temporizador; ver el plan de
+ * implementación para el respaldo server-side pendiente (fuera de este
+ * repo).
+ */
+export const SALUDO_DIRECTO_DURATION_MS = 5000;
+
+export function connectRadioBridge(wsUrl: string, key: string, mode?: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
 
@@ -29,7 +38,7 @@ export function connectRadioBridge(wsUrl: string, key: string): Promise<WebSocke
       ws.close();
     });
     ws.addEventListener("open", () => {
-      ws.send(JSON.stringify({ type: "hello", key }));
+      ws.send(JSON.stringify({ type: "hello", key, ...(mode ? { mode } : {}) }));
     });
   });
 }
