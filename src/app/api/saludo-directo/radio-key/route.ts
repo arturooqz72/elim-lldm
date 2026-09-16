@@ -13,7 +13,8 @@ export async function POST() {
     .eq("id", user.id)
     .single();
 
-  const eligible = profile?.role === "oyente_plus" || profile?.role === "admin";
+  const eligible =
+    profile?.role === "oyente_plus" || profile?.role === "admin" || profile?.role === "moderador";
   if (!eligible) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { data: livePláticas } = await supabase

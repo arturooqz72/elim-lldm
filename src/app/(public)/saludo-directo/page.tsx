@@ -15,7 +15,8 @@ export default async function SaludoDirectoPage() {
   // tipado contra el schema generado (aún no se corrió
   // `supabase gen types`, ver TODO en src/lib/supabase/server.ts).
   const profile = (await getProfile()) as Profile | null;
-  const eligible = profile?.role === "oyente_plus" || profile?.role === "admin";
+  const eligible =
+    profile?.role === "oyente_plus" || profile?.role === "admin" || profile?.role === "moderador";
 
   let isLive = false;
   if (profile && eligible) {
