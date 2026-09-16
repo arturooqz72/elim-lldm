@@ -7,7 +7,7 @@ import type { Profile } from "@/types";
 
 export const metadata: Metadata = {
   title: "Saludo Directo — Elim LLDM",
-  description: "Conecta tu micrófono en vivo a Elim LLDM Radio por 5 segundos.",
+  description: "Conecta tu micrófono en vivo a Elim LLDM Radio por 10 segundos.",
 };
 
 export default async function SaludoDirectoPage() {
@@ -42,7 +42,7 @@ export default async function SaludoDirectoPage() {
           Saludo Directo
         </h1>
         <p className="text-base mb-10" style={{ color: "var(--color-text-muted)" }}>
-          Deja un saludo en vivo, en tu propia voz, directo a Elim LLDM Radio por 5 segundos.
+          Deja un saludo en vivo, en tu propia voz, directo a Elim LLDM Radio por 10 segundos.
         </p>
 
         {!profile && (

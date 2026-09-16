@@ -133,7 +133,7 @@ export function SaludoDirectoButton() {
         style={{ background: "var(--color-primary)", color: "#000", opacity: status === "connecting" ? 0.7 : 1 }}
       >
         {status === "connecting" ? <Loader2 size={16} className="animate-spin" /> : <Mic size={16} />}
-        {status === "connecting" ? "Conectando…" : "Dejar saludo en vivo (5s)"}
+        {status === "connecting" ? "Conectando…" : "Dejar saludo en vivo (10s)"}
       </button>
       {status === "error" && errorMsg && (
         <div

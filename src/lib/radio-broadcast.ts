@@ -5,7 +5,7 @@
  * implementación para el respaldo server-side pendiente (fuera de este
  * repo).
  */
-export const SALUDO_DIRECTO_DURATION_MS = 5000;
+export const SALUDO_DIRECTO_DURATION_MS = 10000;
 
 export function connectRadioBridge(wsUrl: string, key: string, mode?: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
