@@ -23,7 +23,7 @@ export default async function SaludoDirectoPage() {
     const { data: livePláticas } = await supabase
       .from("platikas")
       .select("id")
-      .eq("status", "live")
+      .in("status", ["live", "backstage"])
       .limit(1);
     isLive = Boolean(livePláticas && livePláticas.length > 0);
   }

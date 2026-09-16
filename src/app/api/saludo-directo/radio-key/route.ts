@@ -19,7 +19,7 @@ export async function POST() {
   const { data: livePláticas } = await supabase
     .from("platikas")
     .select("id")
-    .eq("status", "live")
+    .in("status", ["live", "backstage"])
     .limit(1);
 
   if (livePláticas && livePláticas.length > 0) {

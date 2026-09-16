@@ -74,7 +74,11 @@ export function SaludoDirectoButton() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from("saludos_directos").insert({ user_id: user.id });
+        try {
+          await supabase.from("saludos_directos").insert({ user_id: user.id });
+        } catch (auditErr) {
+          console.error("No se pudo registrar el saludo en la bitácora:", auditErr);
+        }
       }
 
       setStatus("live");
