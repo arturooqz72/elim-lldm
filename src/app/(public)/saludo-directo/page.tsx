@@ -15,9 +15,10 @@ export default async function SaludoDirectoPage() {
   // tipado contra el schema generado (aún no se corrió
   // `supabase gen types`, ver TODO en src/lib/supabase/server.ts).
   const profile = (await getProfile()) as Profile | null;
+  const eligible = profile?.role === "oyente_plus" || profile?.role === "admin";
 
   let isLive = false;
-  if (profile) {
+  if (profile && eligible) {
     const supabase = await createClient();
     const { data: livePláticas } = await supabase
       .from("platikas")
@@ -26,8 +27,6 @@ export default async function SaludoDirectoPage() {
       .limit(1);
     isLive = Boolean(livePláticas && livePláticas.length > 0);
   }
-
-  const eligible = profile?.role === "oyente_plus" || profile?.role === "admin";
 
   return (
     <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
