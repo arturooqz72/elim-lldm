@@ -26,17 +26,17 @@ async function maybeSendWelcomeEmail(
   try {
     await sendZohoMail({
       to: user.email,
-      subject: "Bienvenido a la comunidad Elim LLDM",
+      subject: "Bienvenido/a a la comunidad Elim LLDM",
       text:
         `La Paz del Señor, ${nombre}:\n\n` +
-        "Dios le pague por registrarse y ser parte de esta comunidad de Elim LLDM. " +
+        "Dios le pague por unirse a nuestra comunidad. Bienvenido/a.\n\n" +
         "Cualquier pregunta o sugerencia sobre el contenido de esta página será tomada en cuenta — " +
         "crecer juntos es la meta de toda la comunidad LLDM.\n\n" +
         "Dios le bendiga.\n\n— Elim LLDM",
       html:
         `<p>La Paz del Señor, ${nombre}:</p>` +
-        "<p>Dios le pague por registrarse y ser parte de esta comunidad de Elim LLDM. " +
-        "Cualquier pregunta o sugerencia sobre el contenido de esta página será tomada en cuenta — " +
+        "<p>Dios le pague por unirse a nuestra comunidad. Bienvenido/a.</p>" +
+        "<p>Cualquier pregunta o sugerencia sobre el contenido de esta página será tomada en cuenta — " +
         "crecer juntos es la meta de toda la comunidad LLDM.</p>" +
         "<p>Dios le bendiga.</p><p>— Elim LLDM</p>",
     });
