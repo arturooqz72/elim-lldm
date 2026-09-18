@@ -13,7 +13,7 @@ import {
 } from "@/lib/radio-broadcast";
 import { createClient } from "@/lib/supabase/client";
 import { AudioLevelMeter } from "./AudioLevelMeter";
-import type { ProgramaAudio, Saludo } from "@/types";
+import type { ProgramaAudio, ProgramaHost, Saludo } from "@/types";
 
 interface SaludoEnVivo extends Saludo {
   signedUrl: string | null;
@@ -24,6 +24,7 @@ type Status = "idle" | "connecting" | "live" | "error";
 interface RadioBroadcastPanelProps {
   platikaId: string;
   programaAudios?: ProgramaAudio[];
+  programaHosts?: ProgramaHost[];
 }
 
 // LiveKitRoom.tsx renders the sidebar (and this component inside it) both
@@ -31,13 +32,19 @@ interface RadioBroadcastPanelProps {
 // throws if called outside a Room context, which would crash the whole page
 // during those pre-connection states. useMaybeRoomContext never throws, so it
 // gates whether the real panel (and its useTracks call) mounts at all.
-export function RadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadcastPanelProps) {
+export function RadioBroadcastPanel({ platikaId, programaAudios, programaHosts }: RadioBroadcastPanelProps) {
   const room = useMaybeRoomContext();
   if (!room) return null;
-  return <ConnectedRadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />;
+  return (
+    <ConnectedRadioBroadcastPanel
+      platikaId={platikaId}
+      programaAudios={programaAudios}
+      programaHosts={programaHosts}
+    />
+  );
 }
 
-function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadcastPanelProps) {
+function ConnectedRadioBroadcastPanel({ platikaId, programaAudios, programaHosts }: RadioBroadcastPanelProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [micOn, setMicOn] = useState(false);
@@ -48,7 +55,24 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
   const [pcVolume, setPcVolume] = useState(1);
 
   const audios = programaAudios ?? [];
+  const hosts = programaHosts ?? [];
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(audios[0]?.id ?? null);
+
+  // El anfitrión elegido en este panel es solo un filtro de qué clips
+  // mostrar — nunca se guarda en la base de datos ni afecta permisos,
+  // así que basta con estado local. NULL/"" = sin elegir, se ve todo
+  // mezclado igual que antes de esta función.
+  const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
+  const audiosVisibles = audios.filter(
+    (a) => !selectedHostId || !a.host_id || a.host_id === selectedHostId
+  );
+
+  function handleHostChange(hostId: string | null) {
+    setSelectedHostId(hostId);
+    // Evita dejar seleccionado (aunque invisible) el intro de otro
+    // anfitrión al cambiar el filtro.
+    setSelectedAudioId(null);
+  }
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
 
@@ -520,10 +544,11 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           onStop={stopSaludo}
           onVolumeChange={changeSaludoVolume}
         />
+        <HostSelector hosts={hosts} selectedHostId={selectedHostId} onChange={handleHostChange} />
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
           Elige tu intro
         </p>
-        {audios.map((audio) => (
+        {audiosVisibles.map((audio) => (
           <div key={audio.id} className="flex items-center gap-2">
             <button
               type="button"
@@ -689,6 +714,8 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
         </div>
       )}
 
+      <HostSelector hosts={hosts} selectedHostId={selectedHostId} onChange={handleHostChange} />
+
       {audios.length > 0 && (
         <div className="flex flex-col gap-1.5 pt-1" style={{ borderTop: "1px solid rgba(212,160,23,0.2)" }}>
           <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
@@ -758,7 +785,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios }: RadioBroadc
           <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
             Banco de audios
           </p>
-          {audios.map((audio) => {
+          {audiosVisibles.map((audio) => {
             const isActive = liveAudioId === audio.id;
             const isLoadingThis = isActive && liveClipLoading;
             const isPlayingThis = isActive && liveClipPlaying;
@@ -1078,5 +1105,47 @@ function SourceToggle({
         )}
       </span>
     </button>
+  );
+}
+
+function HostSelector({
+  hosts,
+  selectedHostId,
+  onChange,
+}: {
+  hosts: ProgramaHost[];
+  selectedHostId: string | null;
+  onChange: (hostId: string | null) => void;
+}) {
+  // Con 0 o 1 conductor no hay nada que filtrar — el panel se comporta
+  // exactamente igual que antes de esta función.
+  if (hosts.length < 2) return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        className="text-[10px] font-semibold uppercase tracking-wider"
+        style={{ color: "var(--color-text-muted)" }}
+      >
+        Anfitrión
+      </label>
+      <select
+        value={selectedHostId ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="rounded-lg px-2 py-1.5 text-xs outline-none"
+        style={{
+          background: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          color: "var(--color-text)",
+        }}
+      >
+        <option value="">Sin elegir</option>
+        {hosts.map((host) => (
+          <option key={host.id} value={host.user_id}>
+            {host.profiles?.display_name ?? "Sin nombre"}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
