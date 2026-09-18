@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Clock, Radio } from "lucide-react";
 import { LiveKitRoom } from "./LiveKitRoom";
 import { StudioGoLiveButton } from "./StudioGoLiveButton";
-import type { ProgramaAudio } from "@/types";
+import type { ProgramaAudio, ProgramaHost } from "@/types";
 
 interface StudioShellProps {
   platikaId: string;
@@ -16,6 +16,7 @@ interface StudioShellProps {
   currentUserId: string | null;
   canModerateChat: boolean;
   programaAudios?: ProgramaAudio[];
+  programaHosts?: ProgramaHost[];
   initialIsLive: boolean;
   radioActive: boolean;
 }
@@ -33,6 +34,7 @@ export function StudioShell({
   currentUserId,
   canModerateChat,
   programaAudios,
+  programaHosts,
   initialIsLive,
   radioActive,
 }: StudioShellProps) {
@@ -118,6 +120,7 @@ export function StudioShell({
           currentUserId={currentUserId}
           canModerateChat={canModerateChat}
           programaAudios={programaAudios}
+          programaHosts={programaHosts}
           isLive={isLive}
         />
       </div>
