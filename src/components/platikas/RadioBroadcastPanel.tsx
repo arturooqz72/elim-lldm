@@ -72,6 +72,10 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios, programaHosts
     // Evita dejar seleccionado (aunque invisible) el intro de otro
     // anfitrión al cambiar el filtro.
     setSelectedAudioId(null);
+    // Si había un preview sonando de un clip que este filtro va a ocultar,
+    // se queda sonando sin control visible para pausarlo — se detiene aquí.
+    previewRef.current?.pause();
+    setPreviewingId(null);
   }
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const previewRef = useRef<HTMLAudioElement | null>(null);
@@ -85,6 +89,14 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios, programaHosts
   const [liveClipLoading, setLiveClipLoading] = useState(false);
   const [liveClipVolume, setLiveClipVolume] = useState(1);
   const liveClipRef = useRef<LiveClip | null>(null);
+
+  // El clip que está sonando al aire nunca se debe ocultar del "Banco de
+  // audios" al cambiar el filtro de anfitrión — si no, se pierde el único
+  // botón para detenerlo mientras sigue transmitiéndose de verdad.
+  const audiosVisiblesEnVivo =
+    liveAudioId && !audiosVisibles.some((a) => a.id === liveAudioId)
+      ? [...audiosVisibles, ...audios.filter((a) => a.id === liveAudioId)]
+      : audiosVisibles;
 
   // Música de fondo en loop, independiente del banco de audios — suena
   // continuamente hasta que se detenga a mano, con su propio volumen para
@@ -785,7 +797,7 @@ function ConnectedRadioBroadcastPanel({ platikaId, programaAudios, programaHosts
           <p className="text-[10px] font-semibold uppercase tracking-wider pt-1" style={{ color: "var(--color-text-muted)" }}>
             Banco de audios
           </p>
-          {audiosVisibles.map((audio) => {
+          {audiosVisiblesEnVivo.map((audio) => {
             const isActive = liveAudioId === audio.id;
             const isLoadingThis = isActive && liveClipLoading;
             const isPlayingThis = isActive && liveClipPlaying;
