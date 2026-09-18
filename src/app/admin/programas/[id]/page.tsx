@@ -128,25 +128,34 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
                   Aún no hay audios. Sube el primero a la derecha.
                 </p>
               )}
-              {audios.map((audio) => (
-                <div
-                  key={audio.id}
-                  className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-                >
-                  <audio controls src={audio.audio_url} className="h-8 flex-1 min-w-0" />
-                  <span className="text-sm font-medium shrink-0" style={{ color: "var(--color-text)" }}>
-                    {audio.titulo}
-                  </span>
-                  <form action={deleteAudio}>
-                    <input type="hidden" name="id" value={audio.id} />
-                    <input type="hidden" name="programa_id" value={id} />
-                    <button type="submit" style={{ color: "var(--color-destructive)" }} aria-label="Borrar">
-                      <Trash2 size={16} />
-                    </button>
-                  </form>
-                </div>
-              ))}
+              {audios.map((audio) => {
+                const owner = hosts.find((h) => h.user_id === audio.host_id);
+                return (
+                  <div
+                    key={audio.id}
+                    className="flex items-center gap-3 p-3 rounded-xl"
+                    style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                  >
+                    <audio controls src={audio.audio_url} className="h-8 flex-1 min-w-0" />
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-full"
+                      style={{ background: "var(--color-surface-elevated)", color: "var(--color-text-muted)" }}
+                    >
+                      {owner?.profiles?.display_name ?? "General"}
+                    </span>
+                    <span className="text-sm font-medium shrink-0" style={{ color: "var(--color-text)" }}>
+                      {audio.titulo}
+                    </span>
+                    <form action={deleteAudio}>
+                      <input type="hidden" name="id" value={audio.id} />
+                      <input type="hidden" name="programa_id" value={id} />
+                      <button type="submit" style={{ color: "var(--color-destructive)" }} aria-label="Borrar">
+                        <Trash2 size={16} />
+                      </button>
+                    </form>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -281,7 +290,7 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
         </div>
 
         <div className="lg:sticky lg:top-8">
-          <AudioUploadForm programaId={id} nextOrden={audios.length} />
+          <AudioUploadForm programaId={id} nextOrden={audios.length} hosts={hosts} />
         </div>
       </div>
     </div>
