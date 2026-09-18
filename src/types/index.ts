@@ -398,6 +398,7 @@ export interface ProgramaAudio {
   titulo: string;
   audio_url: string;
   orden: number;
+  host_id: string | null;
   created_at: string;
 }
 
