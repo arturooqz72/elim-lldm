@@ -7,7 +7,7 @@ import { Mic, Calendar, ArrowLeft, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { ProgramaAudio } from "@/types";
+import type { ProgramaAudio, ProgramaHost } from "@/types";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -59,10 +59,11 @@ export default async function PlatikaRoomPage({ params }: Props) {
     profiles: { display_name: string; avatar_url: string | null; role: string } | null;
   };
 
-  // getProfile() y la consulta de programa_audios no dependen una de la otra
-  // (esta última solo depende de p.programa_id, ya disponible), así que corren
-  // en paralelo con Promise.all en vez de secuencialmente.
-  const [profile, audiosResult] = await Promise.all([
+  // getProfile() y las consultas de programa_audios/programa_hosts no
+  // dependen una de la otra (ambas solo dependen de p.programa_id, ya
+  // disponible), así que corren en paralelo con Promise.all en vez de
+  // secuencialmente.
+  const [profile, audiosResult, hostsResult] = await Promise.all([
     getProfile(),
     p.programa_id
       ? supabase
@@ -71,9 +72,16 @@ export default async function PlatikaRoomPage({ params }: Props) {
           .eq("programa_id", p.programa_id)
           .order("orden", { ascending: true })
       : Promise.resolve({ data: null as ProgramaAudio[] | null }),
+    p.programa_id
+      ? supabase
+          .from("programa_hosts")
+          .select("*, profiles(display_name, avatar_url)")
+          .eq("programa_id", p.programa_id)
+      : Promise.resolve({ data: null as ProgramaHost[] | null }),
   ]);
   const currentUserId = profile?.id ?? null;
   const programaAudios: ProgramaAudio[] = audiosResult.data ?? [];
+  const programaHosts: ProgramaHost[] = hostsResult.data ?? [];
 
   // El Estudio en Vivo se está reconstruyendo — solo administradores
   // pueden verlo mientras tanto (ver UnderConstruction.tsx).
@@ -142,6 +150,7 @@ export default async function PlatikaRoomPage({ params }: Props) {
           currentUserId={currentUserId}
           canModerateChat={canModerateChat}
           programaAudios={programaAudios}
+          programaHosts={programaHosts}
           initialIsLive={isLive}
           radioActive={p.radio_output_active}
         />
