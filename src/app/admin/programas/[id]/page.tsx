@@ -54,7 +54,19 @@ async function removeHost(formData: FormData) {
   "use server";
   const id = formData.get("id") as string;
   const programaId = formData.get("programa_id") as string;
+  const userId = formData.get("user_id") as string;
   const supabase = await createServiceClient();
+  // Igual que el ON DELETE SET NULL de la migración 0052 para cuando se
+  // borra la cuenta — aquí se hace a mano porque programa_hosts no tiene
+  // FK hacia programa_audios, así que quitar a alguien de conductores no
+  // dispara nada solo: sus clips personales de este programa vuelven a
+  // ser generales explícitamente, en vez de quedar apuntando a un host_id
+  // que ya no aparece en ningún selector.
+  await supabase
+    .from("programa_audios")
+    .update({ host_id: null })
+    .eq("programa_id", programaId)
+    .eq("host_id", userId);
   await supabase.from("programa_hosts").delete().eq("id", id);
   revalidatePath(`/admin/programas/${programaId}`);
 }
@@ -238,6 +250,7 @@ export default async function ProgramaAudiosPage({ params, searchParams }: Props
                   <form action={removeHost}>
                     <input type="hidden" name="id" value={host.id} />
                     <input type="hidden" name="programa_id" value={id} />
+                    <input type="hidden" name="user_id" value={host.user_id} />
                     <button type="submit" style={{ color: "var(--color-destructive)" }} aria-label="Quitar">
                       <Trash2 size={14} />
                     </button>
