@@ -4,13 +4,14 @@ import { RequestQueue } from "./RequestQueue";
 import { DestinationsPanel } from "./DestinationsPanel";
 import { RadioBroadcastPanel } from "./RadioBroadcastPanel";
 import { SpeakerControls } from "./SpeakerControls";
-import type { ProgramaAudio } from "@/types";
+import type { ProgramaAudio, ProgramaHost } from "@/types";
 
 interface HostControlsProps {
   platikaId: string;
   isLive: boolean;
   onSpeakerApproved?: (token: string, wsUrl: string) => void;
   programaAudios?: ProgramaAudio[];
+  programaHosts?: ProgramaHost[];
 }
 
 // El botón "Salir al aire"/"Terminar" vive en la barra superior del
@@ -21,6 +22,7 @@ export function HostControls({
   isLive,
   onSpeakerApproved,
   programaAudios,
+  programaHosts,
 }: HostControlsProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -45,7 +47,7 @@ export function HostControls({
               cuando quieras, sin salir al aire a YouTube/Facebook.
             </p>
           )}
-          <RadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} />
+          <RadioBroadcastPanel platikaId={platikaId} programaAudios={programaAudios} programaHosts={programaHosts} />
         </div>
       </div>
 
