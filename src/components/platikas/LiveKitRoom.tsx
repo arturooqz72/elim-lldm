@@ -7,7 +7,7 @@ import { StagePanel } from "./StagePanel";
 import { ChatPanel } from "./ChatPanel";
 import { HostControls } from "./HostControls";
 import { RequestButton } from "./RequestButton";
-import type { ProgramaAudio } from "@/types";
+import type { ProgramaAudio, ProgramaHost } from "@/types";
 
 interface LiveKitRoomProps {
   platikaId: string;
@@ -21,6 +21,7 @@ interface LiveKitRoomProps {
   // debe afectar el botón de moderar del chat, no los controles de sala.
   canModerateChat: boolean;
   programaAudios?: ProgramaAudio[];
+  programaHosts?: ProgramaHost[];
   // Controlado por StudioShell (no estado interno) — el botón "Salir
   // al aire"/"Terminar" vive en la barra superior del estudio, fuera
   // de este componente, y ambos necesitan ver el mismo estado.
@@ -40,6 +41,7 @@ export function LiveKitRoom({
   currentUserId,
   canModerateChat,
   programaAudios,
+  programaHosts,
   isLive,
 }: LiveKitRoomProps) {
   const [tokenState, setTokenState] = useState<TokenState>({ status: "loading" });
@@ -86,6 +88,7 @@ export function LiveKitRoom({
           isLive={isLive}
           onSpeakerApproved={handleSpeakerApproved}
           programaAudios={programaAudios}
+          programaHosts={programaHosts}
         />
       )}
 
