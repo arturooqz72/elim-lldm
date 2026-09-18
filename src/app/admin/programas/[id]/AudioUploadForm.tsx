@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import type { ProgramaHost } from "@/types";
 
 interface AudioUploadFormProps {
   programaId: string;
   nextOrden: number;
+  hosts: ProgramaHost[];
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -61,10 +63,11 @@ function uploadToB2WithProgress(
   });
 }
 
-export function AudioUploadForm({ programaId, nextOrden }: AudioUploadFormProps) {
+export function AudioUploadForm({ programaId, nextOrden, hosts }: AudioUploadFormProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [titulo, setTitulo] = useState("");
+  const [hostId, setHostId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +120,7 @@ export function AudioUploadForm({ programaId, nextOrden }: AudioUploadFormProps)
             titulo: titulo.trim(),
             audio_url: initData.publicUrl,
             orden: nextOrden,
+            host_id: hostId || null,
           })
         ),
         15000,
@@ -126,6 +130,7 @@ export function AudioUploadForm({ programaId, nextOrden }: AudioUploadFormProps)
 
       setFile(null);
       setTitulo("");
+      setHostId("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido al subir el audio.");
@@ -163,6 +168,25 @@ export function AudioUploadForm({ programaId, nextOrden }: AudioUploadFormProps)
           className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           style={inputStyle}
         />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--color-text)" }}>
+          ¿Para quién es este audio?
+        </label>
+        <select
+          value={hostId}
+          onChange={(e) => setHostId(e.target.value)}
+          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+          style={inputStyle}
+        >
+          <option value="">General (para todos)</option>
+          {hosts.map((host) => (
+            <option key={host.id} value={host.user_id}>
+              {host.profiles?.display_name ?? "Sin nombre"}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
