@@ -19,6 +19,7 @@ import {
   Disc3,
   Puzzle,
   Radio,
+  Trophy,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const NAV = [
   { href: "/admin/arena-abierta", label: "Arena Abierta", icon: Zap },
   { href: "/admin/ruleta", label: "La Ruleta", icon: Disc3 },
   { href: "/admin/ahorcado", label: "Ahorcado", icon: Puzzle },
+  { href: "/tiktok-trivia", label: "Trivia TikTok", icon: Trophy },
   { href: "/admin/archivo", label: "Archivo", icon: Archive },
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
   { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
