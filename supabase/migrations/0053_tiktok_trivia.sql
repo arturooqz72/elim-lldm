@@ -26,6 +26,9 @@ CREATE TABLE tiktok_trivia_respuestas (
   respondida_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE tiktok_trivia_respuestas
+  ADD CONSTRAINT tiktok_trivia_respuestas_sesion_question_unique UNIQUE (sesion_id, question_id);
+
 CREATE INDEX idx_tiktok_trivia_respuestas_sesion ON tiktok_trivia_respuestas(sesion_id);
 
 ALTER TABLE tiktok_trivia_sesiones ENABLE ROW LEVEL SECURITY;
