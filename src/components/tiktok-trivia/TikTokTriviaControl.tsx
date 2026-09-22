@@ -44,6 +44,7 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
   const intentionalCloseRef = useRef(false);
   const questionsRef = useRef<Question[]>([]);
   const questionIndexRef = useRef(0);
+  const questionPhaseRef = useRef<QuestionPhase>("pending");
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,6 +57,9 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
   useEffect(() => {
     questionIndexRef.current = questionIndex;
   }, [questionIndex]);
+  useEffect(() => {
+    questionPhaseRef.current = questionPhase;
+  }, [questionPhase]);
 
   // Corta el WebSocket y cualquier reintento pendiente si el host navega
   // fuera del componente a medio juego (cambio de ruta, botón "atrás") sin
@@ -189,6 +193,21 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
       wsRef.current = ws;
       attachSocket(ws);
       sendBridgeMessage(ws, { type: "start_session" });
+
+      // Si la desconexión ocurrió con una pregunta abierta, el bridge perdió
+      // su currentRound (lo limpia al desconectarse de TikTok) — hay que
+      // reabrirla explícitamente o ningún comentario nuevo puntuará para
+      // ella, sin que la UI (que sigue mostrando "open") lo delate.
+      if (questionPhaseRef.current === "open") {
+        const question = questionsRef.current[questionIndexRef.current];
+        if (question) {
+          sendBridgeMessage(ws, {
+            type: "open_question",
+            questionId: question.id,
+            correctOption: question.correct_option,
+          });
+        }
+      }
     } catch (err) {
       scheduleReconnect(err instanceof Error ? err.message : "No se pudo reconectar.");
     }
