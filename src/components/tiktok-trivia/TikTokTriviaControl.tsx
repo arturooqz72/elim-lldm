@@ -57,6 +57,20 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
     questionIndexRef.current = questionIndex;
   }, [questionIndex]);
 
+  // Corta el WebSocket y cualquier reintento pendiente si el host navega
+  // fuera del componente a medio juego (cambio de ruta, botón "atrás") sin
+  // pasar por "Ver resultados". No intenta marcar la sesión como
+  // "finalizada" en Supabase aquí: un cleanup síncrono no puede esperar de
+  // forma confiable una llamada de red durante el unmount, así que la fila
+  // queda en su último estado conocido ("conectando"/"en_vivo") — aceptable.
+  useEffect(() => {
+    return () => {
+      intentionalCloseRef.current = true;
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      wsRef.current?.close();
+    };
+  }, []);
+
   const currentQuestion = questions[questionIndex] ?? null;
 
   function bumpLeaderboard(username: string, displayName: string) {
@@ -86,7 +100,11 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
       setScreen("en_vivo");
       const supabase = createFreshClient();
       if (sesionIdRef.current) {
-        await supabase.from("tiktok_trivia_sesiones").update({ status: "en_vivo" }).eq("id", sesionIdRef.current);
+        const { error } = await supabase
+          .from("tiktok_trivia_sesiones")
+          .update({ status: "en_vivo" })
+          .eq("id", sesionIdRef.current);
+        if (error) console.error("[TikTokTriviaControl] No se pudo marcar la sesión como en_vivo:", error);
       }
     } else if (msg.type === "error") {
       setBridgeStatus("error");
@@ -104,12 +122,17 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
       const question = questionsRef.current[questionIndexRef.current];
       if (sesionIdRef.current && question) {
         const supabase = createFreshClient();
-        await supabase.from("tiktok_trivia_respuestas").insert({
+        // Si este insert falla, el leaderboard en memoria (ya incrementado
+        // arriba) y la fila persistida en tiktok_trivia_respuestas quedan
+        // desincronizados en silencio — gap conocido y aceptado, no se
+        // intenta reconciliar aquí.
+        const { error } = await supabase.from("tiktok_trivia_respuestas").insert({
           sesion_id: sesionIdRef.current,
           question_id: question.id,
           tiktok_username: msg.tiktokUsername,
           tiktok_display_name: msg.tiktokDisplayName,
         });
+        if (error) console.error("[TikTokTriviaControl] No se pudo guardar la respuesta ganadora:", error);
       }
     }
   }
@@ -117,6 +140,7 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
   /** Escucha compartida entre la primera conexión y cada reintento automático. */
   function attachSocket(ws: WebSocket) {
     ws.addEventListener("message", (event) => {
+      if (wsRef.current !== ws) return;
       try {
         const msg = JSON.parse(event.data as string);
         void handleBridgeMessage(msg);
@@ -255,12 +279,20 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
       wsRef.current.close();
       wsRef.current = null;
     }
-    const supabase = createFreshClient();
     if (sesionIdRef.current) {
-      await supabase
-        .from("tiktok_trivia_sesiones")
-        .update({ status: "finalizada", ended_at: new Date().toISOString() })
-        .eq("id", sesionIdRef.current);
+      try {
+        const supabase = createFreshClient();
+        const { error } = await supabase
+          .from("tiktok_trivia_sesiones")
+          .update({ status: "finalizada", ended_at: new Date().toISOString() })
+          .eq("id", sesionIdRef.current);
+        if (error) console.error("[TikTokTriviaControl] No se pudo finalizar la sesión:", error);
+      } catch (err) {
+        // No bloquea la transición a "resultados": el host ya pidió
+        // terminar y debe ver la pantalla de resultados aunque este
+        // write falle (p. ej. pérdida total de red).
+        console.error("[TikTokTriviaControl] Error al finalizar la sesión:", err);
+      }
     }
     setScreen("resultados");
   }
