@@ -69,7 +69,7 @@ export function ArtistAccordion({ name, tracks }: { name: string; tracks: AudioT
               {name}
             </p>
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              {tracks.length} canto{tracks.length === 1 ? "" : "s"}
+              {tracks.length} audio{tracks.length === 1 ? "" : "s"}
             </p>
           </div>
         </div>

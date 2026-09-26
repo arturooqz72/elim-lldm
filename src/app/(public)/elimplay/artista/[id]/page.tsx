@@ -85,7 +85,7 @@ export default async function ElimPlayArtistPage({ params }: Props) {
               </h1>
               <p className="text-sm mb-6" style={{ color: "var(--color-text-muted)" }}>
                 {categoryNames.length > 0 && `${categoryNames.join(" · ")} · `}
-                {tracks.length} canto{tracks.length === 1 ? "" : "s"}
+                {tracks.length} audio{tracks.length === 1 ? "" : "s"}
               </p>
 
               <div className="flex items-center justify-center sm:justify-start gap-3">

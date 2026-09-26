@@ -24,7 +24,7 @@ export function ArtistCard({ artist, count }: { artist: Artist; count: number })
           {artist.name}
         </p>
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          {count} canto{count === 1 ? "" : "s"}
+          {count} audio{count === 1 ? "" : "s"}
         </p>
       </div>
     </Link>
