@@ -15,10 +15,10 @@ function buildReplyHref(contacto: string | null, nombre: string): string | null 
   const trimmed = contacto.trim();
   if (!trimmed) return null;
 
-  const message = `Hola ${nombre}, gracias por tu saludo, lo escuchamos con mucho cariño en Elim LLDM. Bendiciones.`;
+  const message = `La Paz del Señor, ${nombre}: Dios le pague por su mensaje para la radio Elim LLDM, pronto lo estaremos subiendo a la radio. DLB`;
 
   if (trimmed.includes("@")) {
-    const subject = encodeURIComponent("Gracias por tu saludo — Elim LLDM");
+    const subject = encodeURIComponent("Dios le pague por su saludo — Elim LLDM");
     return `mailto:${trimmed}?subject=${subject}&body=${encodeURIComponent(message)}`;
   }
 
