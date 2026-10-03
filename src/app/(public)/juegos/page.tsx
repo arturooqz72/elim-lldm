@@ -1,4 +1,4 @@
-import { Gamepad2, Puzzle, RotateCw, ChevronRight } from "lucide-react";
+import { CalendarCheck, Gamepad2, Puzzle, RotateCw, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
@@ -10,6 +10,7 @@ import { getRankingIndividual } from "@/lib/juegos/ranking-individual.server";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
+import { getResumenHub } from "@/lib/palabra/servidor";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -38,6 +39,7 @@ export default async function JuegosHubPage() {
     posicionesRuleta,
     posicionesAhorcado,
     notificacionesActivas,
+    resumenPalabra,
   ] = await Promise.all([
     getEstadoPuertaArenaAbierta(),
     getEstadoPuertaRuleta(),
@@ -45,6 +47,7 @@ export default async function JuegosHubPage() {
     getTablaPosiciones("ruleta"),
     getRankingIndividual("ahorcado"),
     getGameKeysConNotificacion(profile?.id ?? null),
+    getResumenHub(profile?.id ?? null),
   ]);
 
   return (
@@ -78,6 +81,51 @@ export default async function JuegosHubPage() {
         <JuegosPresence
           currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null}
         />
+
+        <div className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Reto diario
+          </p>
+
+          <Link
+            href="/juegos/palabra"
+            className="relative flex items-center gap-4 p-6 rounded-2xl"
+            style={{
+              background: "linear-gradient(135deg, rgba(212,160,23,0.12) 0%, var(--color-surface) 60%)",
+              border: "1px solid rgba(212,160,23,0.45)",
+              boxShadow: "0 0 24px rgba(212,160,23,0.08)",
+            }}
+          >
+            <span
+              className="absolute -top-2.5 left-5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: "var(--color-primary)", color: "#000" }}
+            >
+              Reto diario
+            </span>
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)" }}
+            >
+              <CalendarCheck size={20} style={{ color: "var(--color-primary)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                Palabra del Día
+              </h2>
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                {resumenPalabra?.jugoHoy
+                  ? `${resumenPalabra.resuelta ? "✅ Ya la resolviste" : "Ya jugaste"} hoy · 🔥 Racha: ${resumenPalabra.racha} — vuelve mañana`
+                  : resumenPalabra && resumenPalabra.racha > 0
+                    ? `🔥 Racha de ${resumenPalabra.racha} — ¡no la pierdas, juega la de hoy!`
+                    : "Adivina la palabra bíblica en 6 intentos — una nueva cada día"}
+              </p>
+            </div>
+            <ChevronRight size={18} style={{ color: "var(--color-primary)" }} />
+          </Link>
+        </div>
 
         <div className="flex flex-col gap-4">
           <p

@@ -440,3 +440,86 @@ export interface DestinoConEstado {
   // y el stream key son manejados por Google, no se editan a mano.
   isYoutubeOAuth: boolean;
 }
+
+// ---------- Palabra del Día (/juegos/palabra) ----------
+
+/** correct = verde (en su lugar), present = amarillo (en otra posición), absent = gris. */
+export type PalabraColor = "correct" | "present" | "absent";
+
+export interface PalabraIntento {
+  /** Ya normalizada: mayúsculas, sin acentos, con Ñ. */
+  palabra: string;
+  colores: PalabraColor[];
+}
+
+/** Lo que se revela solo al terminar la partida. */
+export interface PalabraRevelada {
+  palabra: string;
+  explicacion: string;
+  referencia: string;
+}
+
+export interface PalabraPartidaEstado {
+  intentos: PalabraIntento[];
+  terminada: boolean;
+  resuelta: boolean;
+}
+
+export interface PalabraRacha {
+  actual: number;
+  maxima: number;
+  comodines: number;
+  ultimaFecha: string | null;
+}
+
+export interface PalabraEstadisticas {
+  jugadas: number;
+  ganadas: number;
+  /** 0-100, redondeado. */
+  porcentaje: number;
+  /** Índice 0 = resuelta en 1 intento … índice 5 = en 6. */
+  distribucion: number[];
+}
+
+export interface PalabraEstadoJugador {
+  partida: PalabraPartidaEstado | null;
+  revelado: PalabraRevelada | null;
+  racha: PalabraRacha;
+  /** Comodines que se gastaron para cubrir días faltados desde la última partida. */
+  comodinesUsados: number;
+  estadisticas: PalabraEstadisticas;
+}
+
+export interface PalabraDiaria {
+  id: string;
+  fecha: string;
+  palabra: string;
+  explicacion: string;
+  referencia: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PalabraFilaRankingSemanal {
+  user_id: string;
+  nombre: string;
+  avatar_url: string | null;
+  iglesia: string | null;
+  puntos: number;
+  partidas: number;
+}
+
+export interface PalabraFilaRankingRacha {
+  user_id: string;
+  nombre: string;
+  avatar_url: string | null;
+  iglesia: string | null;
+  actual: number;
+  maxima: number;
+}
+
+export interface PalabraFilaRankingIglesia {
+  iglesia: string;
+  puntos: number;
+  jugadores: number;
+}

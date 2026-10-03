@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, Fragment } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle, Volume2 } from "lucide-react";
+import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle, Volume2, CalendarCheck } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import { whatsappHref } from "@/lib/whatsapp";
@@ -289,6 +289,20 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
                   {label}
                 </Link>
                 {href === "/platikas" && <LiveBadge className="mr-3" />}
+                {href === "/juegos" && (
+                  // Acceso directo al reto diario solo en el menú móvil: en el
+                  // de escritorio no cabe otro enlace (ver nota del ícono de
+                  // WhatsApp) y ahí ya está destacado al tope de /juegos.
+                  <Link
+                    href="/juegos/palabra"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 mr-1 rounded-full text-[11px] font-bold shrink-0"
+                    style={{ background: "rgba(212,160,23,0.15)", color: "var(--color-primary)" }}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <CalendarCheck size={13} />
+                    Reto diario
+                  </Link>
+                )}
               </div>
             );
           })}
