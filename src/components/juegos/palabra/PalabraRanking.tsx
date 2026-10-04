@@ -9,6 +9,7 @@ import type {
   PalabraFilaRankingRacha,
   PalabraFilaRankingSemanal,
 } from "@/types";
+import { PALABRA_COSTO_PISTA } from "@/lib/palabra/config";
 import { RankingLista } from "./RankingLista";
 import { PreguntaIglesia } from "./PreguntaIglesia";
 
@@ -87,7 +88,7 @@ export function PalabraRanking({ semanal, rachas, iglesias, etiquetaSemana, usua
             {pestana === "semana" && (
               <>
                 <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
-                  {etiquetaSemana} · 7 puntos menos los intentos usados por día resuelto
+                  {etiquetaSemana} · 7 puntos menos los intentos usados por día resuelto (−{PALABRA_COSTO_PISTA} con pista)
                 </p>
                 <RankingLista
                   vacio="Nadie ha sumado puntos esta semana. ¡Sé el primero!"

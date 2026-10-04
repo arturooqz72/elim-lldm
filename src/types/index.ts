@@ -463,6 +463,8 @@ export interface PalabraPartidaEstado {
   intentos: PalabraIntento[];
   terminada: boolean;
   resuelta: boolean;
+  /** Pidió la pista hoy (resta puntos en el ranking, no afecta la racha). */
+  pistaUsada: boolean;
 }
 
 export interface PalabraRacha {
@@ -484,6 +486,8 @@ export interface PalabraEstadisticas {
 export interface PalabraEstadoJugador {
   partida: PalabraPartidaEstado | null;
   revelado: PalabraRevelada | null;
+  /** Texto de la pista si ya la pidió hoy. */
+  pista: string | null;
   racha: PalabraRacha;
   /** Comodines que se gastaron para cubrir días faltados desde la última partida. */
   comodinesUsados: number;

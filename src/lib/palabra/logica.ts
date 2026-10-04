@@ -221,6 +221,33 @@ export function calcularEstadisticas(
   };
 }
 
+// ---------- Pista ----------
+
+const LIBROS_NUEVO_TESTAMENTO = new Set([
+  "MATEO", "MARCOS", "LUCAS", "JUAN", "HECHOS", "ROMANOS", "CORINTIOS", "GALATAS", "EFESIOS",
+  "FILIPENSES", "COLOSENSES", "TESALONICENSES", "TIMOTEO", "TITO", "FILEMON", "HEBREOS",
+  "SANTIAGO", "PEDRO", "JUDAS", "APOCALIPSIS",
+]);
+
+/**
+ * Pista del día a partir de la referencia: "1 Samuel 16:13" → "Aparece en
+ * 1 Samuel" (sin capítulo ni versículo). Nunca puede contener la respuesta:
+ * - si el libro ES la palabra (NAHÚM en "Nahúm 1:1", MATEO en "Mateo 9:9"…)
+ *   solo dice que es un libro y de qué Testamento;
+ * - si aun así el texto la contuviera, cae a una pista neutral.
+ */
+export function pistaDesdeReferencia(referencia: string, palabra: string): string {
+  const libro = referencia.replace(/\s+\d+(:\d+(-\d+)?)?\s*$/, "").trim() || referencia;
+  const libroNormalizado = normalizarPalabra(libro).replace(/^\d+\s*/, "");
+  const respuesta = normalizarPalabra(palabra);
+  const testamento = LIBROS_NUEVO_TESTAMENTO.has(libroNormalizado) ? "Nuevo" : "Antiguo";
+
+  const pista = libroNormalizado.includes(respuesta)
+    ? `Es el nombre de un libro del ${testamento} Testamento`
+    : `Aparece en ${libro}`;
+  return normalizarPalabra(pista).includes(respuesta) ? `Aparece en el ${testamento} Testamento` : pista;
+}
+
 // ---------- Compartir ----------
 
 const EMOJI: Record<PalabraColor, string> = { correct: "🟩", present: "🟨", absent: "⬛" };
@@ -231,11 +258,13 @@ export function textoParaCompartir(opciones: {
   intentos: PalabraIntento[];
   resuelta: boolean;
   racha: number;
+  pistaUsada?: boolean;
 }): string {
-  const marcador = opciones.resuelta ? String(opciones.intentos.length) : "X";
+  const marcador =
+    (opciones.resuelta ? String(opciones.intentos.length) : "X") + `/${PALABRA_MAX_INTENTOS}` + (opciones.pistaUsada ? " 💡" : "");
   const cuadricula = opciones.intentos.map((i) => i.colores.map((c) => EMOJI[c]).join("")).join("\n");
   return [
-    `Palabra del Día Elim #${numeroDelDia(opciones.fecha)}  ${marcador}/${PALABRA_MAX_INTENTOS}  🔥 Racha: ${opciones.racha}`,
+    `Palabra del Día Elim #${numeroDelDia(opciones.fecha)}  ${marcador}  🔥 Racha: ${opciones.racha}`,
     cuadricula,
     PALABRA_URL_COMPARTIR,
   ].join("\n");

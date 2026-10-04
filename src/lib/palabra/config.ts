@@ -27,4 +27,10 @@ export const PALABRA_DIAS_SINCRONIZABLES = 30;
 /** /admin/palabra avisa si quedan menos de estos días con palabra programada. */
 export const PALABRA_AVISO_DIAS = 14;
 
+/**
+ * Puntos que resta la pista en el ranking del día (mínimo 1 si la resuelve).
+ * Debe coincidir con el 2 de las funciones de ranking en 0056_palabra_pista.sql.
+ */
+export const PALABRA_COSTO_PISTA = 2;
+
 export const PALABRA_URL_COMPARTIR = "elimlldm.net/juegos/palabra";

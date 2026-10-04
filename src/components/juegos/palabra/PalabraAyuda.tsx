@@ -1,5 +1,5 @@
 // src/components/juegos/palabra/PalabraAyuda.tsx
-import { PALABRA_DIAS_POR_COMODIN, PALABRA_MAX_COMODINES } from "@/lib/palabra/config";
+import { PALABRA_COSTO_PISTA, PALABRA_DIAS_POR_COMODIN, PALABRA_MAX_COMODINES } from "@/lib/palabra/config";
 import type { PalabraColor } from "@/types";
 import { COLOR_FONDO } from "./colores";
 
@@ -37,6 +37,10 @@ export function PalabraAyuda() {
         <li>Cada intento debe ser una palabra válida de 5 letras.</li>
         <li>Los acentos no importan (á = a). La Ñ sí cuenta como letra.</li>
         <li>Después de cada intento, los colores te dicen qué tan cerca estás.</li>
+        <li>
+          ¿Atorado? Puedes pedir una 💡 pista (normalmente, en qué libro de la Biblia aparece). Resta{" "}
+          {PALABRA_COSTO_PISTA} puntos en el ranking de ese día, pero no afecta tu racha.
+        </li>
       </ul>
 
       <div>

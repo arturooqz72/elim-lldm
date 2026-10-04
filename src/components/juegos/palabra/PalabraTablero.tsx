@@ -27,8 +27,9 @@ export function PalabraTablero({ intentos, actual, revelandoFila, sacudir, termi
       style={{
         // El alto del tablero es ~1.2 × su ancho: se limita por la altura de
         // la pantalla para que tablero + teclado quepan sin scroll en
-        // celulares chicos (375×667), y a 330px en los grandes.
-        maxWidth: "clamp(220px, calc((100dvh - 330px) / 1.2), 330px)",
+        // celulares chicos (375×667, incluida la línea de la pista), y a 330px
+        // en los grandes.
+        maxWidth: "clamp(220px, calc((100dvh - 375px) / 1.2), 330px)",
         gridTemplateRows: `repeat(${PALABRA_MAX_INTENTOS}, 1fr)`,
       }}
       role="grid"

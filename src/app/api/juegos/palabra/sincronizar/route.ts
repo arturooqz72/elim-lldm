@@ -46,9 +46,10 @@ export async function POST(request: Request) {
   const entrada = (Array.isArray(body.partidas) ? body.partidas : []).slice(0, MAX_PARTIDAS) as Array<{
     fecha?: unknown;
     intentos?: unknown;
+    pistaUsada?: unknown;
   }>;
 
-  const candidatas = entrada.filter((p): p is { fecha: string; intentos: unknown[] } => {
+  const candidatas = entrada.filter((p): p is { fecha: string; intentos: unknown[]; pistaUsada?: unknown } => {
     if (!esFechaIso(p.fecha) || !Array.isArray(p.intentos)) return false;
     const antiguedad = diasEntre(p.fecha, hoy);
     return antiguedad >= 0 && antiguedad <= PALABRA_DIAS_SINCRONIZABLES;
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
       num_intentos: intentos.length,
       resuelta,
       terminada,
+      pista_usada: p.pistaUsada === true,
       origen: "local",
     });
   }

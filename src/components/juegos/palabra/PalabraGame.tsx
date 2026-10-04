@@ -17,11 +17,10 @@ import { useRecargaAlCambiarDia, useSincronizacionLocal, useTecladoFisico } from
 import { DURACION_REVELADO, PalabraTablero } from "./PalabraTablero";
 import { PalabraTeclado } from "./PalabraTeclado";
 import { PalabraBarraSuperior } from "./PalabraBarraSuperior";
-import { PalabraModal } from "./PalabraModal";
-import { PalabraAyuda } from "./PalabraAyuda";
-import { PalabraEstadisticas } from "./PalabraEstadisticas";
+import { PalabraModales } from "./PalabraModales";
 import { PalabraResultado } from "./PalabraResultado";
 import { InvitacionSesion } from "./InvitacionSesion";
+import { PalabraPista } from "./PalabraPista";
 import { ESTILOS_PALABRA } from "./estilos";
 
 const PRIORIDAD: Record<PalabraColor, number> = { absent: 0, present: 1, correct: 2 };
@@ -78,7 +77,12 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
   useSincronizacionLocal(conSesion, fecha, setEstado, mostrarAviso);
   useRecargaAlCambiarDia(fecha);
 
-  const partida: PalabraPartidaEstado = estado?.partida ?? { intentos: [], terminada: false, resuelta: false };
+  const partida: PalabraPartidaEstado = estado?.partida ?? {
+    intentos: [],
+    terminada: false,
+    resuelta: false,
+    pistaUsada: false,
+  };
   const bloqueado = !estado || !hayPalabra || partida.terminada || enviando || revelandoFila !== null;
 
   function sacudirFila() {
@@ -117,7 +121,12 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
       }
 
       const intentos = [...partida.intentos, data.intento];
-      const nuevaPartida: PalabraPartidaEstado = { intentos, terminada: data.terminada, resuelta: data.resuelta };
+      const nuevaPartida: PalabraPartidaEstado = {
+        intentos,
+        terminada: data.terminada,
+        resuelta: data.resuelta,
+        pistaUsada: partida.pistaUsada,
+      };
       const filaRevelada = intentos.length - 1;
       setActual("");
       setRevelandoFila(filaRevelada);
@@ -127,7 +136,7 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
           data.estado ?? (prev ? { ...prev, partida: nuevaPartida, revelado: data.revelado } : prev)
         );
       } else {
-        guardarPartidaLocal(fecha, { ...nuevaPartida, revelado: data.revelado });
+        guardarPartidaLocal(fecha, { ...nuevaPartida, revelado: data.revelado, pista: estado?.pista ?? null });
         setEstado(estadoLocal(fecha));
       }
 
@@ -145,6 +154,16 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
       mostrarAviso("Sin conexión. Intenta de nuevo.", 3000);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  function aplicarPista(pista: string) {
+    const conPista: PalabraPartidaEstado = { ...partida, pistaUsada: true };
+    if (conSesion) {
+      setEstado((prev) => (prev ? { ...prev, partida: conPista, pista } : prev));
+    } else {
+      guardarPartidaLocal(fecha, { ...conPista, revelado: null, pista });
+      setEstado(estadoLocal(fecha));
     }
   }
 
@@ -198,6 +217,16 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
         onEstadisticas={() => setModal("estadisticas")}
       />
 
+      {hayPalabra && estado && (
+        <PalabraPista
+          pista={estado.pista}
+          disponible={!partida.terminada}
+          conSesion={conSesion}
+          onPista={aplicarPista}
+          onError={(m) => mostrarAviso(m, 3000)}
+        />
+      )}
+
       <div className="relative">
         {aviso && (
           <div
@@ -248,34 +277,7 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
 
       {!conSesion && !partida.terminada && <InvitacionSesion />}
 
-      {modal === "ayuda" && (
-        <PalabraModal titulo="Cómo jugar" onCerrar={cerrarModal}>
-          <PalabraAyuda />
-          <button
-            type="button"
-            onClick={cerrarModal}
-            className="w-full mt-5 py-3 rounded-xl text-sm font-bold"
-            style={{ background: "var(--color-primary)", color: "#000" }}
-          >
-            ¡A jugar!
-          </button>
-        </PalabraModal>
-      )}
-
-      {modal === "estadisticas" && estado && (
-        <PalabraModal titulo="Estadísticas" onCerrar={cerrarModal}>
-          <PalabraEstadisticas
-            estadisticas={estado.estadisticas}
-            racha={estado.racha}
-            resaltarIntentos={partida.resuelta ? partida.intentos.length : null}
-          />
-          {!conSesion && (
-            <p className="text-xs mt-4 text-center" style={{ color: "var(--color-text-muted)" }}>
-              Sin sesión, tus estadísticas solo se guardan en este dispositivo.
-            </p>
-          )}
-        </PalabraModal>
-      )}
+      <PalabraModales modal={modal} estado={estado} partida={partida} conSesion={conSesion} onCerrar={cerrarModal} />
     </div>
   );
 }

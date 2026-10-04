@@ -16,6 +16,9 @@ export interface PartidaLocal {
   terminada: boolean;
   resuelta: boolean;
   revelado: PalabraRevelada | null;
+  /** Opcionales: las partidas guardadas antes de existir la pista no los traen. */
+  pistaUsada?: boolean;
+  pista?: string | null;
 }
 
 type Partidas = Record<string, PartidaLocal>;
@@ -75,8 +78,16 @@ export function estadoLocal(hoy: string): PalabraEstadoJugador {
     hoy
   );
   return {
-    partida: deHoy ? { intentos: deHoy.intentos, terminada: deHoy.terminada, resuelta: deHoy.resuelta } : null,
+    partida: deHoy
+      ? {
+          intentos: deHoy.intentos,
+          terminada: deHoy.terminada,
+          resuelta: deHoy.resuelta,
+          pistaUsada: Boolean(deHoy.pistaUsada),
+        }
+      : null,
     revelado: deHoy?.terminada ? deHoy.revelado : null,
+    pista: deHoy?.pista ?? null,
     racha,
     comodinesUsados,
     estadisticas: calcularEstadisticas(
@@ -86,11 +97,13 @@ export function estadoLocal(hoy: string): PalabraEstadoJugador {
 }
 
 /** Lo que se manda a /api/juegos/palabra/sincronizar al iniciar sesión (solo palabras, nunca colores). */
-export function partidasParaSincronizar(hoy: string): Array<{ fecha: string; intentos: string[] }> {
+export function partidasParaSincronizar(
+  hoy: string
+): Array<{ fecha: string; intentos: string[]; pistaUsada: boolean }> {
   return Object.entries(leerPartidasLocales())
     .filter(([fecha, p]) => {
       const antiguedad = diasEntre(fecha, hoy);
       return p.intentos.length > 0 && antiguedad >= 0 && antiguedad <= PALABRA_DIAS_SINCRONIZABLES;
     })
-    .map(([fecha, p]) => ({ fecha, intentos: p.intentos.map((i) => i.palabra) }));
+    .map(([fecha, p]) => ({ fecha, intentos: p.intentos.map((i) => i.palabra), pistaUsada: Boolean(p.pistaUsada) }));
 }

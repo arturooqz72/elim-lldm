@@ -11,6 +11,7 @@ import {
   calcularRacha,
   fechaEnZona,
   inicioDeSemana,
+  pistaDesdeReferencia,
   rachaEfectiva,
 } from "./logica";
 import type {
@@ -31,10 +32,11 @@ export interface FilaPartida {
   num_intentos: number;
   resuelta: boolean;
   terminada: boolean;
+  pista_usada: boolean;
   origen: "servidor" | "local";
 }
 
-export const COLUMNAS_PARTIDA = "id, fecha, intentos, num_intentos, resuelta, terminada, origen";
+export const COLUMNAS_PARTIDA = "id, fecha, intentos, num_intentos, resuelta, terminada, pista_usada, origen";
 
 export function fechaDeHoy(): string {
   return fechaEnZona();
@@ -126,13 +128,22 @@ export async function getEstadoJugador(
     : calcularRacha([]);
   const { racha, comodinesUsados } = rachaEfectiva(rachaGuardada, hoy);
 
-  const revelado = deHoy?.terminada ? await getPalabraPorFecha(hoy, client) : null;
+  // La palabra de hoy solo se lee si hace falta: al terminar (para
+  // revelarla) o si pidió la pista (para volver a mostrársela).
+  const palabraHoy =
+    deHoy && (deHoy.terminada || deHoy.pista_usada) ? await getPalabraPorFecha(hoy, client) : null;
 
   return {
     partida: deHoy
-      ? { intentos: deHoy.intentos ?? [], terminada: deHoy.terminada, resuelta: deHoy.resuelta }
+      ? {
+          intentos: deHoy.intentos ?? [],
+          terminada: deHoy.terminada,
+          resuelta: deHoy.resuelta,
+          pistaUsada: deHoy.pista_usada,
+        }
       : null,
-    revelado,
+    revelado: deHoy?.terminada ? palabraHoy : null,
+    pista: deHoy?.pista_usada && palabraHoy ? pistaDesdeReferencia(palabraHoy.referencia, palabraHoy.palabra) : null,
     racha,
     comodinesUsados,
     estadisticas: calcularEstadisticas(

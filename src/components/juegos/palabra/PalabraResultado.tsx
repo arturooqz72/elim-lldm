@@ -34,6 +34,7 @@ export function PalabraResultado({ fecha, partida, revelado, estado, conSesion, 
     intentos: partida.intentos,
     resuelta: partida.resuelta,
     racha: estado.racha.actual,
+    pistaUsada: partida.pistaUsada,
   });
 
   async function compartir() {
