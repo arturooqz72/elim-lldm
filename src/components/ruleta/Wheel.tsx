@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { WHEEL_SEGMENTS, SEG_COLORS } from "@/lib/ruleta/wheel";
+import { WHEEL_SEGMENTS, SEG_COLORS, SPIN_ANIMATION_MS } from "@/lib/ruleta/wheel";
 
 interface WheelProps {
   size?: number;
@@ -29,7 +29,7 @@ export function Wheel({ size = 260, spinToSegment, spinToken, onSpinClick, canSp
 
     setSpinning(true);
     setRotation(total);
-    const t = setTimeout(() => setSpinning(false), 4000);
+    const t = setTimeout(() => setSpinning(false), SPIN_ANIMATION_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinToken]);
@@ -77,7 +77,7 @@ export function Wheel({ size = 260, spinToSegment, spinToken, onSpinClick, canSp
             position: "relative",
             background: gradient,
             transform: `rotate(${rotation}deg)`,
-            transition: spinning ? "transform 4s cubic-bezier(0.15,0.7,0.25,1)" : "none",
+            transition: spinning ? `transform ${SPIN_ANIMATION_MS}ms cubic-bezier(0.15,0.7,0.25,1)` : "none",
           }}
         >
           <svg viewBox="0 0 100 100" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>

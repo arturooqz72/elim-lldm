@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { WHEEL_SEGMENTS, TURN_SECONDS, pickWheelSegmentIndex } from "@/lib/ruleta/wheel";
+import { WHEEL_SEGMENTS, TURN_SECONDS, ANSWER_SECONDS, SPIN_ANIMATION_MS, pickWheelSegmentIndex } from "@/lib/ruleta/wheel";
 import { nextJugadorId } from "@/lib/ruleta/game.server";
 
 export async function POST(
@@ -42,7 +42,7 @@ export async function POST(
   const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
 
   if (seg.type === "puntos") {
-    const endsAt = Date.now() + TURN_SECONDS * 1000;
+    const endsAt = Date.now() + SPIN_ANIMATION_MS + ANSWER_SECONDS * 1000;
     const { data: updated, error: updateError } = await service
       .from("ruleta_salas")
       .update({

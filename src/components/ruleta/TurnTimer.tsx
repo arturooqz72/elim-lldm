@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { TURN_SECONDS } from "@/lib/ruleta/wheel";
 
+const RETRY_MS = 2000;
+
 interface TurnTimerProps {
   endsAt: number | null;
   onExpire: () => void;
@@ -15,6 +17,7 @@ export function TurnTimer({ endsAt, onExpire }: TurnTimerProps) {
 
   useEffect(() => {
     if (!endsAt) return;
+    let retry: ReturnType<typeof setInterval> | null = null;
     setTimeLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
 
     const interval = setInterval(() => {
@@ -23,10 +26,18 @@ export function TurnTimer({ endsAt, onExpire }: TurnTimerProps) {
       if (remaining === 0) {
         clearInterval(interval);
         onExpire();
+        // Si el reloj de este dispositivo va adelantado, el servidor rechaza
+        // el aviso porque para él el turno aún no vence, y nadie volvía a
+        // avisar: la sala se quedaba trabada. Se reintenta hasta que llegue
+        // un deadline nuevo (que desmonta este efecto).
+        retry = setInterval(onExpire, RETRY_MS);
       }
     }, 250);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (retry) clearInterval(retry);
+    };
   }, [endsAt, onExpire]);
 
   if (!endsAt) return null;
