@@ -6,6 +6,7 @@ import { useState, useEffect, Fragment } from "react";
 import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle, Volume2, CalendarCheck } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
+import { usePresenciaSitio } from "./usePresenciaSitio";
 import { whatsappHref } from "@/lib/whatsapp";
 import type { Profile } from "@/types";
 
@@ -54,25 +55,10 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
     return () => subscription.unsubscribe();
   }, []);
 
-  // Presencia global: mientras haya sesión iniciada en cualquier pestaña con
-  // este layout montado, se marca "en línea" en un canal compartido — lo lee
-  // /juegos/jugadores para mostrar quién de la lista de invitación está
-  // conectado ahora mismo, además de quién simplemente se registró.
-  useEffect(() => {
-    if (!profile) return;
-    const supabase = createClient();
-    const channel = supabase.channel("presence:site", {
-      config: { presence: { key: profile.id } },
-    });
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        channel.track({ online_at: new Date().toISOString() });
-      }
-    });
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile]);
+  // Presencia global en "presence:site": la leen /juegos/jugadores (quién de
+  // la lista de invitación está conectado) y /admin/en-linea (todos los que
+  // están en el sitio ahora mismo y en qué página).
+  usePresenciaSitio(profile?.id ?? null, pathname);
 
   async function handleSignOut() {
     const supabase = createFreshClient();

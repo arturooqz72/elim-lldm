@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Users, Mic, Gamepad2, Archive, Radio } from "lucide-react";
 import Link from "next/link";
+import { ConectadosAhoraCard } from "@/components/admin/ConectadosAhoraCard";
 
 export const metadata = { title: "Dashboard — Admin" };
 
@@ -85,7 +86,8 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        <ConectadosAhoraCard />
         {stats.map((s) => {
           const Icon = s.icon;
           return (

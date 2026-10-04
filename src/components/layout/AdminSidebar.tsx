@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Activity,
   Users,
   Mic,
   BookOpen,
@@ -29,6 +30,7 @@ import { useRouter } from "next/navigation";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/en-linea", label: "En línea ahora", icon: Activity },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/admin/programas", label: "Programas", icon: Radio },
