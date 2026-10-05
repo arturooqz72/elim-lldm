@@ -3,8 +3,7 @@
 // Devuelve la pista de hoy: el libro de la Biblia donde aparece la palabra
 // (nunca la palabra ni el versículo). Con sesión, deja marcada la partida
 // con pista_usada = true — eso le resta puntos en el ranking de hoy (ver
-// 0056_palabra_pista.sql). Sin sesión solo devuelve el texto: el progreso
-// sin sesión no cuenta para el ranking.
+// 0056_palabra_pista.sql). Exige sesión, como el resto del juego.
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { pistaDesdeReferencia } from "@/lib/palabra/logica";
@@ -23,7 +22,9 @@ export async function POST() {
   const {
     data: { user },
   } = await authClient.auth.getUser();
-  if (!user) return NextResponse.json({ pista });
+  if (!user) {
+    return NextResponse.json({ error: "sin_sesion", mensaje: "Inicia sesión para jugar." }, { status: 401 });
+  }
 
   const buscarPartida = async () =>
     service.from("palabra_partidas").select(COLUMNAS_PARTIDA).eq("user_id", user.id).eq("fecha", hoy).maybeSingle();

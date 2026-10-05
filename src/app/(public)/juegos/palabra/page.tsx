@@ -1,5 +1,6 @@
 // src/app/(public)/juegos/palabra/page.tsx
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { getProfile } from "@/lib/supabase/server";
 import { numeroDelDia, sumarDias } from "@/lib/palabra/logica";
@@ -28,9 +29,9 @@ function etiquetaFecha(fecha: string): string {
 
 export default async function PalabraDelDiaPage() {
   const hoy = fechaDeHoy();
-  // A diferencia de Ahorcado, aquí NO se exige sesión: sin sesión el
-  // progreso se guarda en localStorage y se invita a iniciar sesión.
+  // Igual que el resto de los juegos: hay que registrarse para jugar.
   const profile = await getProfile();
+  if (!profile) redirect("/login?returnUrl=/juegos/palabra");
 
   const [hayPalabra, estado, rankings] = await Promise.all([
     hayPalabraHoy(hoy),

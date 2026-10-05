@@ -6,10 +6,7 @@
 // - Con sesión: la partida vive en palabra_partidas (una por usuario y
 //   día). El servidor es la fuente de verdad: guarda cada intento, impide
 //   jugar dos veces el mismo día y recalcula la racha al terminar.
-// - Sin sesión: no hay dónde guardar, así que el navegador manda sus
-//   intentos previos (`previos`) y el servidor los vuelve a validar para
-//   saber si la partida termina con este intento. El progreso y la racha
-//   quedan en localStorage (no cuentan para el ranking).
+// - Sin sesión: 401, hay que registrarse para jugar.
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { PALABRA_MAX_INTENTOS } from "@/lib/palabra/config";
@@ -60,24 +57,8 @@ export async function POST(request: Request) {
     data: { user },
   } = await authClient.auth.getUser();
 
-  // ---------- Sin sesión ----------
-  if (!user) {
-    const previos = Array.isArray(body.previos) ? body.previos : [];
-    if (previos.length >= PALABRA_MAX_INTENTOS) return error(409, "terminada", "Ya usaste tus 6 intentos de hoy.");
-    for (const p of previos) {
-      const n = typeof p === "string" ? normalizarPalabra(p) : "";
-      if (!tieneFormatoValido(n) || !esValida(n)) return error(400, "previos_invalidos", "Intentos previos inválidos.");
-      if (n === respuesta) return error(409, "terminada", "Ya resolviste la palabra de hoy.");
-    }
-    const resuelta = intento === respuesta;
-    const terminada = resuelta || previos.length + 1 >= PALABRA_MAX_INTENTOS;
-    return NextResponse.json({
-      intento: nuevo,
-      terminada,
-      resuelta,
-      revelado: terminada ? palabraHoy : null,
-    });
-  }
+  // Se exige sesión, igual que en la página: nada de partidas anónimas.
+  if (!user) return error(401, "sin_sesion", "Inicia sesión para jugar.");
 
   // ---------- Con sesión ----------
   const buscarPartida = async () =>

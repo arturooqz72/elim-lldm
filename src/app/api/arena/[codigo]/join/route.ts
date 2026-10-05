@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ codigo: string }> }
 ) {
   const { codigo } = await params;
+
+  const authClient = await createClient();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
+
   const supabase = await createServiceClient();
 
   let body: { nombre?: string };

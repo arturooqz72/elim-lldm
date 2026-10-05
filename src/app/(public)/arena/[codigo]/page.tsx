@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { ArenaRoom } from "@/components/arena/ArenaRoom";
 import { JoinCodeForm } from "@/components/arena/JoinCodeForm";
@@ -16,6 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArenaSalaPage({ params }: Props) {
   const { codigo } = await params;
   const codigoUpper = codigo.toUpperCase();
+  // Hay que registrarse para jugar, igual que el resto de los juegos.
+  const profile = await getProfile();
+  if (!profile) redirect(`/login?returnUrl=/arena/${codigoUpper}`);
   const supabase = await createClient();
 
   const { data: sala } = await supabase
@@ -42,7 +46,7 @@ export default async function ArenaSalaPage({ params }: Props) {
     );
   }
 
-  const [{ data: preguntasRaw }, { data: jugadoresRaw }, profile] = await Promise.all([
+  const [{ data: preguntasRaw }, { data: jugadoresRaw }] = await Promise.all([
     supabase
       .from("elim_arena_preguntas")
       .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
@@ -53,7 +57,6 @@ export default async function ArenaSalaPage({ params }: Props) {
       .select("*")
       .eq("sala_id", sala.id)
       .order("created_at"),
-    getProfile(),
   ]);
 
   const isHost = profile?.id === sala.created_by;
