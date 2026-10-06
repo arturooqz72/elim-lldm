@@ -26,6 +26,7 @@ import { Scoreboard } from "./Scoreboard";
 import { TurnTimer } from "./TurnTimer";
 import { RoundBanner } from "./RoundBanner";
 import { MatchEndScreen } from "./MatchEndScreen";
+import { InvitarConectados } from "@/components/juegos/InvitarConectados";
 
 type Phase = "lobby" | "playing" | "ronda_fin" | "finished";
 
@@ -445,6 +446,7 @@ export function RuletaRoom({
               <Share2 size={14} />
               Invitar
             </button>
+            <InvitarConectados juego="ruleta" />
             {jugadores.length >= MIN_PLAYERS && jugadores.length < sala.jugadores_deseados && (
               <div className="flex flex-col items-center gap-2">
                 <button

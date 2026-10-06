@@ -17,6 +17,7 @@ import {
   MIN_JUGADORES_PARA_INICIAR,
 } from "@/lib/arena-publica/config";
 import type { ArenaJugador, AnswerOption } from "@/types";
+import { InvitarConectados } from "@/components/juegos/InvitarConectados";
 
 type ArenaPublicaPhase = "lobby" | "counting" | "playing" | "reveal" | "finished";
 
@@ -385,6 +386,7 @@ export function ArenaPublicaRoom({
               <Share2 size={14} />
               Invitar
             </button>
+            <InvitarConectados juego="trivia" />
             {jugadores.length >= MIN_JUGADORES_PARA_INICIAR && jugadores.length < jugadoresDeseados && (
               <div className="flex flex-col items-center gap-2">
                 <button

@@ -6,14 +6,14 @@ import { JUEGOS_INVITACION, type ClaveJuegoInvitacion } from "@/lib/invitaciones
 
 type Estado = "cerrado" | "eligiendo" | "enviando" | "enviado" | "error";
 
-/** "Invitar a jugar" para una persona conectada (ver /api/admin/invitar). */
+/** "Invitar a jugar" para una persona conectada (ver /api/juegos/invitar). */
 export function InvitarBoton({ userId }: { userId: string }) {
   const [estado, setEstado] = useState<Estado>("cerrado");
 
   async function invitar(juego: ClaveJuegoInvitacion) {
     setEstado("enviando");
     try {
-      const res = await fetch("/api/admin/invitar", {
+      const res = await fetch("/api/juegos/invitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, juego }),

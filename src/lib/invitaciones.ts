@@ -1,7 +1,8 @@
-// Invitaciones a jugar enviadas desde /admin/en-linea a alguien que tiene el
-// sitio abierto. Viajan por un canal Realtime por usuario; el aviso solo
-// muestra juegos de esta lista fija (nunca un texto o enlace que venga en el
-// mensaje), así nadie puede usar el canal para mandar enlaces raros.
+// Invitaciones a jugar a alguien que tiene el sitio abierto, desde una sala
+// de espera o desde /admin/en-linea. Viajan por un canal Realtime por
+// usuario; el aviso solo enlaza a juegos de esta lista fija (nunca a un
+// enlace que venga en el mensaje), así nadie puede usar el canal para mandar
+// enlaces raros.
 
 export const JUEGOS_INVITACION = [
   { clave: "trivia", nombre: "Trivia en línea", href: "/arena-abierta" },

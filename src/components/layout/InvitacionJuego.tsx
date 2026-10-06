@@ -6,15 +6,15 @@ import { Gamepad2, X } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { canalInvitacion, EVENTO_INVITACION, juegoInvitacion } from "@/lib/invitaciones";
 
-type Juego = NonNullable<ReturnType<typeof juegoInvitacion>>;
+type Invitacion = { juego: NonNullable<ReturnType<typeof juegoInvitacion>>; de: string | null };
 
 /**
  * Aviso flotante "Te invitan a jugar…" para quien tiene sesión y el sitio
  * abierto. Escucha su propio canal invitacion:<id> (lo manda
- * /api/admin/invitar desde /admin/en-linea).
+ * /api/juegos/invitar desde una sala de espera o desde /admin/en-linea).
  */
 export function InvitacionJuego({ profileId }: { profileId: string | null }) {
-  const [juego, setJuego] = useState<Juego | null>(null);
+  const [invitacion, setInvitacion] = useState<Invitacion | null>(null);
 
   useEffect(() => {
     if (!profileId) return;
@@ -23,8 +23,10 @@ export function InvitacionJuego({ profileId }: { profileId: string | null }) {
     const canal = supabase
       .channel(canalInvitacion(profileId))
       .on("broadcast", { event: EVENTO_INVITACION }, ({ payload }) => {
-        const j = juegoInvitacion((payload as { juego?: unknown } | undefined)?.juego);
-        if (j) setJuego(j);
+        const p = payload as { juego?: unknown; de?: unknown } | undefined;
+        const juego = juegoInvitacion(p?.juego);
+        const de = typeof p?.de === "string" && p.de.trim() ? p.de.trim().slice(0, 40) : null;
+        if (juego) setInvitacion({ juego, de });
       })
       .subscribe();
     return () => {
@@ -32,7 +34,8 @@ export function InvitacionJuego({ profileId }: { profileId: string | null }) {
     };
   }, [profileId]);
 
-  if (!juego) return null;
+  if (!invitacion) return null;
+  const { juego, de } = invitacion;
 
   return (
     <div
@@ -54,13 +57,14 @@ export function InvitacionJuego({ profileId }: { profileId: string | null }) {
       </div>
       <div className="flex-1 min-w-0 flex flex-col gap-2">
         <p className="text-sm" style={{ color: "var(--color-text)" }}>
-          <strong>¡La Paz del Señor!</strong> El equipo de Elim LLDM te invita a jugar{" "}
-          <strong style={{ color: "var(--color-primary)" }}>{juego.nombre}</strong>.
+          <strong>¡La Paz del Señor!</strong> {de ?? "El equipo de Elim LLDM"} te invita a jugar{" "}
+          <strong style={{ color: "var(--color-primary)" }}>{juego.nombre}</strong>
+          {de ? " y te está esperando." : "."}
         </p>
         <div className="flex gap-2">
           <Link
             href={juego.href}
-            onClick={() => setJuego(null)}
+            onClick={() => setInvitacion(null)}
             className="flex-1 text-center py-2 rounded-lg text-sm font-bold"
             style={{ background: "var(--color-primary)", color: "#000" }}
           >
@@ -68,7 +72,7 @@ export function InvitacionJuego({ profileId }: { profileId: string | null }) {
           </Link>
           <button
             type="button"
-            onClick={() => setJuego(null)}
+            onClick={() => setInvitacion(null)}
             className="px-3 py-2 rounded-lg text-sm"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}
           >
@@ -76,7 +80,7 @@ export function InvitacionJuego({ profileId }: { profileId: string | null }) {
           </button>
         </div>
       </div>
-      <button type="button" onClick={() => setJuego(null)} aria-label="Cerrar" style={{ color: "var(--color-text-muted)" }}>
+      <button type="button" onClick={() => setInvitacion(null)} aria-label="Cerrar" style={{ color: "var(--color-text-muted)" }}>
         <X size={16} />
       </button>
     </div>
