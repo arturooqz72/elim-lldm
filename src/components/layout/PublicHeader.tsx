@@ -41,16 +41,18 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
   useEffect(() => {
     const supabase = createClient();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         setProfile(null);
       } else if (session?.user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
-        if (data) setProfile(data as Profile);
+        const userId = session.user.id;
+        // Fuera del callback: un await a Supabase aquí dentro deja trabado el
+        // cliente (lock de auth) y todas sus consultas posteriores se quedan
+        // colgadas — ver docs de onAuthStateChange.
+        setTimeout(async () => {
+          const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+          if (data) setProfile(data as Profile);
+        }, 0);
       }
     });
 
