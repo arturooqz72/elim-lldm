@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { UserRound, Users } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { useConectadosSitio } from "./useConectadosSitio";
+import { InvitarBoton } from "./InvitarBoton";
 import { nombreSeccion } from "./secciones-sitio";
 
 interface Perfil {
@@ -164,9 +165,12 @@ export function EnLineaAhora() {
                       {u.rutas.length ? u.rutas.map((r) => nombreSeccion(r)).join(" · ") : "Sitio"}
                     </p>
                   </div>
-                  <span className="text-[11px] shrink-0" style={{ color: "var(--color-text-muted)" }}>
-                    {ahora ? haceCuanto(u.desde, ahora) : ""}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0 max-w-[55%]">
+                    <span className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+                      {ahora ? haceCuanto(u.desde, ahora) : ""}
+                    </span>
+                    <InvitarBoton userId={u.id} />
+                  </div>
                 </li>
               );
             })}
