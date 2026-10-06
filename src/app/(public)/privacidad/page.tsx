@@ -73,6 +73,11 @@ export default function PrivacidadPage() {
               qué página estás viendo (para saber cuántas personas están conectadas) y, si las activas, las
               notificaciones del navegador.
             </li>
+            <li>
+              <strong style={{ color: "var(--color-text)" }}>Historial de visitas:</strong> qué páginas del sitio abres,
+              con fecha y hora. Si tienes cuenta se asocia a tu nombre; si no, a un número aleatorio guardado en tu
+              navegador que no te identifica. Solo lo ven los administradores y se borra automáticamente a los 90 días.
+            </li>
           </ul>
         </Seccion>
 

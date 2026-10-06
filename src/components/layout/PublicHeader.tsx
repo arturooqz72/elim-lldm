@@ -7,6 +7,7 @@ import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOu
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import { usePresenciaSitio } from "./usePresenciaSitio";
+import { useRegistrarVisita } from "./useRegistrarVisita";
 import { InvitacionJuego } from "./InvitacionJuego";
 import { whatsappHref } from "@/lib/whatsapp";
 import type { Profile } from "@/types";
@@ -60,6 +61,8 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
   // la lista de invitación está conectado) y /admin/en-linea (todos los que
   // están en el sitio ahora mismo y en qué página).
   usePresenciaSitio(profile?.id ?? null, pathname);
+  // Historial persistente de visitas (/admin/historial), 90 días.
+  useRegistrarVisita(profile?.id ?? null, pathname);
 
   async function handleSignOut() {
     const supabase = createFreshClient();
