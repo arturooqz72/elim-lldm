@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 const CORREO = "contacto@elimlldm.net";
+const ACTUALIZADA = "7 de octubre de 2026";
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -24,8 +25,6 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   );
 }
 
-// BORRADOR: texto pendiente de revisión por el administrador antes de
-// cobrar con claves reales de Stripe.
 export default function InglesTerminosPage() {
   const { gratisDiarios, costoPronunciacion } = inglesConfig();
   const paquetes = inglesPaquetes();
@@ -44,11 +43,8 @@ export default function InglesTerminosPage() {
           <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--color-text)" }}>
             Términos de Elim English
           </h1>
-          <p
-            className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full"
-            style={{ background: "rgba(248,113,113,0.12)", color: "var(--color-destructive)" }}
-          >
-            Borrador — en revisión
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Última actualización: {ACTUALIZADA}
           </p>
         </div>
 
