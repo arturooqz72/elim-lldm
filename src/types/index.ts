@@ -527,3 +527,37 @@ export interface PalabraFilaRankingIglesia {
   puntos: number;
   jugadores: number;
 }
+
+// ── Elim English (tutor de inglés con IA, /ingles) ─────────────────────────────
+
+export type InglesNivel = "principiante" | "intermedio" | "avanzado";
+export type InglesModo = "conversacion" | "situaciones" | "gramatica" | "vocabulario";
+export type InglesSituacion = "restaurante" | "entrevista" | "medico" | "aeropuerto";
+export type InglesPaqueteId = "basico" | "grande";
+
+export interface InglesPerfil {
+  nivel: InglesNivel;
+  modo: InglesModo;
+  situacion: InglesSituacion;
+}
+
+export interface InglesMensaje {
+  modo: InglesModo;
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Lo que le queda al usuario; siempre calculado en el servidor. */
+export interface InglesSaldo {
+  gratisRestantes: number;
+  gratisDiarios: number;
+  creditos: number;
+}
+
+/** Paquete tal como se muestra en pantalla (precio ya decidido por el servidor). */
+export interface InglesPaquete {
+  id: InglesPaqueteId;
+  mensajes: number;
+  precioCentavos: number;
+  moneda: string;
+}

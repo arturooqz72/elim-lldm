@@ -1,0 +1,148 @@
+import Link from "next/link";
+import { FileText } from "lucide-react";
+import type { Metadata } from "next";
+import { inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
+import { ETIQUETA_PAQUETE, formatoPrecio } from "@/lib/ingles/etiquetas";
+
+export const metadata: Metadata = {
+  title: "Términos de Elim English — Elim LLDM",
+  description: "Términos de uso y política de reembolso del tutor de inglés Elim English.",
+};
+
+const CORREO = "contacto@elimlldm.net";
+
+function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>
+        {titulo}
+      </h2>
+      <div className="flex flex-col gap-3 text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+// BORRADOR: texto pendiente de revisión por el administrador antes de
+// cobrar con claves reales de Stripe.
+export default function InglesTerminosPage() {
+  const { gratisDiarios } = inglesConfig();
+  const paquetes = inglesPaquetes();
+  const enlace = { color: "var(--color-primary)" } as const;
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
+      <div className="max-w-2xl mx-auto px-4 py-16 flex flex-col gap-10">
+        <div className="text-center">
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5"
+            style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.2)" }}
+          >
+            <FileText size={24} style={{ color: "var(--color-primary)" }} />
+          </div>
+          <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--color-text)" }}>
+            Términos de Elim English
+          </h1>
+          <p
+            className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full"
+            style={{ background: "rgba(248,113,113,0.12)", color: "var(--color-destructive)" }}
+          >
+            Borrador — en revisión
+          </p>
+        </div>
+
+        <Seccion titulo="Qué es Elim English">
+          <p>
+            Elim English es un tutor de inglés por chat que funciona con inteligencia artificial. Sirve para practicar
+            conversación, situaciones de la vida diaria, gramática y vocabulario. Es una herramienta de práctica: no es
+            un curso certificado ni sustituye a un maestro, y la tutora puede equivocarse.
+          </p>
+        </Seccion>
+
+        <Seccion titulo="Cuenta y uso aceptable">
+          <ul className="list-disc pl-5 flex flex-col gap-2">
+            <li>Necesitas una cuenta de Elim LLDM con sesión iniciada para usar Elim English.</li>
+            <li>
+              Úsalo para aprender inglés con respeto. No envíes contenido ofensivo, datos personales sensibles ni
+              información de otras personas.
+            </li>
+            <li>
+              Podemos suspender el acceso a quien abuse del servicio (por ejemplo, con envíos automatizados o contenido
+              inapropiado).
+            </li>
+            <li>
+              Tus mensajes se envían a nuestro proveedor de inteligencia artificial solo para generar la respuesta de la
+              tutora, y se guardan en tu historial para que puedas continuar la conversación. Puedes borrar tu historial
+              desde la misma pantalla.
+            </li>
+          </ul>
+        </Seccion>
+
+        <Seccion titulo="Mensajes gratis y créditos">
+          <ul className="list-disc pl-5 flex flex-col gap-2">
+            <li>
+              Cada usuario tiene {gratisDiarios} mensajes gratis al día. Se renuevan a medianoche, hora del Pacífico, y
+              los que no uses no se acumulan.
+            </li>
+            <li>Cuando se acaban los gratis, cada mensaje que envías a la tutora usa un crédito.</li>
+            <li>
+              Paquetes disponibles:{" "}
+              {paquetes
+                .map((p) => `${ETIQUETA_PAQUETE[p.id]}: ${p.mensajes.toLocaleString("es-MX")} mensajes por ${formatoPrecio(p.precioCentavos, p.moneda)}`)
+                .join("; ")}
+              . Es un pago único, no una suscripción: no hay cargos automáticos.
+            </li>
+            <li>Los créditos comprados no caducan mientras el servicio exista y no se pueden transferir a otra cuenta.</li>
+            <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
+          </ul>
+        </Seccion>
+
+        <Seccion titulo="Pagos">
+          <p>
+            Los pagos los procesa Stripe. Elim LLDM nunca ve ni guarda los datos de tu tarjeta; solo guardamos el
+            registro de la compra (paquete, monto, fecha e identificador del pago).
+          </p>
+        </Seccion>
+
+        <Seccion titulo="Política de reembolso">
+          <ul className="list-disc pl-5 flex flex-col gap-2">
+            <li>
+              Puedes pedir el reembolso completo dentro de los 14 días posteriores a la compra si no has usado ningún
+              crédito de ese paquete.
+            </li>
+            <li>
+              Si ya usaste parte de los créditos, podemos reembolsar la parte proporcional de los créditos no usados,
+              revisando cada caso.
+            </li>
+            <li>
+              Si se te cobró dos veces o el pago se hizo pero no recibiste los créditos, te devolvemos el cobro duplicado
+              o acreditamos lo que falta.
+            </li>
+            <li>
+              Para pedir un reembolso, escribe a{" "}
+              <a href={`mailto:${CORREO}`} style={enlace}>
+                {CORREO}
+              </a>{" "}
+              desde el correo de tu cuenta, con la fecha de la compra. Al reembolsar se retiran los créditos
+              correspondientes.
+            </li>
+          </ul>
+        </Seccion>
+
+        <Seccion titulo="Cambios">
+          <p>
+            Podemos cambiar los precios, los paquetes o el número de mensajes gratis. Los cambios no afectan los créditos
+            que ya compraste. Si cambian estos términos, lo avisaremos en esta página.
+          </p>
+        </Seccion>
+
+        <p className="text-center text-sm">
+          <Link href="/ingles" style={enlace}>
+            ← Volver a Elim English
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
