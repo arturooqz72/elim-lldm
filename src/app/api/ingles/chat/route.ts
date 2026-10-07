@@ -35,6 +35,8 @@ export async function POST(request: Request) {
   const modo = esModo(body?.modo) ? body.modo : "conversacion";
   const situacion = esSituacion(body?.situacion) ? body.situacion : "restaurante";
 
+  // Pronunciación no es un chat: tiene su propia ruta (/api/ingles/pronunciacion).
+  if (modo === "pronunciacion") return NextResponse.json({ error: "Modo no válido para el chat" }, { status: 400 });
   if (!message) return NextResponse.json({ error: "Mensaje vacío" }, { status: 400 });
   if (message.length > cfg.maxCaracteres) {
     return NextResponse.json(

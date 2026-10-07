@@ -531,7 +531,7 @@ export interface PalabraFilaRankingIglesia {
 // ── Elim English (tutor de inglés con IA, /ingles) ─────────────────────────────
 
 export type InglesNivel = "principiante" | "intermedio" | "avanzado";
-export type InglesModo = "conversacion" | "situaciones" | "gramatica" | "vocabulario";
+export type InglesModo = "conversacion" | "situaciones" | "gramatica" | "vocabulario" | "pronunciacion";
 export type InglesSituacion = "restaurante" | "entrevista" | "medico" | "aeropuerto";
 export type InglesPaqueteId = "basico" | "grande";
 
@@ -560,4 +560,47 @@ export interface InglesPaquete {
   mensajes: number;
   precioCentavos: number;
   moneda: string;
+}
+
+// ── Elim English: modo Pronunciación ───────────────────────────────────────────
+
+/** Sonidos difíciles para hispanohablantes que se siguen en el progreso. */
+export type InglesSonido = "th" | "v_b" | "sh_ch" | "r" | "vocales" | "s_inicial";
+
+export interface PronFrase {
+  id: string;
+  texto: string;
+  traduccion: string;
+  sonido: InglesSonido | null;
+}
+
+export interface PronFonema {
+  fonema: string;
+  puntaje: number;
+}
+
+export interface PronPalabra {
+  palabra: string;
+  puntaje: number;
+  /** "None" | "Mispronunciation" | "Omission" | "Insertion" (de Azure) */
+  error: string;
+  fonemas: PronFonema[];
+}
+
+export interface PronResultado {
+  puntaje: number;
+  precision: number;
+  fluidez: number;
+  completitud: number;
+  palabras: PronPalabra[];
+  sonidosFallados: InglesSonido[];
+  explicacion: string | null;
+}
+
+export interface PronProgreso {
+  /** Promedio de los últimos intentos (null si todavía no hay). */
+  promedio: number | null;
+  intentos: number;
+  /** Sonidos que más falla, del más frecuente al menos. */
+  sonidosDificiles: { sonido: InglesSonido; veces: number }[];
 }

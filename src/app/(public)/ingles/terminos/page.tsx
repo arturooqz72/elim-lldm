@@ -27,7 +27,7 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 // BORRADOR: texto pendiente de revisión por el administrador antes de
 // cobrar con claves reales de Stripe.
 export default function InglesTerminosPage() {
-  const { gratisDiarios } = inglesConfig();
+  const { gratisDiarios, costoPronunciacion } = inglesConfig();
   const paquetes = inglesPaquetes();
   const enlace = { color: "var(--color-primary)" } as const;
 
@@ -95,7 +95,21 @@ export default function InglesTerminosPage() {
             </li>
             <li>Los créditos comprados no caducan mientras el servicio exista y no se pueden transferir a otra cuenta.</li>
             <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
+            <li>
+              En el modo Pronunciación cada intento cuesta {costoPronunciacion} mensajes. Si no se detecta tu voz o la
+              evaluación falla, no se descuenta.
+            </li>
           </ul>
+        </Seccion>
+
+        <Seccion titulo="Modo Pronunciación y tu voz">
+          <p>
+            En el modo Pronunciación, la grabación de tu voz se envía a un servicio externo de reconocimiento de voz
+            (Microsoft Azure Speech) solo para evaluar tu pronunciación de la frase. El audio no se almacena: ni nosotros
+            ni la página lo guardamos después de la evaluación. Solo guardamos el resultado (la frase, los puntajes y las
+            palabras o sonidos con errores) para mostrarte tu progreso. El micrófono solo se activa cuando tocas el botón
+            de grabar.
+          </p>
         </Seccion>
 
         <Seccion titulo="Pagos">

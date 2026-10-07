@@ -6,9 +6,10 @@ import { GraduationCap, Send, Trash2 } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesOpciones } from "./InglesOpciones";
 import { InglesPaquetes } from "./InglesPaquetes";
+import { InglesPronunciacion } from "./InglesPronunciacion";
 import { InglesSaldo } from "./InglesSaldo";
 import { BIENVENIDA, MODOS } from "@/lib/ingles/etiquetas";
-import type { InglesMensaje, InglesModo, InglesPaquete, InglesPerfil, InglesSaldo as Saldo } from "@/types";
+import type { InglesMensaje, InglesModo, InglesPaquete, InglesPerfil, InglesSaldo as Saldo, PronFrase, PronProgreso } from "@/types";
 
 const GOLD = "#f5c842";
 
@@ -22,6 +23,11 @@ interface Props {
   paquetes: InglesPaquete[];
   maxCaracteres: number;
   compra: "ok" | "cancelada" | null;
+  /** Modo Pronunciación */
+  costoPronunciacion: number;
+  pronMaxSegundos: number;
+  fraseInicial: PronFrase | null;
+  progresoInicial: PronProgreso;
 }
 
 function agrupar(mensajes: InglesMensaje[]): Record<InglesModo, ChatMsg[]> {
@@ -146,6 +152,7 @@ export function InglesChat(props: Props) {
   }
 
   const actuales = mensajes[perfil.modo];
+  const pron = perfil.modo === "pronunciacion";
 
   return (
     <div
@@ -173,15 +180,17 @@ export function InglesChat(props: Props) {
             </p>
           </div>
         </div>
-        <button
-          onClick={borrarConversacion}
-          className="p-2 rounded-lg transition-colors shrink-0"
-          style={{ color: "var(--color-text-muted)" }}
-          title="Borrar conversación"
-          aria-label="Borrar conversación"
-        >
-          <Trash2 size={16} />
-        </button>
+        {!pron && (
+          <button
+            onClick={borrarConversacion}
+            className="p-2 rounded-lg transition-colors shrink-0"
+            style={{ color: "var(--color-text-muted)" }}
+            title="Borrar conversación"
+            aria-label="Borrar conversación"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
       <InglesOpciones perfil={perfil} onCambiar={cambiarPerfil} />
@@ -201,9 +210,22 @@ export function InglesChat(props: Props) {
           </div>
         )}
 
-        <InglesMensajes mensajes={actuales} bienvenida={BIENVENIDA[perfil.modo]} escribiendo={loading} />
+        {pron ? (
+          <InglesPronunciacion
+            nivel={perfil.nivel}
+            costo={props.costoPronunciacion}
+            maxSegundos={props.pronMaxSegundos}
+            saldo={saldo}
+            paquetes={paquetes}
+            fraseInicial={props.fraseInicial}
+            progresoInicial={props.progresoInicial}
+            onSaldo={setSaldo}
+          />
+        ) : (
+          <InglesMensajes mensajes={actuales} bienvenida={BIENVENIDA[perfil.modo]} escribiendo={loading} />
+        )}
 
-        {error && (
+        {!pron && error && (
           <div
             className="px-4 py-3 rounded-2xl text-sm"
             style={{
@@ -216,38 +238,40 @@ export function InglesChat(props: Props) {
           </div>
         )}
 
-        {limite && <InglesPaquetes paquetes={paquetes} gratisDiarios={saldo.gratisDiarios} />}
+        {!pron && limite && <InglesPaquetes paquetes={paquetes} gratisDiarios={saldo.gratisDiarios} />}
       </div>
 
       {/* Entrada */}
       <div className="px-5 py-4 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <div className="flex items-end gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={maxCaracteres}
-            placeholder={limite ? "Llegaste al límite de hoy" : "Escribe en inglés (o en español si no sabes cómo decirlo)..."}
-            disabled={limite}
-            rows={1}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none disabled:opacity-50"
-            style={{
-              background: "var(--color-surface-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-              maxHeight: "120px",
-            }}
-          />
-          <button
-            onClick={() => void enviar()}
-            disabled={loading || limite || !input.trim()}
-            className="p-3 rounded-xl shrink-0 transition-opacity disabled:opacity-40"
-            style={{ background: GOLD, color: "#000" }}
-            aria-label="Enviar"
-          >
-            <Send size={16} />
-          </button>
-        </div>
+        {!pron && (
+          <div className="flex items-end gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              maxLength={maxCaracteres}
+              placeholder={limite ? "Llegaste al límite de hoy" : "Escribe en inglés (o en español si no sabes cómo decirlo)..."}
+              disabled={limite}
+              rows={1}
+              className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none disabled:opacity-50"
+              style={{
+                background: "var(--color-surface-elevated)",
+                border: "1px solid var(--color-border)",
+                color: "var(--color-text)",
+                maxHeight: "120px",
+              }}
+            />
+            <button
+              onClick={() => void enviar()}
+              disabled={loading || limite || !input.trim()}
+              className="p-3 rounded-xl shrink-0 transition-opacity disabled:opacity-40"
+              style={{ background: GOLD, color: "#000" }}
+              aria-label="Enviar"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        )}
         <div className="flex justify-between mt-1.5 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
           <Link href="/ingles/terminos" className="hover:underline">
             Términos y reembolsos

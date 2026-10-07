@@ -6,7 +6,7 @@ import type { InglesSaldo } from "@/types";
 import { inglesConfig } from "./config";
 
 /** "YYYY-MM-DD" de hoy en hora del Pacífico — el mismo día que usa la RPC. */
-function hoyPacifico(): string {
+export function hoyPacifico(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",

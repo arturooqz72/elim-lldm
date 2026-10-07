@@ -18,6 +18,12 @@ export function inglesConfig() {
     maxCaracteres: entero("ENGLISH_MAX_CHARS", 1000),
     /** Mensajes previos que se mandan al modelo (no todo el historial). */
     historial: entero("ENGLISH_HISTORY_LIMIT", 12),
+    /** Mensajes que cuesta cada intento de pronunciación. */
+    costoPronunciacion: entero("ENGLISH_PRONUNCIATION_COST", 3),
+    /** Duración máxima de la grabación (también se valida en el servidor). */
+    pronMaxSegundos: entero("ENGLISH_PRON_MAX_SECONDS", 15),
+    /** Tope de frases nuevas generadas por usuario por día (costo de Anthropic). */
+    pronFrasesDiarias: entero("ENGLISH_PRON_DAILY_PHRASES", 60),
   };
 }
 

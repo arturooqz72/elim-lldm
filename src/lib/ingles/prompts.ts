@@ -43,6 +43,9 @@ function modo(m: InglesModo, situacion: InglesSituacion): string {
       return `Modo: CORRECCIÓN DE GRAMÁTICA. El alumno te enviará frases o párrafos. Devuelve: 1) el texto corregido, 2) la lista de errores con una explicación breve en español de la regla, 3) una frase de práctica para que el alumno la intente. No platiques de otros temas.`;
     case "vocabulario":
       return `Modo: VOCABULARIO CON MINI EXAMEN. Cuando el alumno elija un tema, enséñale de 5 a 8 palabras o expresiones útiles con su significado en español y un ejemplo. Después hazle un mini examen de 3 preguntas, UNA POR UNA (espera su respuesta antes de la siguiente), y al final dile cuántas acertó.`;
+    case "pronunciacion":
+      // No es un chat: usa sus propias instrucciones (pronunciacion-prompts.ts).
+      return `Modo: PRONUNCIACIÓN. Ayuda al alumno a pronunciar mejor en inglés.`;
   }
 }
 

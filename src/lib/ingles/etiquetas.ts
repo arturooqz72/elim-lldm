@@ -1,10 +1,10 @@
 // src/lib/ingles/etiquetas.ts
 // Textos en español de la interfaz de Elim English (se usa en cliente y servidor).
 
-import type { InglesModo, InglesNivel, InglesPaqueteId, InglesSituacion } from "@/types";
+import type { InglesModo, InglesNivel, InglesPaqueteId, InglesSituacion, InglesSonido } from "@/types";
 
 export const NIVELES: InglesNivel[] = ["principiante", "intermedio", "avanzado"];
-export const MODOS: InglesModo[] = ["conversacion", "situaciones", "gramatica", "vocabulario"];
+export const MODOS: InglesModo[] = ["conversacion", "situaciones", "gramatica", "vocabulario", "pronunciacion"];
 export const SITUACIONES: InglesSituacion[] = ["restaurante", "entrevista", "medico", "aeropuerto"];
 
 export const ETIQUETA_NIVEL: Record<InglesNivel, string> = {
@@ -18,6 +18,16 @@ export const ETIQUETA_MODO: Record<InglesModo, string> = {
   situaciones: "Situaciones",
   gramatica: "Corrección de gramática",
   vocabulario: "Vocabulario",
+  pronunciacion: "Pronunciación",
+};
+
+export const ETIQUETA_SONIDO: Record<InglesSonido, string> = {
+  th: "th (think, this)",
+  v_b: "v y b (very / berry)",
+  sh_ch: "sh y ch (ship / chip)",
+  r: "r inglesa (red, car)",
+  vocales: "vocales cortas y largas (ship / sheep)",
+  s_inicial: "s inicial (school, speak)",
 };
 
 export const ETIQUETA_SITUACION: Record<InglesSituacion, string> = {
@@ -42,6 +52,7 @@ export const BIENVENIDA: Record<InglesModo, string> = {
     "Escríbeme una o varias frases en inglés y te digo qué está bien, qué corregir y por qué.",
   vocabulario:
     "Escríbeme un tema (por ejemplo: \"comida\", \"trabajo\", \"viajes\") y te enseño palabras nuevas con un mini examen al final.",
+  pronunciacion: "Lee la frase en voz alta y te digo qué tal la pronunciaste.",
 };
 
 export function formatoPrecio(centavos: number, moneda: string): string {
