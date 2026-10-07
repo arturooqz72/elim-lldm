@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, Fragment } from "react";
-import { Menu, X, Radio, Mic, Gamepad2, Archive, Music, Video, Bot, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, Mail, AudioLines, MessageSquareText, MessageCircle, Volume2, CalendarCheck, GraduationCap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, MessageCircle, CalendarCheck } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
+import { EtiquetaMantenimiento, NavEscritorio } from "./NavEscritorio";
+import { NAV_LINKS, esActivo } from "./navLinks";
 import { usePresenciaSitio } from "./usePresenciaSitio";
 import { useRegistrarVisita } from "./useRegistrarVisita";
 import { InvitacionJuego } from "./InvitacionJuego";
@@ -16,39 +18,6 @@ import type { Profile } from "@/types";
 // del menú, para que se reconozca de un vistazo como "esto abre WhatsApp"
 // y no como una sección más del sitio.
 const WHATSAPP_GREEN = "#25D366";
-
-const NAV_LINKS = [
-  { href: "/radio", label: "Radio", icon: Radio },
-  { href: "/saludo", label: "Saludos", icon: AudioLines },
-  { href: "/saludo-directo", label: "Saludo Directo", icon: Volume2 },
-  { href: "/platikas", label: "Estudio en Vivo", icon: Mic },
-  { href: "/juegos", label: "Juegos en línea", icon: Gamepad2 },
-  { href: "/archivo", label: "Archivo", icon: Archive },
-  { href: "/elimplay", label: "ElimPlay", icon: Music },
-  { href: "/videos", label: "Videos", icon: Video },
-  { href: "/elim-ia", label: "Elim IA", icon: Bot },
-  { href: "/ingles", label: "Elim English", icon: GraduationCap },
-  { href: "/opiniones", label: "Opiniones", icon: MessageSquareText },
-  { href: "/contacto", label: "Contáctanos", icon: Mail },
-];
-
-/**
- * Etiqueta de "Elim IA" cuando está en mantenimiento (ELIM_IA_MAINTENANCE).
- * En escritorio va debajo del enlace (absoluta) para no ensanchar un menú que
- * ya está justo de espacio; en el menú móvil va al lado del nombre.
- */
-function EtiquetaMantenimiento({ debajo = false }: { debajo?: boolean }) {
-  return (
-    <span
-      className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold leading-none whitespace-nowrap ${
-        debajo ? "absolute left-1/2 -translate-x-1/2 -bottom-1.5 pointer-events-none" : ""
-      }`}
-      style={{ background: "rgba(144,144,168,0.15)", color: "var(--color-text-muted)" }}
-    >
-      En mantenimiento
-    </span>
-  );
-}
 
 export function PublicHeader({
   initialProfile,
@@ -108,7 +77,7 @@ export function PublicHeader({
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl 2xl:max-w-[96rem] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <span
@@ -119,35 +88,11 @@ export function PublicHeader({
             </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(href + "/");
-              const isSaludo = href === "/saludo";
-              return (
-                <Fragment key={href}>
-                  <Link
-                    href={href}
-                    className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
-                    style={{
-                      color: isSaludo || active ? "var(--color-primary)" : "var(--color-text-muted)",
-                      background: active ? "rgba(212,160,23,0.1)" : "transparent",
-                      fontWeight: isSaludo ? 700 : 500,
-                      textShadow: isSaludo ? "0 0 14px rgba(212,160,23,0.55)" : "none",
-                    }}
-                  >
-                    <Icon size={15} />
-                    {label}
-                    {href === "/elim-ia" && elimIaMantenimiento && <EtiquetaMantenimiento debajo />}
-                  </Link>
-                  {href === "/platikas" && <LiveBadge />}
-                </Fragment>
-              );
-            })}
-          </nav>
+          {/* Desktop Nav — enlaces principales + "Más ▾" (ver navLinks.ts). */}
+          <NavEscritorio pathname={pathname} elimIaMantenimiento={elimIaMantenimiento} />
 
           {/* Auth */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Ícono solo, sin texto, a propósito: como link de texto dentro
                 del <nav> de arriba empujaba el contenido más allá de los
                 1280px del contenedor y cortaba "Iniciar sesión" a la derecha
@@ -157,7 +102,7 @@ export function PublicHeader({
               target="_blank"
               rel="noopener noreferrer"
               title="Escríbenos por WhatsApp"
-              className="hidden md:flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200"
+              className="hidden md:flex items-center justify-center w-9 h-9 shrink-0 rounded-lg transition-all duration-200"
               style={{ background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.3)" }}
             >
               <MessageCircle size={16} style={{ color: WHATSAPP_GREEN }} />
@@ -166,7 +111,8 @@ export function PublicHeader({
             {profile?.role === "admin" && (
               <Link
                 href="/admin"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200"
+                title="Panel Admin"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200"
                 style={{
                   background: "rgba(212,160,23,0.12)",
                   border: "1px solid rgba(212,160,23,0.35)",
@@ -174,7 +120,8 @@ export function PublicHeader({
                 }}
               >
                 <ShieldCheck size={15} />
-                Panel Admin
+                {/* Solo ícono entre sm y 2xl para que el menú de escritorio quepa. */}
+                <span className="sm:inline xl:hidden 2xl:inline">Panel Admin</span>
               </Link>
             )}
 
@@ -266,7 +213,7 @@ export function PublicHeader({
                 ícono de rayitas confundía a algunas personas, que no sabían
                 que ahí se abría la navegación. */}
             <button
-              className="md:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium"
+              className="xl:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium"
               style={{ color: "var(--color-text-muted)" }}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
@@ -285,11 +232,11 @@ export function PublicHeader({
             las opciones, volviéndolas difíciles de leer. */}
         {mobileOpen && (
           <div
-            className="md:hidden px-4 pb-4 flex flex-col gap-1"
+            className="xl:hidden px-4 pb-4 flex flex-col gap-1"
             style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-bg)" }}
           >
             {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(href + "/");
+              const active = esActivo(pathname, href);
               const isSaludo = href === "/saludo";
               return (
                 <div key={href} className="flex items-center gap-2">
