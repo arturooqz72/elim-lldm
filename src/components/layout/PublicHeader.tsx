@@ -32,7 +32,31 @@ const NAV_LINKS = [
   { href: "/contacto", label: "Contáctanos", icon: Mail },
 ];
 
-export function PublicHeader({ initialProfile }: { initialProfile: Profile | null }) {
+/**
+ * Etiqueta de "Elim IA" cuando está en mantenimiento (ELIM_IA_MAINTENANCE).
+ * En escritorio va debajo del enlace (absoluta) para no ensanchar un menú que
+ * ya está justo de espacio; en el menú móvil va al lado del nombre.
+ */
+function EtiquetaMantenimiento({ debajo = false }: { debajo?: boolean }) {
+  return (
+    <span
+      className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold leading-none whitespace-nowrap ${
+        debajo ? "absolute left-1/2 -translate-x-1/2 -bottom-1.5 pointer-events-none" : ""
+      }`}
+      style={{ background: "rgba(144,144,168,0.15)", color: "var(--color-text-muted)" }}
+    >
+      En mantenimiento
+    </span>
+  );
+}
+
+export function PublicHeader({
+  initialProfile,
+  elimIaMantenimiento = false,
+}: {
+  initialProfile: Profile | null;
+  elimIaMantenimiento?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -104,7 +128,7 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
                 <Fragment key={href}>
                   <Link
                     href={href}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+                    className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
                     style={{
                       color: isSaludo || active ? "var(--color-primary)" : "var(--color-text-muted)",
                       background: active ? "rgba(212,160,23,0.1)" : "transparent",
@@ -114,6 +138,7 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
                   >
                     <Icon size={15} />
                     {label}
+                    {href === "/elim-ia" && elimIaMantenimiento && <EtiquetaMantenimiento debajo />}
                   </Link>
                   {href === "/platikas" && <LiveBadge />}
                 </Fragment>
@@ -281,6 +306,7 @@ export function PublicHeader({ initialProfile }: { initialProfile: Profile | nul
                   >
                     <Icon size={18} />
                     {label}
+                    {href === "/elim-ia" && elimIaMantenimiento && <EtiquetaMantenimiento />}
                   </Link>
                   {href === "/platikas" && <LiveBadge className="mr-3" />}
                   {href === "/juegos" && (

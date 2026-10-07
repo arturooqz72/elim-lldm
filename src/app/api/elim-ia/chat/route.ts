@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildLldmSystemPrompt, SYSTEM_PROMPT_GENERAL } from "@/lib/elim-ia/prompts";
+import { elimIaEnMantenimiento, MENSAJE_MANTENIMIENTO } from "@/lib/elim-ia/mantenimiento";
 import type { ElimIADocument, ElimIAMessage, ElimIAMode } from "@/types";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -14,6 +15,12 @@ interface AnthropicContentBlock {
 }
 
 export async function POST(request: Request) {
+  // Mantenimiento: se corta aquí, antes de leer sesión, historial o
+  // documentos, y sin llamar a Anthropic (Modo LLDM y Modo General).
+  if (elimIaEnMantenimiento()) {
+    return NextResponse.json({ error: MENSAJE_MANTENIMIENTO, mantenimiento: true }, { status: 503 });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

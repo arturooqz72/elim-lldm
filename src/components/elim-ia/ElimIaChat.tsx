@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, BookOpen, Globe, Loader2, Send, Trash2, User } from "lucide-react";
+import Link from "next/link";
+import { Bot, BookOpen, GraduationCap, Globe, Loader2, Send, Trash2, User, Wrench } from "lucide-react";
+import { MENSAJE_MANTENIMIENTO } from "@/lib/elim-ia/mantenimiento";
 import type { ElimIAMessage, ElimIAMode } from "@/types";
 
 const GOLD = "#f5c842";
@@ -14,6 +16,8 @@ interface ChatMsg {
 interface Props {
   initialMessages: Pick<ElimIAMessage, "mode" | "role" | "content">[];
   displayName: string;
+  /** ELIM_IA_MAINTENANCE: muestra el aviso y desactiva el envío. */
+  mantenimiento?: boolean;
 }
 
 const WELCOME: Record<ElimIAMode, string> = {
@@ -21,7 +25,7 @@ const WELCOME: Record<ElimIAMode, string> = {
   general: "Hola, soy Elim IA en Modo General. Puedo ayudarte con cualquier tema y buscar información actualizada en internet.",
 };
 
-export function ElimIaChat({ initialMessages, displayName }: Props) {
+export function ElimIaChat({ initialMessages, displayName, mantenimiento = false }: Props) {
   const [mode, setMode] = useState<ElimIAMode>("lldm");
   const [messages, setMessages] = useState<Record<ElimIAMode, ChatMsg[]>>(() => {
     const grouped: Record<ElimIAMode, ChatMsg[]> = { lldm: [], general: [] };
@@ -39,7 +43,7 @@ export function ElimIaChat({ initialMessages, displayName }: Props) {
 
   async function sendMessage() {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || mantenimiento) return;
 
     setInput("");
     setError(null);
@@ -108,14 +112,16 @@ export function ElimIaChat({ initialMessages, displayName }: Props) {
           </div>
         </div>
 
-        <button
-          onClick={clearHistory}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: "var(--color-text-muted)" }}
-          title="Borrar historial"
-        >
-          <Trash2 size={16} />
-        </button>
+        {!mantenimiento && (
+          <button
+            onClick={clearHistory}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "var(--color-text-muted)" }}
+            title="Borrar historial"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
       {/* Mode toggle */}
@@ -148,7 +154,27 @@ export function ElimIaChat({ initialMessages, displayName }: Props) {
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-        {currentMessages.length === 0 && (
+        {mantenimiento && (
+          <div
+            className="px-5 py-5 rounded-2xl flex flex-col items-start gap-3"
+            style={{ background: `${GOLD}0F`, border: `1px solid ${GOLD}55` }}
+          >
+            <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--color-text)" }}>
+              <Wrench size={16} style={{ color: GOLD }} />
+              {MENSAJE_MANTENIMIENTO}
+            </p>
+            <Link
+              href="/ingles"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: GOLD, color: "#000" }}
+            >
+              <GraduationCap size={15} />
+              Ir a Elim English
+            </Link>
+          </div>
+        )}
+
+        {!mantenimiento && currentMessages.length === 0 && (
           <div className="flex gap-3">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -233,9 +259,16 @@ export function ElimIaChat({ initialMessages, displayName }: Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={mode === "lldm" ? "Pregunta sobre los documentos de la iglesia..." : "Pregunta lo que quieras..."}
+            placeholder={
+              mantenimiento
+                ? "Elim IA está en mantenimiento"
+                : mode === "lldm"
+                  ? "Pregunta sobre los documentos de la iglesia..."
+                  : "Pregunta lo que quieras..."
+            }
+            disabled={mantenimiento}
             rows={1}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none"
+            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none disabled:opacity-50"
             style={{
               background: "var(--color-surface-elevated)",
               border: "1px solid var(--color-border)",
@@ -245,7 +278,7 @@ export function ElimIaChat({ initialMessages, displayName }: Props) {
           />
           <button
             onClick={sendMessage}
-            disabled={loading || !input.trim()}
+            disabled={mantenimiento || loading || !input.trim()}
             className="p-3 rounded-xl shrink-0 transition-opacity disabled:opacity-40"
             style={{ background: GOLD, color: "#000" }}
           >
