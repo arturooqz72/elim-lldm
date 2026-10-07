@@ -27,6 +27,15 @@ export function inglesConfig() {
   };
 }
 
+/**
+ * Venta de créditos activa. Por defecto apagada: solo "true" la enciende.
+ * Apagada, al llegar al límite se ofrece la lista de espera en vez de los
+ * paquetes, se oculta el contador de créditos y el checkout se rechaza.
+ */
+export function pagosActivos(): boolean {
+  return process.env.ENGLISH_PAYMENTS_ENABLED === "true";
+}
+
 export function inglesPaquetes(): InglesPaquete[] {
   const moneda = (process.env.ENGLISH_CURRENCY || "usd").toLowerCase();
   return [

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RotateCcw, Volume2 } from "lucide-react";
-import { InglesPaquetes } from "./InglesPaquetes";
+import { InglesAvisoLimite } from "./InglesAvisoLimite";
 import { PronunciacionGrabadora } from "./PronunciacionGrabadora";
 import { PronunciacionProgreso } from "./PronunciacionProgreso";
 import { PronunciacionResultado } from "./PronunciacionResultado";
@@ -19,6 +19,9 @@ interface Props {
   fraseInicial: PronFrase | null;
   progresoInicial: PronProgreso;
   onSaldo: (saldo: InglesSaldo) => void;
+  pagosActivos: boolean;
+  enLista: boolean;
+  onApuntado: () => void;
 }
 
 /** Lee la frase en inglés con la voz del navegador. */
@@ -162,7 +165,15 @@ export function InglesPronunciacion(props: Props) {
         </div>
       )}
 
-      {sinSaldo && <InglesPaquetes paquetes={paquetes} gratisDiarios={saldo.gratisDiarios} />}
+      {sinSaldo && (
+        <InglesAvisoLimite
+          pagosActivos={props.pagosActivos}
+          paquetes={paquetes}
+          gratisDiarios={saldo.gratisDiarios}
+          enLista={props.enLista}
+          onApuntado={props.onApuntado}
+        />
+      )}
 
       {frase && !evaluando && (
         <div className="flex gap-2 justify-center">

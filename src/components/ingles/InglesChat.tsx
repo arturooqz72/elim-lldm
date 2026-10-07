@@ -5,9 +5,10 @@ import Link from "next/link";
 import { GraduationCap, Send, Trash2 } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesOpciones } from "./InglesOpciones";
-import { InglesPaquetes } from "./InglesPaquetes";
+import { InglesAvisoLimite } from "./InglesAvisoLimite";
 import { InglesPronunciacion } from "./InglesPronunciacion";
 import { InglesSaldo } from "./InglesSaldo";
+import { useAvisoCompra } from "./useAvisoCompra";
 import { BIENVENIDA, MODOS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesModo, InglesPaquete, InglesPerfil, InglesSaldo as Saldo, PronFrase, PronProgreso } from "@/types";
 
@@ -28,6 +29,9 @@ interface Props {
   pronMaxSegundos: number;
   fraseInicial: PronFrase | null;
   progresoInicial: PronProgreso;
+  /** ENGLISH_PAYMENTS_ENABLED y si el usuario ya está en la lista de espera. */
+  pagosActivos: boolean;
+  enListaEspera: boolean;
 }
 
 function agrupar(mensajes: InglesMensaje[]): Record<InglesModo, ChatMsg[]> {
@@ -41,14 +45,12 @@ export function InglesChat(props: Props) {
   const [perfil, setPerfil] = useState<InglesPerfil>(perfilInicial);
   const [mensajes, setMensajes] = useState(() => agrupar(mensajesIniciales));
   const [saldo, setSaldo] = useState<Saldo>(saldoInicial);
+  const [enLista, setEnLista] = useState(props.enListaEspera);
   const [limite, setLimite] = useState(saldoInicial.gratisRestantes === 0 && saldoInicial.creditos === 0);
-  const [aviso, setAviso] = useState<string | null>(
-    compra === "ok"
-      ? "¡Gracias por tu compra! Tus créditos aparecerán en unos segundos."
-      : compra === "cancelada"
-        ? "El pago se canceló; no se hizo ningún cargo."
-        : null,
-  );
+  const aviso = useAvisoCompra(compra, saldoInicial.creditos, (nuevo) => {
+    setSaldo(nuevo);
+    setLimite(false);
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,31 +59,6 @@ export function InglesChat(props: Props) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [mensajes, perfil.modo, loading, limite]);
-
-  // Al volver de Stripe: quitar ?compra= de la URL y esperar a que el webhook
-  // acredite los créditos (normalmente tarda unos segundos).
-  useEffect(() => {
-    if (!compra) return;
-    window.history.replaceState(null, "", "/ingles");
-    if (compra !== "ok") return;
-
-    let intentos = 0;
-    const timer = setInterval(async () => {
-      intentos++;
-      const res = await fetch("/api/ingles/saldo").catch(() => null);
-      const nuevo = res?.ok ? ((await res.json()) as Saldo) : null;
-      if (nuevo && nuevo.creditos > saldoInicial.creditos) {
-        setSaldo(nuevo);
-        setLimite(false);
-        setAviso(`¡Listo! Se agregaron tus créditos. Ahora tienes ${nuevo.creditos.toLocaleString("es-MX")}.`);
-        clearInterval(timer);
-      } else if (intentos >= 15) {
-        setAviso("Tu pago se recibió. Si tus créditos no aparecen en unos minutos, recarga la página o escríbenos.");
-        clearInterval(timer);
-      }
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [compra, saldoInicial.creditos]);
 
   function cambiarPerfil(nuevo: InglesPerfil) {
     setPerfil(nuevo);
@@ -196,7 +173,7 @@ export function InglesChat(props: Props) {
       <InglesOpciones perfil={perfil} onCambiar={cambiarPerfil} />
 
       <div className="px-5 py-2 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
-        <InglesSaldo saldo={saldo} />
+        <InglesSaldo saldo={saldo} mostrarCreditos={props.pagosActivos} />
       </div>
 
       {/* Mensajes */}
@@ -220,6 +197,9 @@ export function InglesChat(props: Props) {
             fraseInicial={props.fraseInicial}
             progresoInicial={props.progresoInicial}
             onSaldo={setSaldo}
+            pagosActivos={props.pagosActivos}
+            enLista={enLista}
+            onApuntado={() => setEnLista(true)}
           />
         ) : (
           <InglesMensajes mensajes={actuales} bienvenida={BIENVENIDA[perfil.modo]} escribiendo={loading} />
@@ -238,7 +218,15 @@ export function InglesChat(props: Props) {
           </div>
         )}
 
-        {!pron && limite && <InglesPaquetes paquetes={paquetes} gratisDiarios={saldo.gratisDiarios} />}
+        {!pron && limite && (
+          <InglesAvisoLimite
+            pagosActivos={props.pagosActivos}
+            paquetes={paquetes}
+            gratisDiarios={saldo.gratisDiarios}
+            enLista={enLista}
+            onApuntado={() => setEnLista(true)}
+          />
+        )}
       </div>
 
       {/* Entrada */}

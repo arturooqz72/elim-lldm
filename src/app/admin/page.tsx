@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Users, Mic, Gamepad2, Archive, Radio } from "lucide-react";
 import Link from "next/link";
 import { ConectadosAhoraCard } from "@/components/admin/ConectadosAhoraCard";
+import { ListaEsperaInglesCard } from "@/components/admin/ListaEsperaInglesCard";
 
 export const metadata = { title: "Dashboard — Admin" };
 
@@ -117,6 +118,7 @@ export default async function AdminDashboard() {
             </Link>
           );
         })}
+        <ListaEsperaInglesCard />
       </div>
 
       {/* Quick actions */}

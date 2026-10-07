@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { buscarPaquete } from "@/lib/ingles/config";
+import { buscarPaquete, pagosActivos } from "@/lib/ingles/config";
 import { ETIQUETA_PAQUETE } from "@/lib/ingles/etiquetas";
 import { stripeServidor } from "@/lib/ingles/stripe.server";
 
@@ -10,6 +10,11 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  // Venta pausada (ENGLISH_PAYMENTS_ENABLED != "true"): no se crea ningún cobro.
+  if (!pagosActivos()) {
+    return NextResponse.json({ error: "Por ahora no hay compras disponibles" }, { status: 403 });
+  }
 
   const stripe = stripeServidor();
   if (!stripe) return NextResponse.json({ error: "Los pagos no están configurados" }, { status: 500 });

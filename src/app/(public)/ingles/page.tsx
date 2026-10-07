@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
-import { inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
+import { inglesConfig, inglesPaquetes, pagosActivos } from "@/lib/ingles/config";
 import { leerSaldo } from "@/lib/ingles/saldo.server";
 import { fraseActual, leerProgreso } from "@/lib/ingles/progreso.server";
 import { InglesChat } from "@/components/ingles/InglesChat";
@@ -25,7 +25,7 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
   const perfil = (perfilData as InglesPerfil | null) ?? PERFIL_INICIAL;
   const cfg = inglesConfig();
 
-  const [{ data: mensajesData }, saldo, frase, progreso] = await Promise.all([
+  const [{ data: mensajesData }, saldo, frase, progreso, { data: espera }] = await Promise.all([
     supabase
       .from("english_mensajes")
       .select("modo, role, content")
@@ -35,6 +35,7 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
     leerSaldo(supabase, profile.id),
     fraseActual(supabase, profile.id, perfil.nivel),
     leerProgreso(supabase, profile.id),
+    supabase.from("english_lista_espera").select("user_id").eq("user_id", profile.id).maybeSingle(),
   ]);
 
   const mensajes = ((mensajesData ?? []) as InglesMensaje[]).reverse();
@@ -53,6 +54,8 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
         pronMaxSegundos={cfg.pronMaxSegundos}
         fraseInicial={frase}
         progresoInicial={progreso}
+        pagosActivos={pagosActivos()}
+        enListaEspera={Boolean(espera)}
       />
     </div>
   );

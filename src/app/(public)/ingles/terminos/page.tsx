@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import type { Metadata } from "next";
-import { inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
+import { inglesConfig, inglesPaquetes, pagosActivos } from "@/lib/ingles/config";
 import { ETIQUETA_PAQUETE, formatoPrecio } from "@/lib/ingles/etiquetas";
 
 export const metadata: Metadata = {
@@ -28,6 +28,8 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 export default function InglesTerminosPage() {
   const { gratisDiarios, costoPronunciacion } = inglesConfig();
   const paquetes = inglesPaquetes();
+  // ENGLISH_PAYMENTS_ENABLED: con la venta pausada el servicio es solo gratuito.
+  const conPagos = pagosActivos();
   const enlace = { color: "var(--color-primary)" } as const;
 
   return (
@@ -75,76 +77,116 @@ export default function InglesTerminosPage() {
           </ul>
         </Seccion>
 
-        <Seccion titulo="Mensajes gratis y créditos">
-          <ul className="list-disc pl-5 flex flex-col gap-2">
-            <li>
-              Cada usuario tiene {gratisDiarios} mensajes gratis al día. Se renuevan a medianoche, hora del Pacífico, y
-              los que no uses no se acumulan.
-            </li>
-            <li>Cuando se acaban los gratis, cada mensaje que envías a la tutora usa un crédito.</li>
-            <li>
-              Paquetes disponibles:{" "}
-              {paquetes
-                .map((p) => `${ETIQUETA_PAQUETE[p.id]}: ${p.mensajes.toLocaleString("es-MX")} mensajes por ${formatoPrecio(p.precioCentavos, p.moneda)}`)
-                .join("; ")}
-              . Es un pago único, no una suscripción: no hay cargos automáticos.
-            </li>
-            <li>Los créditos comprados no caducan mientras el servicio exista y no se pueden transferir a otra cuenta.</li>
-            <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
-            <li>
-              En el modo Pronunciación cada intento cuesta {costoPronunciacion} mensajes. Si no se detecta tu voz o la
-              evaluación falla, no se descuenta.
-            </li>
-          </ul>
-        </Seccion>
+        {conPagos ? (
+          <Seccion titulo="Mensajes gratis y créditos">
+            <ul className="list-disc pl-5 flex flex-col gap-2">
+              <li>
+                Cada usuario tiene {gratisDiarios} mensajes gratis al día. Se renuevan a medianoche, hora del Pacífico,
+                y los que no uses no se acumulan.
+              </li>
+              <li>Cuando se acaban los gratis, cada mensaje que envías a la tutora usa un crédito.</li>
+              <li>
+                Paquetes disponibles:{" "}
+                {paquetes
+                  .map(
+                    (p) =>
+                      `${ETIQUETA_PAQUETE[p.id]}: ${p.mensajes.toLocaleString("es-MX")} mensajes por ${formatoPrecio(p.precioCentavos, p.moneda)}`,
+                  )
+                  .join("; ")}
+                . Es un pago único, no una suscripción: no hay cargos automáticos.
+              </li>
+              <li>
+                Los créditos comprados no caducan mientras el servicio exista y no se pueden transferir a otra cuenta.
+              </li>
+              <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
+              <li>
+                En el modo Pronunciación cada intento cuesta {costoPronunciacion} mensajes. Si no se detecta tu voz o la
+                evaluación falla, no se descuenta.
+              </li>
+            </ul>
+          </Seccion>
+        ) : (
+          <Seccion titulo="Servicio gratuito">
+            <ul className="list-disc pl-5 flex flex-col gap-2">
+              <li>
+                Por ahora Elim English es gratuito y no hay compras disponibles: no se te cobrará nada ni se te pedirán
+                datos de pago.
+              </li>
+              <li>
+                Cada usuario tiene {gratisDiarios} mensajes gratis al día. Se renuevan a medianoche, hora del Pacífico,
+                y los que no uses no se acumulan.
+              </li>
+              <li>
+                En el modo Pronunciación cada intento usa {costoPronunciacion} de tus mensajes del día. Si no se detecta
+                tu voz o la evaluación falla, no se descuenta.
+              </li>
+              <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
+              <li>
+                Cuando llegues al límite del día puedes pedir que te avisemos si en el futuro hay más mensajes
+                disponibles.
+              </li>
+            </ul>
+          </Seccion>
+        )}
 
         <Seccion titulo="Modo Pronunciación y tu voz">
           <p>
             En el modo Pronunciación, la grabación de tu voz se envía a un servicio externo de reconocimiento de voz
-            (Microsoft Azure Speech) solo para evaluar tu pronunciación de la frase. El audio no se almacena: ni nosotros
-            ni la página lo guardamos después de la evaluación. Solo guardamos el resultado (la frase, los puntajes y las
-            palabras o sonidos con errores) para mostrarte tu progreso. El micrófono solo se activa cuando tocas el botón
-            de grabar.
+            (Microsoft Azure Speech) solo para evaluar tu pronunciación de la frase. El audio no se almacena: ni
+            nosotros ni la página lo guardamos después de la evaluación. Solo guardamos el resultado (la frase, los
+            puntajes y las palabras o sonidos con errores) para mostrarte tu progreso. El micrófono solo se activa
+            cuando tocas el botón de grabar.
           </p>
         </Seccion>
 
-        <Seccion titulo="Pagos">
-          <p>
-            Los pagos los procesa Stripe. Elim LLDM nunca ve ni guarda los datos de tu tarjeta; solo guardamos el
-            registro de la compra (paquete, monto, fecha e identificador del pago).
-          </p>
-        </Seccion>
+        {conPagos && (
+          <>
+            <Seccion titulo="Pagos">
+              <p>
+                Los pagos los procesa Stripe. Elim LLDM nunca ve ni guarda los datos de tu tarjeta; solo guardamos el
+                registro de la compra (paquete, monto, fecha e identificador del pago).
+              </p>
+            </Seccion>
 
-        <Seccion titulo="Política de reembolso">
-          <ul className="list-disc pl-5 flex flex-col gap-2">
-            <li>
-              Puedes pedir el reembolso completo dentro de los 14 días posteriores a la compra si no has usado ningún
-              crédito de ese paquete.
-            </li>
-            <li>
-              Si ya usaste parte de los créditos, podemos reembolsar la parte proporcional de los créditos no usados,
-              revisando cada caso.
-            </li>
-            <li>
-              Si se te cobró dos veces o el pago se hizo pero no recibiste los créditos, te devolvemos el cobro duplicado
-              o acreditamos lo que falta.
-            </li>
-            <li>
-              Para pedir un reembolso, escribe a{" "}
-              <a href={`mailto:${CORREO}`} style={enlace}>
-                {CORREO}
-              </a>{" "}
-              desde el correo de tu cuenta, con la fecha de la compra. Al reembolsar se retiran los créditos
-              correspondientes.
-            </li>
-          </ul>
-        </Seccion>
+            <Seccion titulo="Política de reembolso">
+              <ul className="list-disc pl-5 flex flex-col gap-2">
+                <li>
+                  Puedes pedir el reembolso completo dentro de los 14 días posteriores a la compra si no has usado
+                  ningún crédito de ese paquete.
+                </li>
+                <li>
+                  Si ya usaste parte de los créditos, podemos reembolsar la parte proporcional de los créditos no
+                  usados, revisando cada caso.
+                </li>
+                <li>
+                  Si se te cobró dos veces o el pago se hizo pero no recibiste los créditos, te devolvemos el cobro
+                  duplicado o acreditamos lo que falta.
+                </li>
+                <li>
+                  Para pedir un reembolso, escribe a{" "}
+                  <a href={`mailto:${CORREO}`} style={enlace}>
+                    {CORREO}
+                  </a>{" "}
+                  desde el correo de tu cuenta, con la fecha de la compra. Al reembolsar se retiran los créditos
+                  correspondientes.
+                </li>
+              </ul>
+            </Seccion>
+          </>
+        )}
 
         <Seccion titulo="Cambios">
-          <p>
-            Podemos cambiar los precios, los paquetes o el número de mensajes gratis. Los cambios no afectan los créditos
-            que ya compraste. Si cambian estos términos, lo avisaremos en esta página.
-          </p>
+          {conPagos ? (
+            <p>
+              Podemos cambiar los precios, los paquetes o el número de mensajes gratis. Los cambios no afectan los
+              créditos que ya compraste. Si cambian estos términos, lo avisaremos en esta página.
+            </p>
+          ) : (
+            <p>
+              Podemos cambiar el número de mensajes gratis o, más adelante, ofrecer paquetes de mensajes de pago. Si eso
+              pasa, lo avisaremos en esta página antes de cobrar cualquier cosa.
+            </p>
+          )}
         </Seccion>
 
         <p className="text-center text-sm">
