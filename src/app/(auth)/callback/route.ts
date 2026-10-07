@@ -89,6 +89,17 @@ export async function GET(request: NextRequest) {
       if (data.user && type !== "recovery") await maybeSendWelcomeEmail(supabase, data.user);
       return redirectResponse;
     }
+    // El enlace del correo se abrió en otro navegador o dispositivo (app de
+    // correo, celular): ahí no está el code_verifier que guardó signUp. Supabase
+    // YA confirmó el correo antes de redirigir aquí, así que no es un error del
+    // usuario: solo le falta iniciar sesión con su correo y contraseña.
+    if (error.code === "pkce_code_verifier_not_found" && type !== "recovery") {
+      const loginUrl = new URL("/login", origin);
+      loginUrl.searchParams.set("confirmado", "1");
+      if (returnUrl !== "/") loginUrl.searchParams.set("returnUrl", returnUrl);
+      return NextResponse.redirect(loginUrl.toString());
+    }
+    console.error("Callback — no se pudo canjear el código:", error.code ?? error.message);
   }
 
   // Token hash exchange (legacy magic link / OTP email)

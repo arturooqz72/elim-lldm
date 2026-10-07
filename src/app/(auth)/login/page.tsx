@@ -15,6 +15,8 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl") ?? "/";
   const hasError = searchParams.get("error") === "auth";
+  // Llega de /callback cuando el correo se confirmó en otro navegador/dispositivo.
+  const correoConfirmado = searchParams.get("confirmado") === "1";
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -198,6 +200,11 @@ function LoginForm() {
           }}
         >
           {/* Messages */}
+          {(correoConfirmado && !message) && (
+            <div className="px-4 py-3 rounded-xl text-xs leading-relaxed" style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)", color: "var(--color-success)" }}>
+              ¡Listo, tu correo ya quedó confirmado! Ahora inicia sesión con tu correo y contraseña.
+            </div>
+          )}
           {(hasError && !message) && (
             <div className="px-4 py-3 rounded-xl text-xs" style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.25)", color: "var(--color-destructive)" }}>
               Hubo un problema al iniciar sesión. Intenta de nuevo.
