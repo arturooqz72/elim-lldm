@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const CORREO = "contacto@elimlldm.net";
-const ACTUALIZADA = "4 de octubre de 2026";
+const ACTUALIZADA = "7 de octubre de 2026";
 
 function Seccion({ id, titulo, children }: { id?: string; titulo: string; children: React.ReactNode }) {
   return (
@@ -78,6 +78,12 @@ export default function PrivacidadPage() {
               con fecha y hora. Si tienes cuenta se asocia a tu nombre; si no, a un número aleatorio guardado en tu
               navegador que no te identifica. Solo lo ven los administradores y se borra automáticamente a los 90 días.
             </li>
+            <li>
+              <strong style={{ color: "var(--color-text)" }}>Elim English:</strong> tu nivel y modo elegidos, tus
+              conversaciones con la tutora, los resultados de tus prácticas de pronunciación (frase, puntajes y sonidos a
+              mejorar) y, si compras mensajes, el registro de la compra (paquete, monto y fecha). La grabación de tu voz no
+              se guarda: solo se usa en el momento para evaluarla.
+            </li>
           </ul>
         </Seccion>
 
@@ -94,6 +100,11 @@ export default function PrivacidadPage() {
             Usamos servicios que guardan los datos por nosotros: Supabase (base de datos y cuentas), Vercel (hospedaje),
             Google y Facebook (solo si eliges entrar con ellos) y nuestro proveedor de correo. Ninguno los usa para
             publicidad en nuestro nombre.
+          </p>
+          <p>
+            En Elim English: tus mensajes a la tutora se envían a Anthropic (el proveedor de inteligencia artificial) para
+            generar la respuesta; en el modo Pronunciación, tu grabación se envía a Microsoft Azure solo para evaluarla y no
+            se almacena; y los pagos los procesa Stripe, así que nunca vemos ni guardamos los datos de tu tarjeta.
           </p>
         </Seccion>
 
