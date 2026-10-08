@@ -18,7 +18,9 @@ interface PalabraPistaProps {
 
 /**
  * Pistas gratis arriba del tablero (no restan puntos): la categoría desde
- * el inicio y el libro y capítulo después del 2.º intento fallido.
+ * el inicio y el libro y capítulo después del 2.º intento fallido. Todo va
+ * en una sola fila a 360px (si se parte en dos, el teclado se sale de la
+ * pantalla en celulares chicos), por eso la categoría lleva solo su nombre.
  */
 export function PalabraPista({ categoria, pista, fallidos, terminada }: PalabraPistaProps) {
   if (!categoria && !pista) return null;
@@ -30,11 +32,11 @@ export function PalabraPista({ categoria, pista, fallidos, terminada }: PalabraP
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
           style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)", color: "var(--color-text)" }}
+          title="Categoría de la palabra"
         >
           <Tag size={13} className="shrink-0" style={{ color: "var(--color-primary)" }} />
-          <span>
-            Categoría: <strong>{NOMBRE_CATEGORIA[categoria]}</strong>
-          </span>
+          <span className="sr-only">Categoría: </span>
+          <strong>{NOMBRE_CATEGORIA[categoria]}</strong>
         </span>
       )}
 
@@ -50,7 +52,7 @@ export function PalabraPista({ categoria, pista, fallidos, terminada }: PalabraP
         !terminada &&
         faltan > 0 && (
           <span className="px-1" style={{ color: "var(--color-text-muted)" }}>
-            💡 Otra pista {faltan === 1 ? "tras 1 intento fallido más" : `tras ${faltan} intentos fallidos`}
+            💡 Otra pista {faltan === 1 ? "tras 1 fallo más" : `tras ${faltan} fallos`}
           </span>
         )
       )}

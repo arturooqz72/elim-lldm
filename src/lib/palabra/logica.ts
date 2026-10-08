@@ -253,7 +253,7 @@ export function tieneSegundaPista(numIntentos: number, resuelta: boolean): boole
 /**
  * Segunda pista: "Búscala en Mateo 6". Nunca puede contener la respuesta:
  * si el libro ES la palabra (ESTER en Ester, ÉXODO en Éxodo…) solo dice
- * que es el nombre de un libro y de qué Testamento.
+ * que es un libro y de qué Testamento ("Libro del Antiguo Testamento").
  */
 export function pistaCapitulo(libro: string, capitulo: number, palabra: string): string {
   const respuesta = normalizarPalabra(palabra);
@@ -261,7 +261,7 @@ export function pistaCapitulo(libro: string, capitulo: number, palabra: string):
   const testamento = buscarLibro(libro)?.testamento ?? "Antiguo";
   const pista = `Búscala en ${libro} ${capitulo}`;
   return libroNormalizado.includes(respuesta) || normalizarPalabra(pista).includes(respuesta)
-    ? `Es el nombre de un libro del ${testamento} Testamento`
+    ? `Libro del ${testamento} Testamento` // corto: cabe en una fila a 360px
     : pista;
 }
 
