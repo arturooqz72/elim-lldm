@@ -27,10 +27,24 @@ export interface DiaIngles {
   nuevosEnLista: number;
 }
 
+/** Persona que llegó al límite diario al menos una vez en el rango. */
+export interface PersonaAlLimite {
+  nombre: string;
+  /** Días del rango en que usó todos sus mensajes gratis. */
+  diasAlLimite: number;
+  /** Días del rango en que usó la tutora (aunque no llegara al límite). */
+  diasActivos: number;
+  /** Mensajes usados en el rango (chat + pronunciación). */
+  mensajes: number;
+  ultimoDiaAlLimite: string;
+  enListaEspera: boolean;
+}
+
 export interface EstadisticasIngles {
   dias: DiaIngles[];
   totales: Omit<DiaIngles, "dia"> & { costoAproxUsd: number; listaEsperaTotal: number };
   modos: { modo: string; mensajes: number }[];
+  alLimite: PersonaAlLimite[];
 }
 
 /** "YYYY-MM-DD" de un instante en hora del Pacífico. */
@@ -134,12 +148,21 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     d._personas.add(quien);
     personasRango.add(quien);
   }
+  const porPersona = new Map<string, { diasAlLimite: number; diasActivos: number; mensajes: number; ultimo: string }>();
   for (const u of uso) {
     const d = porDia.get(u.dia);
     if (!d || !valido(u.user_id) || u.usados <= 0) continue;
     d._activos.add(u.user_id);
     activosRango.add(u.user_id);
-    if (u.usados >= gratisDiarios) d.llegaronAlLimite++;
+    const per = porPersona.get(u.user_id) ?? { diasAlLimite: 0, diasActivos: 0, mensajes: 0, ultimo: "" };
+    per.diasActivos++;
+    per.mensajes += u.usados;
+    if (u.usados >= gratisDiarios) {
+      d.llegaronAlLimite++;
+      per.diasAlLimite++;
+      if (u.dia > per.ultimo) per.ultimo = u.dia;
+    }
+    porPersona.set(u.user_id, per);
   }
   for (const m of mensajes) {
     const d = porDia.get(diaPacifico(m.created_at));
@@ -166,7 +189,30 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   const suma = (k: keyof Omit<DiaIngles, "dia">) => dias.reduce((s, d) => s + d[k], 0);
   const llamadas = suma("mensajes") + suma("intentosPronunciacion");
 
+  // Quiénes llegaron al límite (nombres solo de esas personas).
+  const idsAlLimite = [...porPersona.entries()].filter(([, p]) => p.diasAlLimite > 0).map(([id]) => id);
+  const nombres = new Map<string, string>();
+  if (idsAlLimite.length) {
+    const { data: perfiles } = await supabase.from("profiles").select("id, display_name").in("id", idsAlLimite);
+    for (const p of (perfiles ?? []) as { id: string; display_name: string }[]) nombres.set(p.id, p.display_name);
+  }
+  const enLista = new Set(lista.map((l) => l.user_id));
+  const alLimite: PersonaAlLimite[] = idsAlLimite
+    .map((id) => {
+      const p = porPersona.get(id)!;
+      return {
+        nombre: nombres.get(id) ?? "Usuario",
+        diasAlLimite: p.diasAlLimite,
+        diasActivos: p.diasActivos,
+        mensajes: p.mensajes,
+        ultimoDiaAlLimite: p.ultimo,
+        enListaEspera: enLista.has(id),
+      };
+    })
+    .sort((a, b) => b.diasAlLimite - a.diasAlLimite || b.mensajes - a.mensajes);
+
   return {
+    alLimite,
     dias,
     totales: {
       personasVisitaron: personasRango.size,

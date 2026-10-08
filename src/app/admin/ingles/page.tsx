@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
 import { leerEstadisticas } from "@/lib/ingles/estadisticas.server";
-import { pagosActivos } from "@/lib/ingles/config";
+import { inglesConfig, pagosActivos } from "@/lib/ingles/config";
 
 export const metadata = { title: "Estadísticas de Elim English — Admin" };
 
@@ -39,7 +39,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const { dias, totales, modos } = await leerEstadisticas(supabase, numDias);
+  const { dias, totales, modos, alLimite } = await leerEstadisticas(supabase, numDias);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
   return (
@@ -99,7 +99,11 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           <thead>
             <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
               {["Día", "Entraron", "Usaron", "Mensajes", "Al límite", "Pronunciación", "Lista de espera"].map((t) => (
-                <th key={t} className="text-left font-semibold px-4 py-3" style={{ borderBottom: "1px solid var(--color-border)" }}>
+                <th
+                  key={t}
+                  className="text-left font-semibold px-4 py-3"
+                  style={{ borderBottom: "1px solid var(--color-border)" }}
+                >
                   {t}
                 </th>
               ))}
@@ -129,6 +133,68 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="rounded-2xl overflow-x-auto mb-8" style={borde}>
+        <div className="px-5 pt-5 pb-3">
+          <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Personas que llegaron al límite ({alLimite.length})
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--color-text-muted)" }}>
+            Usaron sus {inglesConfig().gratisDiarios} mensajes gratis del día al menos una vez en este rango. Si son las
+            mismas personas varios días, lo usan en serio.
+          </p>
+        </div>
+        {alLimite.length === 0 ? (
+          <p className="px-5 pb-5 text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Nadie llegó al límite en este rango.
+          </p>
+        ) : (
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                {[
+                  "Nombre",
+                  "Días al límite",
+                  "Días que la usó",
+                  "Mensajes",
+                  "Última vez al límite",
+                  "Lista de espera",
+                ].map((t) => (
+                  <th
+                    key={t}
+                    className="text-left font-semibold px-4 py-3"
+                    style={{
+                      borderTop: "1px solid var(--color-border)",
+                      borderBottom: "1px solid var(--color-border)",
+                    }}
+                  >
+                    {t}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {alLimite.map((p, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid var(--color-border)", color: "var(--color-text)" }}>
+                  <td className="px-4 py-2.5 font-medium">{p.nombre}</td>
+                  <td className="px-4 py-2.5">{p.diasAlLimite}</td>
+                  <td className="px-4 py-2.5">{p.diasActivos}</td>
+                  <td className="px-4 py-2.5">{p.mensajes}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--color-text-muted)" }}>
+                    {fechaCorta(p.ultimoDiaAlLimite)}
+                  </td>
+                  <td
+                    className="px-4 py-2.5"
+                    style={{ color: p.enListaEspera ? "var(--color-success)" : "var(--color-text-muted)" }}
+                  >
+                    {p.enListaEspera ? "Sí" : "No"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="rounded-2xl p-5" style={borde}>
