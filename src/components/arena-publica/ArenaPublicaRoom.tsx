@@ -18,6 +18,8 @@ import {
 } from "@/lib/arena-publica/config";
 import type { ArenaJugador, AnswerOption } from "@/types";
 import { InvitarConectados } from "@/components/juegos/InvitarConectados";
+import { BotonReglas } from "@/components/juegos/BotonReglas";
+import { ReglasTrivia } from "@/components/juegos/ReglasJuegos";
 
 type ArenaPublicaPhase = "lobby" | "counting" | "playing" | "reveal" | "finished";
 
@@ -335,6 +337,9 @@ export function ArenaPublicaRoom({
             Trivia en línea
           </span>
           <div className="flex items-center gap-2">
+            <BotonReglas juego="Trivia en línea">
+              <ReglasTrivia />
+            </BotonReglas>
             <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
               style={{

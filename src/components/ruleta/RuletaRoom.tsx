@@ -28,6 +28,8 @@ import { RoundBanner } from "./RoundBanner";
 import { MatchEndScreen } from "./MatchEndScreen";
 import { ResolverPanel } from "./ResolverPanel";
 import { InvitarConectados } from "@/components/juegos/InvitarConectados";
+import { BotonReglas } from "@/components/juegos/BotonReglas";
+import { ReglasRuleta } from "@/components/juegos/ReglasJuegos";
 
 type Phase = "lobby" | "playing" | "ronda_fin" | "finished";
 
@@ -393,6 +395,9 @@ export function RuletaRoom({
         <header className="flex items-center justify-between">
           <Link href="/ruleta" className="text-lg font-bold" style={{ color: "var(--color-primary)" }}>La Ruleta</Link>
           <div className="flex items-center gap-2">
+            <BotonReglas juego="La Ruleta en línea">
+              <ReglasRuleta />
+            </BotonReglas>
             <div
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-sm font-bold"
               style={{

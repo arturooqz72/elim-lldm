@@ -11,6 +11,9 @@ import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
 import { getResumenHub } from "@/lib/palabra/servidor";
+import { BotonReglas } from "@/components/juegos/BotonReglas";
+import { ReglasAhorcado, ReglasRuletaLocal } from "@/components/juegos/ReglasJuegos";
+import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -90,8 +93,7 @@ export default async function JuegosHubPage() {
             Reto diario
           </p>
 
-          <Link
-            href="/juegos/palabra"
+          <div
             className="relative flex items-center gap-4 p-6 rounded-2xl"
             style={{
               background: "linear-gradient(135deg, rgba(212,160,23,0.12) 0%, var(--color-surface) 60%)",
@@ -113,7 +115,9 @@ export default async function JuegosHubPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                Palabra del Día
+                <Link href="/juegos/palabra" className="after:absolute after:inset-0 after:rounded-2xl">
+                  Palabra del Día
+                </Link>
               </h2>
               <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                 {resumenPalabra?.jugoHoy
@@ -123,8 +127,11 @@ export default async function JuegosHubPage() {
                     : "Adivina la palabra bíblica en 6 intentos — una nueva cada día"}
               </p>
             </div>
+            <BotonReglas juego="Palabra del Día">
+              <PalabraAyuda />
+            </BotonReglas>
             <ChevronRight size={18} style={{ color: "var(--color-primary)" }} />
-          </Link>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -173,9 +180,8 @@ export default async function JuegosHubPage() {
           </p>
 
           <div className="flex flex-col gap-3">
-            <Link
-              href="/juegos/ahorcado"
-              className="flex items-center gap-4 p-6 rounded-2xl"
+            <div
+              className="relative flex items-center gap-4 p-6 rounded-2xl"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
               <div
@@ -186,14 +192,19 @@ export default async function JuegosHubPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                  Ahorcado del Nuevo Testamento
+                  <Link href="/juegos/ahorcado" className="after:absolute after:inset-0 after:rounded-2xl">
+                    Ahorcado del Nuevo Testamento
+                  </Link>
                 </h2>
                 <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                   Personajes, lugares, palabras clave y libros — de un jugador
                 </p>
               </div>
+              <BotonReglas juego="Ahorcado">
+                <ReglasAhorcado />
+              </BotonReglas>
               <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-            </Link>
+            </div>
             <TablaPosiciones
               titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
               filas={posicionesAhorcado}
@@ -204,9 +215,8 @@ export default async function JuegosHubPage() {
             />
           </div>
 
-          <a
-            href="/juegos/ruleta-elimlldm.html"
-            className="flex items-center gap-4 p-6 rounded-2xl"
+          <div
+            className="relative flex items-center gap-4 p-6 rounded-2xl"
             style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
           >
             <div
@@ -217,14 +227,19 @@ export default async function JuegosHubPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                Ruleta de retos
+                <a href="/juegos/ruleta-elimlldm.html" className="after:absolute after:inset-0 after:rounded-2xl">
+                  Ruleta de retos
+                </a>
               </h2>
               <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Gira solo y descubre tu reto
+                La Ruleta para jugar en un solo dispositivo
               </p>
             </div>
+            <BotonReglas juego="Ruleta de retos">
+              <ReglasRuletaLocal />
+            </BotonReglas>
             <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-          </a>
+          </div>
         </div>
       </div>
     </div>

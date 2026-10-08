@@ -6,6 +6,8 @@ import { getProfile } from "@/lib/supabase/server";
 import { getRankingIndividual } from "@/lib/juegos/ranking-individual.server";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { AhorcadoGame } from "@/components/juegos/ahorcado/AhorcadoGame";
+import { BotonReglas } from "@/components/juegos/BotonReglas";
+import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
 
 export const metadata: Metadata = {
   title: "Ahorcado del Nuevo Testamento — Elim LLDM",
@@ -41,6 +43,9 @@ export default async function AhorcadoPage() {
             </h1>
             <p style={{ color: "var(--color-text-muted)" }}>Adivina la palabra letra por letra</p>
           </div>
+          <BotonReglas juego="Ahorcado">
+            <ReglasAhorcado />
+          </BotonReglas>
         </div>
       </div>
 

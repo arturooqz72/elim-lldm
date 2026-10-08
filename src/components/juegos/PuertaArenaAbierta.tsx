@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { GameNotifyBell } from "./GameNotifyBell";
+import { BotonReglas } from "./BotonReglas";
+import { ReglasTrivia } from "./ReglasJuegos";
 
 interface PuertaArenaAbiertaProps {
   disponible: boolean;
@@ -102,6 +104,9 @@ export function PuertaArenaAbierta({
           <Share2 size={14} />
           Invitar
         </button>
+        <BotonReglas juego="Trivia en línea" variante="boton">
+          <ReglasTrivia />
+        </BotonReglas>
       </div>
 
       <GameNotifyBell gameKey="arena_abierta" esperando={esperando} initialSubscribed={notificacionesActivas} />

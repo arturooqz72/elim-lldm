@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Users, Share2 } from "lucide-react";
 import { GameNotifyBell } from "./GameNotifyBell";
+import { BotonReglas } from "./BotonReglas";
+import { ReglasRuleta } from "./ReglasJuegos";
 
 interface PuertaRuletaProps {
   disponible: boolean;
@@ -99,6 +101,9 @@ export function PuertaRuleta({
           <Share2 size={14} />
           Invitar
         </button>
+        <BotonReglas juego="La Ruleta en línea" variante="boton">
+          <ReglasRuleta />
+        </BotonReglas>
       </div>
 
       <GameNotifyBell gameKey="ruleta" esperando={esperando} initialSubscribed={notificacionesActivas} />
