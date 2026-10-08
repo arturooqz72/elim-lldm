@@ -21,10 +21,11 @@ const WHATSAPP_GREEN = "#25D366";
 
 export function PublicHeader({
   initialProfile,
-  elimIaMantenimiento = false,
+  enMantenimiento = [],
 }: {
   initialProfile: Profile | null;
-  elimIaMantenimiento?: boolean;
+  /** hrefs de secciones en mantenimiento (ELIM_IA_MAINTENANCE, ARCHIVO_MAINTENANCE). */
+  enMantenimiento?: string[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -89,7 +90,7 @@ export function PublicHeader({
           </Link>
 
           {/* Desktop Nav — enlaces principales + "Más ▾" (ver navLinks.ts). */}
-          <NavEscritorio pathname={pathname} elimIaMantenimiento={elimIaMantenimiento} />
+          <NavEscritorio pathname={pathname} enMantenimiento={enMantenimiento} />
 
           {/* Auth */}
           <div className="flex items-center gap-2 shrink-0">
@@ -253,7 +254,7 @@ export function PublicHeader({
                   >
                     <Icon size={18} />
                     {label}
-                    {href === "/elim-ia" && elimIaMantenimiento && <EtiquetaMantenimiento />}
+                    {enMantenimiento.includes(href) && <EtiquetaMantenimiento />}
                   </Link>
                   {href === "/platikas" && <LiveBadge className="mr-3" />}
                   {href === "/juegos" && (

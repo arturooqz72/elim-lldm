@@ -7,7 +7,7 @@ import { LiveBadge } from "./LiveBadge";
 import { NAV_LINKS, esActivo } from "./navLinks";
 
 /**
- * Etiqueta de "Elim IA" cuando está en mantenimiento (ELIM_IA_MAINTENANCE).
+ * Etiqueta de una sección en mantenimiento (Elim IA, Archivo…).
  * En escritorio va debajo del enlace (absoluta) para no ensanchar el menú;
  * en el menú móvil va al lado del nombre.
  */
@@ -26,11 +26,12 @@ export function EtiquetaMantenimiento({ debajo = false }: { debajo?: boolean }) 
 
 interface Props {
   pathname: string;
-  elimIaMantenimiento: boolean;
+  /** hrefs de secciones en mantenimiento. */
+  enMantenimiento: string[];
 }
 
 /** Menú de escritorio: enlaces principales a la vista y el resto en "Más ▾". */
-export function NavEscritorio({ pathname, elimIaMantenimiento }: Props) {
+export function NavEscritorio({ pathname, enMantenimiento }: Props) {
   const [masAbierto, setMasAbierto] = useState(false);
   const masRef = useRef<HTMLDivElement>(null);
   const principales = NAV_LINKS.filter((l) => !l.enMas);
@@ -74,7 +75,7 @@ export function NavEscritorio({ pathname, elimIaMantenimiento }: Props) {
             >
               <Icon size={15} className="hidden 2xl:block" />
               {label}
-              {href === "/elim-ia" && elimIaMantenimiento && <EtiquetaMantenimiento debajo />}
+              {enMantenimiento.includes(href) && <EtiquetaMantenimiento debajo />}
             </Link>
             {href === "/platikas" && <LiveBadge />}
           </Fragment>
@@ -122,7 +123,8 @@ export function NavEscritorio({ pathname, elimIaMantenimiento }: Props) {
                   onClick={() => setMasAbierto(false)}
                 >
                   <Icon size={15} />
-                  {label}
+                  <span className="flex-1">{label}</span>
+                  {enMantenimiento.includes(href) && <EtiquetaMantenimiento />}
                 </Link>
               );
             })}

@@ -3,7 +3,8 @@ import { VideoPlayer } from "@/components/archivo/VideoPlayer";
 import { formatDate, formatDuration } from "@/lib/utils";
 import { Archive, ArrowLeft, Eye, Tag, Calendar } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { archivoEnMantenimiento } from "@/lib/archivo/mantenimiento";
 import type { Metadata } from "next";
 
 interface Props {
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ArchivoDetailPage({ params }: Props) {
+  if (archivoEnMantenimiento()) redirect("/archivo");
   const { id } = await params;
   const supabase = await createClient();
 

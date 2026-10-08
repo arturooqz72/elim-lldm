@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { archivoEnMantenimiento } from "@/lib/archivo/mantenimiento";
+import { ArchivoMantenimiento } from "@/components/archivo/ArchivoMantenimiento";
 import { ArchiveCard } from "@/components/archivo/ArchiveCard";
 import { Archive, Search, Tag } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +22,9 @@ export default async function ArchivoPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  // Mantenimiento: aviso en lugar del listado, sin consultar la base de datos.
+  if (archivoEnMantenimiento()) return <ArchivoMantenimiento />;
+
   const { q, categoria, tag } = await searchParams;
   const supabase = await createClient();
 

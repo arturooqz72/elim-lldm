@@ -2,6 +2,7 @@ import { PublicHeader } from "@/components/layout/PublicHeader";
 import { PublicFooter } from "@/components/layout/PublicFooter";
 import { getProfile } from "@/lib/supabase/server";
 import { elimIaEnMantenimiento } from "@/lib/elim-ia/mantenimiento";
+import { archivoEnMantenimiento } from "@/lib/archivo/mantenimiento";
 import type { Profile } from "@/types";
 
 export default async function PublicLayout({
@@ -18,7 +19,13 @@ export default async function PublicLayout({
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PublicHeader initialProfile={profile} elimIaMantenimiento={elimIaEnMantenimiento()} />
+      <PublicHeader
+        initialProfile={profile}
+        enMantenimiento={[
+          ...(elimIaEnMantenimiento() ? ["/elim-ia"] : []),
+          ...(archivoEnMantenimiento() ? ["/archivo"] : []),
+        ]}
+      />
       <main className="flex-1">{children}</main>
       <PublicFooter />
     </div>
