@@ -7,7 +7,8 @@ import {
   Radio,
   Mic,
   Gamepad2,
-  Archive,
+  GraduationCap,
+  MessageSquareText,
   Play,
   ChevronRight,
   Wifi,
@@ -261,12 +262,12 @@ export default async function LandingPage() {
                   highlight: true,
                 },
                 {
-                  icon: Mic,
-                  title: "Estudio en Vivo – Elim",
+                  icon: GraduationCap,
+                  title: "Elim English",
                   description:
-                    "Transmisiones en vivo con debate abierto. Solicita subir al escenario, chatea y comparte tu fe.",
-                  href: "/platikas",
-                  cta: "Ver Estudio en Vivo",
+                    "Practica inglés con una tutora de inteligencia artificial: conversación, situaciones reales, gramática y pronunciación.",
+                  href: "/ingles",
+                  cta: "Practicar inglés",
                 },
                 {
                   icon: Gamepad2,
@@ -277,12 +278,12 @@ export default async function LandingPage() {
                   cta: "Jugar",
                 },
                 {
-                  icon: Archive,
-                  title: "Archivo",
+                  icon: MessageSquareText,
+                  title: "Opiniones y Sugerencias",
                   description:
-                    "Todas las pláticas grabadas organizadas por tema y categoría. El acervo completo de la doctrina LLDM.",
-                  href: "/archivo",
-                  cta: "Explorar",
+                    "Comparte tu opinión o sugerencia con toda la comunidad de Elim LLDM. Tu voz nos ayuda a crecer.",
+                  href: "/opiniones",
+                  cta: "Compartir",
                 },
               ].map(({ icon: Icon, title, description, href, cta, highlight }) => (
                 <Link
