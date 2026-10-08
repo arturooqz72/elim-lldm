@@ -14,6 +14,7 @@ import {
   Mic,
   Music,
   Radio,
+  Smartphone,
   Video,
   Volume2,
   type LucideIcon,
@@ -25,10 +26,25 @@ export interface NavLink {
   icon: LucideIcon;
   /** En escritorio va dentro del botón "Más". */
   enMas?: boolean;
+  /** Dorado y en negritas, para que se vea (como Saludos). */
+  destacado?: boolean;
+  /**
+   * Abre la página completa (<a>) en vez de navegar dentro del sitio: las
+   * apps instalables (/escuchar) necesitan que el navegador lea su manifest.
+   */
+  documento?: boolean;
 }
 
 export const NAV_LINKS: NavLink[] = [
   { href: "/radio", label: "Radio", icon: Radio },
+  {
+    href: "/escuchar",
+    label: "Escuchar en vivo / Instalar app",
+    icon: Smartphone,
+    enMas: true,
+    destacado: true,
+    documento: true,
+  },
   { href: "/saludo", label: "Saludos", icon: AudioLines },
   { href: "/saludo-directo", label: "Saludo Directo", icon: Volume2 },
   { href: "/platikas", label: "Estudio en Vivo", icon: Mic },

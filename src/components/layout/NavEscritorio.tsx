@@ -24,6 +24,18 @@ export function EtiquetaMantenimiento({ debajo = false }: { debajo?: boolean }) 
   );
 }
 
+/**
+ * Enlace del menú: <Link> normal, o <a> (página completa) si el enlace lo
+ * pide con `documento` (ver navLinks.ts).
+ */
+export function EnlaceNav({
+  documento,
+  href,
+  ...props
+}: { documento?: boolean; href: string } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return documento ? <a href={href} {...props} /> : <Link href={href} {...props} />;
+}
+
 interface Props {
   pathname: string;
   /** hrefs de secciones en mantenimiento. */
@@ -101,23 +113,25 @@ export function NavEscritorio({ pathname, enMantenimiento }: Props) {
         {masAbierto && (
           <div
             role="menu"
-            className="absolute right-0 mt-2 w-52 rounded-xl py-1 z-50"
+            className="absolute right-0 mt-2 min-w-52 w-max rounded-xl py-1 z-50"
             style={{
               background: "var(--color-surface-elevated)",
               border: "1px solid var(--color-border)",
               boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
             }}
           >
-            {enMas.map(({ href, label, icon: Icon }) => {
+            {enMas.map(({ href, label, icon: Icon, destacado, documento }) => {
               const active = esActivo(pathname, href);
               return (
-                <Link
+                <EnlaceNav
                   key={href}
                   href={href}
+                  documento={documento}
                   role="menuitem"
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors"
                   style={{
-                    color: active ? "var(--color-primary)" : "var(--color-text)",
+                    color: active || destacado ? "var(--color-primary)" : "var(--color-text)",
+                    fontWeight: destacado ? 700 : undefined,
                     background: active ? "rgba(212,160,23,0.1)" : "transparent",
                   }}
                   onClick={() => setMasAbierto(false)}
@@ -125,7 +139,7 @@ export function NavEscritorio({ pathname, enMantenimiento }: Props) {
                   <Icon size={15} />
                   <span className="flex-1">{label}</span>
                   {enMantenimiento.includes(href) && <EtiquetaMantenimiento />}
-                </Link>
+                </EnlaceNav>
               );
             })}
           </div>

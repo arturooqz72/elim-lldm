@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Menu, X, LogIn, LogOut, ChevronDown, UserCircle, ShieldCheck, MessageCircle, CalendarCheck } from "lucide-react";
 import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
-import { EtiquetaMantenimiento, NavEscritorio } from "./NavEscritorio";
+import { EnlaceNav, EtiquetaMantenimiento, NavEscritorio } from "./NavEscritorio";
 import { NAV_LINKS, esActivo } from "./navLinks";
 import { usePresenciaSitio } from "./usePresenciaSitio";
 import { useRegistrarVisita } from "./useRegistrarVisita";
@@ -236,13 +236,14 @@ export function PublicHeader({
             className="xl:hidden px-4 pb-4 flex flex-col gap-1"
             style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-bg)" }}
           >
-            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            {NAV_LINKS.map(({ href, label, icon: Icon, destacado, documento }) => {
               const active = esActivo(pathname, href);
-              const isSaludo = href === "/saludo";
+              const isSaludo = href === "/saludo" || Boolean(destacado);
               return (
                 <div key={href} className="flex items-center gap-2">
-                  <Link
+                  <EnlaceNav
                     href={href}
+                    documento={documento}
                     className="flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm"
                     style={{
                       color: isSaludo || active ? "var(--color-primary)" : "var(--color-text)",
@@ -255,7 +256,7 @@ export function PublicHeader({
                     <Icon size={18} />
                     {label}
                     {enMantenimiento.includes(href) && <EtiquetaMantenimiento />}
-                  </Link>
+                  </EnlaceNav>
                   {href === "/platikas" && <LiveBadge className="mr-3" />}
                   {href === "/juegos" && (
                     // Acceso directo al reto diario solo en el menú móvil: en el

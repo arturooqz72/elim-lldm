@@ -11,16 +11,22 @@ import {
   suscribirInstalacion,
 } from "./instalacionApp";
 
-const GOLD = "#f5c842";
+interface Props {
+  /** Nombre que sale en la guía de iPhone. */
+  nombreApp?: string;
+  /** Color del botón y de la guía. */
+  color?: string;
+}
 
 /**
- * Botón "Instalar app" del encabezado de Elim English.
+ * Botón "Instalar app" de las apps instalables del sitio: Elim English (en
+ * su encabezado) y Radio Elim (en /escuchar).
  * - Android / Chrome: abre el aviso de instalación del navegador (solo
  *   aparece cuando el navegador lo ofrece).
  * - iPhone / iPad: muestra una mini guía (Compartir → Agregar a inicio).
  * - Ya abierta como app o recién instalada: no se muestra.
  */
-export function InglesInstalar() {
+export function InglesInstalar({ nombreApp = "Elim English", color: GOLD = "#f5c842" }: Props = {}) {
   const [listo, setListo] = useState(false);
   const [puedeAvisar, setPuedeAvisar] = useState(false);
   const [instalada, setInstalada] = useState(false);
@@ -71,7 +77,7 @@ export function InglesInstalar() {
           >
             <div className="flex items-start justify-between gap-3 mb-4">
               <p id="guia-instalar-titulo" className="text-base font-bold" style={{ color: "var(--color-text)" }}>
-                Instala Elim English en tu iPhone
+                Instala {nombreApp} en tu iPhone
               </p>
               <button
                 type="button"

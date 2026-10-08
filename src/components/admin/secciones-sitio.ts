@@ -13,6 +13,7 @@ const SECCIONES: Array<[string, string]> = [
   ["/trivia", "Trivia"],
   ["/tiktok-trivia", "Trivia TikTok"],
   ["/radio", "Radio"],
+  ["/escuchar", "Radio Elim (escuchar)"],
   ["/saludo-directo", "Saludo Directo"],
   ["/saludo", "Saludos"],
   ["/platikas", "Estudio en Vivo"],

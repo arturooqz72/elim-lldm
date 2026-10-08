@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getNowPlaying } from "@/lib/azuracast/api";
 import { RadioPlayer } from "@/components/radio/RadioPlayer";
-import { Radio, Wifi, AudioLines, ChevronRight } from "lucide-react";
+import { Radio, Wifi, AudioLines, ChevronRight, Smartphone } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -69,6 +69,17 @@ export default async function RadioPage() {
 
         {/* Player — all metadata passed as props, no separate metadata card */}
         <div className="relative z-10 max-w-2xl mx-auto px-4 pb-10 flex flex-col gap-6">
+          {/* Página directa / app instalable. <a> y no <Link>: carga la página
+              completa para que el navegador lea el manifest de Radio Elim. */}
+          <a
+            href="/escuchar"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-200 hover:shadow-[0_0_20px_rgba(212,160,23,0.4)]"
+            style={{ background: "var(--color-primary)", color: "#000" }}
+          >
+            <Smartphone size={17} className="shrink-0" />
+            Escuchar en vivo / Instalar app
+          </a>
+
           <RadioPlayer
             listenerCount={nowPlaying?.listeners.current}
             nowPlayingTitle={nowPlaying?.now_playing.song.title}

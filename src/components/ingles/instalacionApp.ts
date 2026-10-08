@@ -1,9 +1,12 @@
 "use client";
 
-// Estado de instalación de la app de Elim English, compartido entre el
-// botón "Instalar app" y el registro del service worker. El aviso de
-// instalación del navegador (beforeinstallprompt) llega una sola vez y puede
-// llegar antes de que el botón se monte, así que se guarda aquí.
+// Estado de instalación de las apps del sitio (Elim English en /ingles y
+// Radio Elim en /escuchar), compartido entre el botón "Instalar app" y el
+// registro del service worker. El aviso de instalación del navegador
+// (beforeinstallprompt) llega una sola vez y puede llegar antes de que el
+// botón se monte, así que se guarda aquí, junto con la sección donde llegó:
+// el aviso instala la app del manifest de esa página, así que no se usa en
+// otra sección (por ejemplo, al pasar de /ingles a /escuchar sin recargar).
 
 /** Evento de Chrome/Android; no viene en los tipos del DOM de TypeScript. */
 export interface AvisoInstalacion extends Event {
@@ -14,9 +17,15 @@ export interface AvisoInstalacion extends Event {
 export type Plataforma = "ios" | "android" | "otro";
 
 let aviso: AvisoInstalacion | null = null;
+let seccionDelAviso = "";
 let instalada = false;
 let iniciado = false;
 const oyentes = new Set<() => void>();
+
+/** "/ingles/algo" → "/ingles". */
+function seccion(ruta: string): string {
+  return "/" + (ruta.split("/")[1] ?? "");
+}
 
 function avisar() {
   for (const fn of oyentes) fn();
@@ -47,6 +56,7 @@ export function iniciarInstalacion() {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); // se muestra con nuestro botón, no con la barra del navegador
     aviso = e as AvisoInstalacion;
+    seccionDelAviso = seccion(location.pathname);
     avisar();
   });
   window.addEventListener("appinstalled", () => {
@@ -64,7 +74,7 @@ export function suscribirInstalacion(fn: () => void): () => void {
 }
 
 export function hayAvisoInstalacion(): boolean {
-  return aviso !== null;
+  return aviso !== null && seccionDelAviso === seccion(location.pathname);
 }
 
 export function estaInstalada(): boolean {
@@ -73,7 +83,7 @@ export function estaInstalada(): boolean {
 
 /** Abre el aviso del navegador. Devuelve true si la persona aceptó. */
 export async function pedirInstalacion(): Promise<boolean> {
-  if (!aviso) return false;
+  if (!aviso || !hayAvisoInstalacion()) return false;
   const actual = aviso;
   aviso = null; // el navegador solo deja usarlo una vez
   avisar();

@@ -24,6 +24,7 @@ import {
   CalendarCheck,
   Radio,
   Trophy,
+  Smartphone,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const NAV = [
   { href: "/admin/en-linea", label: "En línea ahora", icon: Activity },
   { href: "/admin/historial", label: "Historial de visitas", icon: History },
   { href: "/admin/ingles", label: "Elim English", icon: GraduationCap },
+  { href: "/admin/radio", label: "App de la Radio", icon: Smartphone },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/admin/programas", label: "Programas", icon: Radio },
