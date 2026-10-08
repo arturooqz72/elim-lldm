@@ -78,7 +78,7 @@ export function AdminSidebar() {
       }}
     >
       {/* Logo */}
-      <div className="px-5 py-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
+      <div className="shrink-0 px-5 py-5" style={{ borderBottom: "1px solid var(--color-border)" }}>
         <Link href="/" className="flex items-center gap-2">
           <span
             className="text-lg font-bold"
@@ -95,8 +95,10 @@ export function AdminSidebar() {
         </span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+      {/* Nav — con su propio scroll: son más opciones que alto de pantalla,
+          y sin min-h-0 + overflow las últimas (y "Cerrar sesión") quedaban
+          fuera de la vista sin forma de llegar a ellas. */}
+      <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
         {NAV.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
@@ -104,7 +106,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+              className="shrink-0 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
               style={{
                 background: active ? "rgba(212,160,23,0.12)" : "transparent",
                 color: active ? "var(--color-primary)" : "var(--color-text-muted)",
@@ -120,7 +122,7 @@ export function AdminSidebar() {
       </nav>
 
       {/* Sign out */}
-      <div className="px-3 py-4" style={{ borderTop: "1px solid var(--color-border)" }}>
+      <div className="shrink-0 px-3 py-4" style={{ borderTop: "1px solid var(--color-border)" }}>
         <button
           onClick={signOut}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
