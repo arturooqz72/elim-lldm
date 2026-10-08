@@ -184,7 +184,7 @@ export default async function LandingPage() {
                 Escuchar Radio
               </Link>
               <Link
-                href="/platikas"
+                href="/ingles"
                 className="hero-btn-secondary flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-base transition-all duration-200"
                 style={{
                   background: "transparent",
@@ -192,7 +192,7 @@ export default async function LandingPage() {
                   color: "var(--color-text-muted)",
                 }}
               >
-                Ver Estudio en Vivo
+                Practicar inglés
                 <ChevronRight size={16} />
               </Link>
             </div>
