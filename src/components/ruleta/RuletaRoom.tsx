@@ -26,6 +26,7 @@ import { Scoreboard } from "./Scoreboard";
 import { TurnTimer } from "./TurnTimer";
 import { RoundBanner } from "./RoundBanner";
 import { MatchEndScreen } from "./MatchEndScreen";
+import { ResolverPanel } from "./ResolverPanel";
 import { InvitarConectados } from "@/components/juegos/InvitarConectados";
 
 type Phase = "lobby" | "playing" | "ronda_fin" | "finished";
@@ -73,7 +74,6 @@ export function RuletaRoom({
   const [round, setRound] = useState<RoundState | null>(initialRound);
   const [spinToken, setSpinToken] = useState(0);
   const [advancing, setAdvancing] = useState(false);
-  const [resolveText, setResolveText] = useState("");
   const jugadorCountRef = useRef(jugadoresIniciales.length);
   const isFirstJugadoresLoad = useRef(true);
 
@@ -306,14 +306,12 @@ export function RuletaRoom({
     });
   }
 
-  async function handleResolve(e: React.FormEvent) {
-    e.preventDefault();
-    if (!jugadorId || !resolveText.trim()) return;
+  async function handleResolve(respuesta: string) {
+    if (!jugadorId) return;
     await fetch(`/api/ruleta/${sala.codigo}/resolve`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jugador_id: jugadorId, respuesta: resolveText.trim() }),
+      body: JSON.stringify({ jugador_id: jugadorId, respuesta }),
     });
-    setResolveText("");
   }
 
   const handleTimeout = useCallback(async () => {
@@ -518,25 +516,7 @@ export function RuletaRoom({
                   disabled={!misTurno}
                   onGuess={handleGuess}
                 />
-                {misTurno && (
-                  <form onSubmit={handleResolve} className="flex gap-2">
-                    <input
-                      value={resolveText}
-                      onChange={(e) => setResolveText(e.target.value)}
-                      placeholder="Resolver panel: escribe la frase completa"
-                      className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
-                      style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!resolveText.trim()}
-                      className="px-4 py-2 rounded-xl text-sm font-bold"
-                      style={{ background: "var(--color-primary)", color: "#000" }}
-                    >
-                      Resolver
-                    </button>
-                  </form>
-                )}
+                {misTurno && <ResolverPanel onResolver={handleResolve} />}
               </>
             )}
 

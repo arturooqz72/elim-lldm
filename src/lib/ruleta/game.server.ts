@@ -14,6 +14,24 @@ export function normalize(str: string): string {
   return str.toUpperCase();
 }
 
+/**
+ * Forma comparable de una respuesta: mayúsculas, sin acentos ni tildes, sin
+ * signos de puntuación y con espacios simples. Se aplica a los dos lados,
+ * así cuenta igual "Faltará." (dictado por voz) que "FALTARA" (el panel).
+ */
+function comparable(str: string): string {
+  return str
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim();
+}
+
+export function mismaFrase(respuesta: string, frase: string): boolean {
+  return comparable(respuesta) === comparable(frase);
+}
+
 const LETTER_RE = /[A-ZÑÁÉÍÓÚÜ]/;
 
 export function buildBoardShape(frase: string, letrasProbadas: string[]): RuletaBoardTile[] {

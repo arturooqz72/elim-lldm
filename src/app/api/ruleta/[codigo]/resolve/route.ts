@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { TURN_SECONDS, RESOLVE_BONUS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
-import { buildBoardShape, allLettersInPhrase, nextJugadorId, normalize } from "@/lib/ruleta/game.server";
+import { buildBoardShape, allLettersInPhrase, nextJugadorId, mismaFrase } from "@/lib/ruleta/game.server";
 
 export async function POST(
   request: Request,
@@ -47,7 +47,7 @@ export async function POST(
 
   if (!ronda) return NextResponse.json({ error: "Ronda no encontrada" }, { status: 500 });
 
-  const acierto = normalize(respuesta) === ronda.frase;
+  const acierto = mismaFrase(respuesta, ronda.frase);
   const channel = supabase.channel(`ruleta:${codigo.toUpperCase()}`);
 
   if (acierto) {
