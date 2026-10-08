@@ -47,14 +47,12 @@ export function InglesInstalar() {
       <button
         type="button"
         onClick={() => (esIos ? setGuia(true) : void pedirInstalacion())}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 whitespace-nowrap transition-opacity hover:opacity-90"
+        className="flex items-center gap-1 px-2 min-[400px]:gap-1.5 min-[400px]:px-2.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 whitespace-nowrap transition-opacity hover:opacity-90"
         style={{ background: `${GOLD}1A`, border: `1px solid ${GOLD}55`, color: GOLD }}
         aria-label="Instalar app"
       >
         <Download size={14} />
-        {/* En celulares angostos el encabezado no alcanza para el texto completo. */}
-        <span className="sm:hidden">Instalar</span>
-        <span className="hidden sm:inline">Instalar app</span>
+        Instalar app
       </button>
 
       {guia && (

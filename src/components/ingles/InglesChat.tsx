@@ -141,7 +141,7 @@ export function InglesChat(props: Props) {
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between gap-3 px-5 py-4 shrink-0"
+        className="flex items-center justify-between gap-2 px-3 py-4 min-[400px]:gap-3 min-[400px]:px-5 shrink-0"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -153,7 +153,7 @@ export function InglesChat(props: Props) {
             <GraduationCap size={20} style={{ color: GOLD }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base font-bold whitespace-nowrap" style={{ color: "var(--color-text)" }}>
+            <h1 className="text-[15px] min-[400px]:text-base font-bold whitespace-nowrap" style={{ color: "var(--color-text)" }}>
               Elim English
             </h1>
             <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
