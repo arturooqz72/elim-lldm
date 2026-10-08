@@ -18,7 +18,8 @@ function LoginForm() {
   // Llega de /callback cuando el correo se confirmó en otro navegador/dispositivo.
   const correoConfirmado = searchParams.get("confirmado") === "1";
 
-  const [mode, setMode] = useState<"login" | "register">("login");
+  // ?modo=registro abre directo en "Crear cuenta" (p. ej. desde la prueba de Elim English).
+  const [mode, setMode] = useState<"login" | "register">(searchParams.get("modo") === "registro" ? "register" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

@@ -10,6 +10,11 @@ function entero(nombre: string, porDefecto: number): number {
   return Number.isFinite(n) && n > 0 ? n : porDefecto;
 }
 
+function decimal(nombre: string, porDefecto: number): number {
+  const n = Number.parseFloat(process.env[nombre] ?? "");
+  return Number.isFinite(n) && n >= 0 ? n : porDefecto;
+}
+
 export function inglesConfig() {
   return {
     modelo: process.env.ENGLISH_MODEL || "claude-haiku-4-5",
@@ -24,6 +29,22 @@ export function inglesConfig() {
     pronMaxSegundos: entero("ENGLISH_PRON_MAX_SECONDS", 15),
     /** Tope de frases nuevas generadas por usuario por día (costo de Anthropic). */
     pronFrasesDiarias: entero("ENGLISH_PRON_DAILY_PHRASES", 60),
+    /** Prueba sin cuenta: mensajes por visitante (cookie). */
+    pruebaMensajes: entero("ENGLISH_TRIAL_MESSAGES", 3),
+    /**
+     * Prueba sin cuenta: mensajes por IP por día. Más que pruebaMensajes
+     * porque varias personas pueden compartir IP (familia, iglesia, datos
+     * móviles); solo frena a quien borra la cookie para volver a empezar.
+     */
+    pruebaPorIpDiaria: entero("ENGLISH_TRIAL_IP_DAILY", 6),
+    /** Prueba sin cuenta: tope de todo el sitio por día (cuida el costo). */
+    pruebaGlobalDiaria: entero("ENGLISH_TRIAL_GLOBAL_DAILY", 300),
+    /**
+     * Precio estimado de Azure por hora de audio evaluado: ~$1.00 de
+     * speech-to-text + ~$0.30 de Pronunciation Assessment. Con el plan
+     * gratis (F0) las primeras 5 horas al mes no se cobran.
+     */
+    azureUsdPorHora: decimal("ENGLISH_AZURE_USD_PER_HOUR", 1.3),
   };
 }
 

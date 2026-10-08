@@ -9,7 +9,7 @@ import { InglesAvisoLimite } from "./InglesAvisoLimite";
 import { InglesPronunciacion } from "./InglesPronunciacion";
 import { InglesSaldo } from "./InglesSaldo";
 import { useAvisoCompra } from "./useAvisoCompra";
-import { BIENVENIDA, MODOS } from "@/lib/ingles/etiquetas";
+import { BIENVENIDA, MODOS, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesModo, InglesPaquete, InglesPerfil, InglesSaldo as Saldo, PronFrase, PronProgreso } from "@/types";
 
 const GOLD = "#f5c842";
@@ -69,8 +69,10 @@ export function InglesChat(props: Props) {
     });
   }
 
-  async function enviar() {
-    const texto = input.trim();
+  /** Envía lo escrito en la caja, o el texto de un botón de sugerencia. */
+  async function enviar(directo?: string) {
+    const texto = (directo ?? input).trim();
+    if (limite) return;
     if (!texto || loading) return;
     const modo = perfil.modo;
 
@@ -202,7 +204,13 @@ export function InglesChat(props: Props) {
             onApuntado={() => setEnLista(true)}
           />
         ) : (
-          <InglesMensajes mensajes={actuales} bienvenida={BIENVENIDA[perfil.modo]} escribiendo={loading} />
+          <InglesMensajes
+            mensajes={actuales}
+            bienvenida={BIENVENIDA[perfil.modo]}
+            escribiendo={loading}
+            sugerencias={limite ? undefined : SUGERENCIAS[perfil.modo as keyof typeof SUGERENCIAS]}
+            onSugerencia={(t) => void enviar(t)}
+          />
         )}
 
         {!pron && error && (

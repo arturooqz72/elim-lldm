@@ -133,6 +133,7 @@ export async function POST(request: Request) {
     completitud: evaluacion.completitud,
     palabras: evaluacion.palabras,
     sonidos_fallados: sonidos,
+    duracion_seg: Math.round(info.segundos * 10) / 10,
   });
   if (insertError) console.error("Elim English — no se guardó el intento:", insertError.message);
 

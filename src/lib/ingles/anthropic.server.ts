@@ -1,7 +1,7 @@
 // src/lib/ingles/anthropic.server.ts
 // Llamada simple a la API de Anthropic (mismo fetch directo que Elim IA y el
-// chat de Elim English) para el modo Pronunciación: generar frases y
-// explicar los errores.
+// chat de Elim English) para el modo Pronunciación (generar frases y explicar
+// los errores) y para la prueba sin cuenta.
 
 import { inglesConfig } from "./config";
 
@@ -12,8 +12,21 @@ interface BloqueAnthropic {
   text?: string;
 }
 
-/** Devuelve el texto de la respuesta, o null si falla (el error queda en el log). */
-export async function pedirAlModelo(sistema: string, mensaje: string, maxTokens: number): Promise<string | null> {
+export interface MensajeModelo {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Un solo mensaje. Devuelve el texto de la respuesta, o null si falla. */
+export function pedirAlModelo(sistema: string, mensaje: string, maxTokens: number): Promise<string | null> {
+  return conversar(sistema, [{ role: "user", content: mensaje }], maxTokens);
+}
+
+/**
+ * Conversación completa (debe empezar con un mensaje del usuario). Devuelve
+ * el texto de la respuesta, o null si falla (el error queda en el log).
+ */
+export async function conversar(sistema: string, mensajes: MensajeModelo[], maxTokens: number): Promise<string | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.error("Elim English — falta ANTHROPIC_API_KEY");
@@ -32,7 +45,7 @@ export async function pedirAlModelo(sistema: string, mensaje: string, maxTokens:
         model: inglesConfig().modelo,
         max_tokens: maxTokens,
         system: sistema,
-        messages: [{ role: "user", content: mensaje }],
+        messages: mensajes,
       }),
       signal: AbortSignal.timeout(30_000),
     });

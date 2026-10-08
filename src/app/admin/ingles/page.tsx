@@ -39,7 +39,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const { dias, totales, modos, alLimite } = await leerEstadisticas(supabase, numDias);
+  const { dias, totales, modos, alLimite, prueba } = await leerEstadisticas(supabase, numDias);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
   return (
@@ -75,6 +75,11 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Tarjeta valor={totales.personasVisitaron} titulo="Personas que entraron a /ingles" nota="con o sin cuenta" />
         <Tarjeta valor={totales.usuariosActivos} titulo="Usaron la tutora" nota="mandaron al menos un mensaje" />
+        <Tarjeta
+          valor={totales.regresaron}
+          titulo="Regresaron"
+          nota="la usaron en el rango y ya la habían usado otro día antes"
+        />
         <Tarjeta valor={totales.mensajes} titulo="Mensajes de chat" />
         <Tarjeta valor={totales.intentosPronunciacion} titulo="Intentos de pronunciación" />
         <Tarjeta
@@ -86,7 +91,19 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
         <Tarjeta
           valor={`$${totales.costoAproxUsd.toFixed(2)} USD`}
           titulo="Costo aprox. de Anthropic"
-          nota="estimado; el real está en tu consola de Anthropic"
+          nota="estimado, incluye la prueba sin cuenta; el real está en tu consola de Anthropic"
+        />
+        <Tarjeta
+          valor={`$${totales.costoAzureUsd.toFixed(2)} USD`}
+          titulo="Costo aprox. de Azure (pronunciación)"
+          nota={`${totales.minutosAzure.toLocaleString("es-MX")} min de audio; con el plan gratis (F0) las primeras 5 h al mes no se cobran`}
+        />
+        <Tarjeta
+          valor={prueba.visitantes}
+          titulo="Prueba sin cuenta: visitantes que la usaron"
+          nota={`${prueba.crearonCuenta} crearon cuenta${
+            prueba.visitantes ? ` (${Math.round((prueba.crearonCuenta / prueba.visitantes) * 100)}%)` : ""
+          }${prueba.yaTeniaCuenta ? ` · ${prueba.yaTeniaCuenta} ya tenían cuenta` : ""} · ${prueba.mensajes} mensajes`}
         />
         <Tarjeta
           valor={totales.usuariosActivos ? (totales.mensajes / totales.usuariosActivos).toFixed(1) : "—"}
@@ -95,10 +112,10 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
       </div>
 
       <div className="rounded-2xl overflow-x-auto mb-8" style={borde}>
-        <table className="w-full text-sm min-w-[640px]">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-              {["Día", "Entraron", "Usaron", "Mensajes", "Al límite", "Pronunciación", "Lista de espera"].map((t) => (
+              {["Día", "Entraron", "Usaron", "Regresaron", "Mensajes", "Al límite", "Pronunciación", "Lista de espera"].map((t) => (
                 <th
                   key={t}
                   className="text-left font-semibold px-4 py-3"
@@ -117,6 +134,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 </td>
                 <td className="px-4 py-2.5">{d.personasVisitaron}</td>
                 <td className="px-4 py-2.5">{d.usuariosActivos}</td>
+                <td className="px-4 py-2.5">{d.regresaron}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-8 text-right">{d.mensajes}</span>

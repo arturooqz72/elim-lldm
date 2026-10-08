@@ -55,6 +55,22 @@ export const BIENVENIDA: Record<InglesModo, string> = {
   pronunciacion: "Lee la frase en voz alta y te digo qué tal la pronunciaste.",
 };
 
+/** Botones de inicio del chat vacío: se envían con un toque (cuestan como cualquier mensaje). */
+export const SUGERENCIAS: Record<Exclude<InglesModo, "pronunciacion">, string[]> = {
+  conversacion: [
+    "Hello, how are you?",
+    "Quiero practicar para una entrevista de trabajo",
+    "¿Cómo se dice 'tengo hambre' en inglés?",
+  ],
+  situaciones: ["start", "Hello! Can you help me, please?", "¿Qué frases útiles debo saber aquí?"],
+  gramatica: [
+    "I has two brothers and one sister.",
+    "Yesterday I go to the church with my family.",
+    "¿Cuándo uso 'do' y cuándo 'does'?",
+  ],
+  vocabulario: ["Comida", "Trabajo", "Viajes"],
+};
+
 export function formatoPrecio(centavos: number, moneda: string): string {
   const codigo = moneda.toUpperCase();
   const monto = new Intl.NumberFormat("es-MX", { style: "currency", currency: codigo, currencyDisplay: "narrowSymbol" })

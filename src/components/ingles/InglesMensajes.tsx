@@ -28,13 +28,18 @@ interface Props {
   mensajes: ChatMsg[];
   bienvenida: string;
   escribiendo: boolean;
+  /** Botones de inicio que se muestran con el chat vacío (se envían con un toque). */
+  sugerencias?: string[];
+  onSugerencia?: (texto: string) => void;
 }
 
 /** Burbujas de la conversación del modo actual (sin estado propio). */
-export function InglesMensajes({ mensajes, bienvenida, escribiendo }: Props) {
+export function InglesMensajes({ mensajes, bienvenida, escribiendo, sugerencias, onSugerencia }: Props) {
+  const vacio = mensajes.length === 0;
+
   return (
     <>
-      {mensajes.length === 0 && (
+      {vacio && (
         <div className="flex gap-3">
           <Avatar rol="assistant" />
           <div
@@ -43,6 +48,22 @@ export function InglesMensajes({ mensajes, bienvenida, escribiendo }: Props) {
           >
             {bienvenida}
           </div>
+        </div>
+      )}
+
+      {vacio && !escribiendo && sugerencias && onSugerencia && sugerencias.length > 0 && (
+        <div className="flex flex-col items-end gap-2" aria-label="Sugerencias para empezar">
+          {sugerencias.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onSugerencia(s)}
+              className="px-4 py-2 rounded-2xl text-sm text-left max-w-[85%] transition-colors"
+              style={{ background: `${GOLD}14`, border: `1px solid ${GOLD}55`, color: "var(--color-text)" }}
+            >
+              {s}
+            </button>
+          ))}
         </div>
       )}
 
