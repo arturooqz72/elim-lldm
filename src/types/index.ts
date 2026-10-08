@@ -446,6 +446,9 @@ export interface DestinoConEstado {
 /** correct = verde (en su lugar), present = amarillo (en otra posición), absent = gris. */
 export type PalabraColor = "correct" | "present" | "absent";
 
+/** Primera pista, visible desde el inicio. */
+export type PalabraCategoria = "persona" | "lugar" | "objeto" | "accion" | "concepto";
+
 export interface PalabraIntento {
   /** Ya normalizada: mayúsculas, sin acentos, con Ñ. */
   palabra: string;
@@ -457,13 +460,16 @@ export interface PalabraRevelada {
   palabra: string;
   explicacion: string;
   referencia: string;
+  /** Libro y capítulo donde aparece la palabra (la segunda pista). */
+  libro: string;
+  capitulo: number;
 }
 
 export interface PalabraPartidaEstado {
   intentos: PalabraIntento[];
   terminada: boolean;
   resuelta: boolean;
-  /** Pidió la pista hoy (resta puntos en el ranking, no afecta la racha). */
+  /** Pidió la pista del sistema anterior (solo historial; ya no resta puntos). */
   pistaUsada: boolean;
 }
 
@@ -486,7 +492,9 @@ export interface PalabraEstadisticas {
 export interface PalabraEstadoJugador {
   partida: PalabraPartidaEstado | null;
   revelado: PalabraRevelada | null;
-  /** Texto de la pista si ya la pidió hoy. */
+  /** Categoría de la palabra de hoy (primera pista, desde el inicio). */
+  categoria: PalabraCategoria | null;
+  /** "Búscala en Mateo 6": solo después del 2.º intento fallido. */
   pista: string | null;
   racha: PalabraRacha;
   /** Comodines que se gastaron para cubrir días faltados desde la última partida. */
@@ -500,6 +508,9 @@ export interface PalabraDiaria {
   palabra: string;
   explicacion: string;
   referencia: string;
+  categoria: PalabraCategoria;
+  libro: string;
+  capitulo: number;
   created_at: string;
   updated_at: string;
 }

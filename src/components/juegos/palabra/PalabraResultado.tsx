@@ -68,7 +68,7 @@ export function PalabraResultado({ fecha, partida, revelado, estado, conSesion, 
         >
           {partida.resuelta
             ? `¡La encontraste en ${partida.intentos.length}/${PALABRA_MAX_INTENTOS}!`
-            : "Esta vez no fue — ¡mañana hay otra!"}
+            : "¡Casi! Mañana hay una nueva palabra"}
         </p>
         {revelado && (
           <>
@@ -83,7 +83,8 @@ export function PalabraResultado({ fecha, partida, revelado, estado, conSesion, 
               style={{ color: "var(--color-text-muted)" }}
             >
               <BookOpen size={13} />
-              {revelado.referencia}
+              {/* Al perder: el libro y capítulo de la pista, para que la busque. */}
+              {partida.resuelta || !revelado.libro ? revelado.referencia : `${revelado.libro} ${revelado.capitulo}`}
             </p>
           </>
         )}

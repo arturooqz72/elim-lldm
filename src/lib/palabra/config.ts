@@ -28,9 +28,16 @@ export const PALABRA_DIAS_SINCRONIZABLES = 30;
 export const PALABRA_AVISO_DIAS = 14;
 
 /**
- * Puntos que resta la pista en el ranking del día (mínimo 1 si la resuelve).
- * Debe coincidir con el 2 de las funciones de ranking en 0056_palabra_pista.sql.
+ * Pistas (gratis, no restan puntos): la categoría se ve desde el inicio y
+ * el libro y capítulo ("Búscala en Mateo 6") después de estos intentos
+ * fallidos.
  */
-export const PALABRA_COSTO_PISTA = 2;
+export const PALABRA_FALLOS_SEGUNDA_PISTA = 2;
 
 export const PALABRA_URL_COMPARTIR = "elimlldm.net/juegos/palabra";
+
+/**
+ * Primer día completo con las pistas nuevas (categoría + capítulo). Antes
+ * de esta fecha, /admin/palabra no separa "antes/después de la 2.ª pista".
+ */
+export const PALABRA_INICIO_PISTAS = "2026-10-09";

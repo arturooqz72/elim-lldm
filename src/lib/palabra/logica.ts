@@ -2,18 +2,21 @@
 //
 // Lógica pura de "Palabra del Día", compartida entre servidor y cliente:
 // normalización, evaluación de colores, fechas en la zona fija, racha con
-// comodines, estadísticas y texto para compartir. Sin "server-only" y sin
+// comodines, estadísticas, pistas y texto para compartir. Sin "server-only" y sin
 // acceso a la palabra del día — esa solo vive en el servidor.
 import {
   PALABRA_DIAS_POR_COMODIN,
   PALABRA_EPOCH,
+  PALABRA_FALLOS_SEGUNDA_PISTA,
   PALABRA_LONGITUD,
   PALABRA_MAX_COMODINES,
   PALABRA_MAX_INTENTOS,
   PALABRA_TZ,
   PALABRA_URL_COMPARTIR,
 } from "./config";
+import { buscarLibro } from "./libros";
 import type {
+  PalabraCategoria,
   PalabraColor,
   PalabraEstadisticas,
   PalabraIntento,
@@ -221,31 +224,45 @@ export function calcularEstadisticas(
   };
 }
 
-// ---------- Pista ----------
+// ---------- Pistas ----------
 
-const LIBROS_NUEVO_TESTAMENTO = new Set([
-  "MATEO", "MARCOS", "LUCAS", "JUAN", "HECHOS", "ROMANOS", "CORINTIOS", "GALATAS", "EFESIOS",
-  "FILIPENSES", "COLOSENSES", "TESALONICENSES", "TIMOTEO", "TITO", "FILEMON", "HEBREOS",
-  "SANTIAGO", "PEDRO", "JUDAS", "APOCALIPSIS",
-]);
+export const NOMBRE_CATEGORIA: Record<PalabraCategoria, string> = {
+  persona: "Persona",
+  lugar: "Lugar",
+  objeto: "Objeto",
+  accion: "Acción",
+  concepto: "Concepto",
+};
+
+export const CATEGORIAS_PALABRA = Object.keys(NOMBRE_CATEGORIA) as PalabraCategoria[];
+
+export function esCategoria(valor: unknown): valor is PalabraCategoria {
+  return typeof valor === "string" && (CATEGORIAS_PALABRA as string[]).includes(valor);
+}
+
+/** Intentos fallidos de una partida (el que la resolvió no cuenta). */
+export function intentosFallidos(numIntentos: number, resuelta: boolean): number {
+  return resuelta ? Math.max(numIntentos - 1, 0) : numIntentos;
+}
+
+/** La segunda pista (libro y capítulo) aparece tras este número de intentos fallidos. */
+export function tieneSegundaPista(numIntentos: number, resuelta: boolean): boolean {
+  return intentosFallidos(numIntentos, resuelta) >= PALABRA_FALLOS_SEGUNDA_PISTA;
+}
 
 /**
- * Pista del día a partir de la referencia: "1 Samuel 16:13" → "Aparece en
- * 1 Samuel" (sin capítulo ni versículo). Nunca puede contener la respuesta:
- * - si el libro ES la palabra (NAHÚM en "Nahúm 1:1", MATEO en "Mateo 9:9"…)
- *   solo dice que es un libro y de qué Testamento;
- * - si aun así el texto la contuviera, cae a una pista neutral.
+ * Segunda pista: "Búscala en Mateo 6". Nunca puede contener la respuesta:
+ * si el libro ES la palabra (ESTER en Ester, ÉXODO en Éxodo…) solo dice
+ * que es el nombre de un libro y de qué Testamento.
  */
-export function pistaDesdeReferencia(referencia: string, palabra: string): string {
-  const libro = referencia.replace(/\s+\d+(:\d+(-\d+)?)?\s*$/, "").trim() || referencia;
-  const libroNormalizado = normalizarPalabra(libro).replace(/^\d+\s*/, "");
+export function pistaCapitulo(libro: string, capitulo: number, palabra: string): string {
   const respuesta = normalizarPalabra(palabra);
-  const testamento = LIBROS_NUEVO_TESTAMENTO.has(libroNormalizado) ? "Nuevo" : "Antiguo";
-
-  const pista = libroNormalizado.includes(respuesta)
+  const libroNormalizado = normalizarPalabra(libro).replace(/^\d+\s*/, "");
+  const testamento = buscarLibro(libro)?.testamento ?? "Antiguo";
+  const pista = `Búscala en ${libro} ${capitulo}`;
+  return libroNormalizado.includes(respuesta) || normalizarPalabra(pista).includes(respuesta)
     ? `Es el nombre de un libro del ${testamento} Testamento`
-    : `Aparece en ${libro}`;
-  return normalizarPalabra(pista).includes(respuesta) ? `Aparece en el ${testamento} Testamento` : pista;
+    : pista;
 }
 
 // ---------- Compartir ----------

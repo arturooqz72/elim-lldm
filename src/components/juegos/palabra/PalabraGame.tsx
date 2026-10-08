@@ -3,8 +3,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
-import { PALABRA_LONGITUD } from "@/lib/palabra/config";
-import { normalizarPalabra } from "@/lib/palabra/logica";
+import { PALABRA_FALLOS_SEGUNDA_PISTA, PALABRA_LONGITUD } from "@/lib/palabra/config";
+import { intentosFallidos, normalizarPalabra } from "@/lib/palabra/logica";
 import type {
   PalabraColor,
   PalabraEstadoJugador,
@@ -41,6 +41,8 @@ interface RespuestaIntento {
   terminada: boolean;
   resuelta: boolean;
   revelado: PalabraRevelada | null;
+  /** Segunda pista, cuando ya le toca (2 intentos fallidos). */
+  pista?: string | null;
   estado?: PalabraEstadoJugador;
   error?: string;
   mensaje?: string;
@@ -83,6 +85,11 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
     resuelta: false,
     pistaUsada: false,
   };
+  // Intentos fallidos ya visibles: la fila que está girando todavía no cuenta.
+  const fallidosVisibles =
+    revelandoFila === null
+      ? intentosFallidos(partida.intentos.length, partida.resuelta)
+      : partida.intentos.length - 1;
   const bloqueado = !estado || !hayPalabra || partida.terminada || enviando || revelandoFila !== null;
 
   function sacudirFila() {
@@ -133,7 +140,10 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
 
       if (conSesion) {
         setEstado((prev) =>
-          data.estado ?? (prev ? { ...prev, partida: nuevaPartida, revelado: data.revelado } : prev)
+          data.estado ??
+          (prev
+            ? { ...prev, partida: nuevaPartida, revelado: data.revelado, pista: data.pista ?? prev.pista }
+            : prev)
         );
       } else {
         guardarPartidaLocal(fecha, { ...nuevaPartida, revelado: data.revelado, pista: estado?.pista ?? null });
@@ -154,16 +164,6 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
       mostrarAviso("Sin conexión. Intenta de nuevo.", 3000);
     } finally {
       setEnviando(false);
-    }
-  }
-
-  function aplicarPista(pista: string) {
-    const conPista: PalabraPartidaEstado = { ...partida, pistaUsada: true };
-    if (conSesion) {
-      setEstado((prev) => (prev ? { ...prev, partida: conPista, pista } : prev));
-    } else {
-      guardarPartidaLocal(fecha, { ...conPista, revelado: null, pista });
-      setEstado(estadoLocal(fecha));
     }
   }
 
@@ -219,11 +219,11 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
 
       {hayPalabra && estado && (
         <PalabraPista
-          pista={estado.pista}
-          disponible={!partida.terminada}
-          conSesion={conSesion}
-          onPista={aplicarPista}
-          onError={(m) => mostrarAviso(m, 3000)}
+          categoria={estado.categoria}
+          // La segunda pista aparece cuando termina de girar la fila que la ganó.
+          pista={fallidosVisibles >= PALABRA_FALLOS_SEGUNDA_PISTA ? estado.pista : null}
+          fallidos={fallidosVisibles}
+          terminada={partida.terminada}
         />
       )}
 

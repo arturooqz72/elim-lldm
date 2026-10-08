@@ -87,6 +87,8 @@ export function estadoLocal(hoy: string): PalabraEstadoJugador {
         }
       : null,
     revelado: deHoy?.terminada ? deHoy.revelado : null,
+    // Sin sesión no se puede jugar (la página pide iniciar sesión): no hay pistas.
+    categoria: null,
     pista: deHoy?.pista ?? null,
     racha,
     comodinesUsados,

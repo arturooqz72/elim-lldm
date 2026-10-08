@@ -1,5 +1,5 @@
 // src/components/juegos/palabra/PalabraAyuda.tsx
-import { PALABRA_COSTO_PISTA, PALABRA_DIAS_POR_COMODIN, PALABRA_MAX_COMODINES } from "@/lib/palabra/config";
+import { PALABRA_DIAS_POR_COMODIN, PALABRA_FALLOS_SEGUNDA_PISTA, PALABRA_MAX_COMODINES } from "@/lib/palabra/config";
 import type { PalabraColor } from "@/types";
 import { COLOR_FONDO } from "./colores";
 
@@ -38,8 +38,9 @@ export function PalabraAyuda() {
         <li>Los acentos no importan (á = a). La Ñ sí cuenta como letra.</li>
         <li>Después de cada intento, los colores te dicen qué tan cerca estás.</li>
         <li>
-          ¿Atorado? Puedes pedir una 💡 pista (normalmente, en qué libro de la Biblia aparece). Resta{" "}
-          {PALABRA_COSTO_PISTA} puntos en el ranking de ese día, pero no afecta tu racha.
+          Pistas gratis: arriba del tablero ves si la palabra es persona, lugar, objeto, acción o
+          concepto, y después de {PALABRA_FALLOS_SEGUNDA_PISTA} intentos fallidos, el libro y
+          capítulo de la Biblia donde aparece. No restan puntos.
         </li>
       </ul>
 

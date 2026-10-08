@@ -1,4 +1,6 @@
 // src/components/admin/PalabraDiariaForm.tsx
+import { LIBROS_BIBLIA } from "@/lib/palabra/libros";
+import { CATEGORIAS_PALABRA, NOMBRE_CATEGORIA } from "@/lib/palabra/logica";
 import type { PalabraDiaria } from "@/types";
 
 interface PalabraDiariaFormProps {
@@ -78,7 +80,7 @@ export function PalabraDiariaForm({
         />
         {bloquearPalabra && (
           <p className="text-[11px] mt-1" style={{ color: "var(--color-text-muted)" }}>
-            Ya se jugó o se está jugando: solo puedes corregir la explicación y la referencia.
+            Ya se jugó o se está jugando: solo puedes corregir la explicación, la referencia y las pistas.
           </p>
         )}
       </div>
@@ -113,6 +115,77 @@ export function PalabraDiariaForm({
           style={inputStyle}
         />
       </div>
+
+      <fieldset className="flex flex-col gap-3 p-3 rounded-xl" style={{ border: "1px solid var(--color-border)" }}>
+        <legend className="px-1 text-xs font-semibold" style={{ color: "var(--color-primary)" }}>
+          Pistas (obligatorias)
+        </legend>
+
+        <div>
+          <label className={label} style={{ color: "var(--color-text)" }}>
+            Categoría — se ve desde el inicio
+          </label>
+          <select
+            name="categoria"
+            required
+            defaultValue={editando?.categoria ?? ""}
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={inputStyle}
+          >
+            <option value="" disabled>
+              Elige una…
+            </option>
+            {CATEGORIAS_PALABRA.map((c) => (
+              <option key={c} value={c}>
+                {NOMBRE_CATEGORIA[c]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-[1fr_88px] gap-2">
+          <div>
+            <label className={label} style={{ color: "var(--color-text)" }}>
+              Libro
+            </label>
+            <select
+              name="libro"
+              required
+              defaultValue={editando?.libro ?? ""}
+              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            >
+              <option value="" disabled>
+                Elige…
+              </option>
+              {LIBROS_BIBLIA.map((l) => (
+                <option key={l.nombre} value={l.nombre}>
+                  {l.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label} style={{ color: "var(--color-text)" }}>
+              Capítulo
+            </label>
+            <input
+              type="number"
+              name="capitulo"
+              required
+              min={1}
+              max={150}
+              defaultValue={editando?.capitulo ?? ""}
+              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        <p className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>
+          Se muestra como &quot;Búscala en Mateo 6&quot; después del 2.º intento fallido. Revisa que la
+          palabra aparezca tal cual (no solo en plural) en ese capítulo de la Reina-Valera 1960.
+        </p>
+      </fieldset>
 
       <div className="flex gap-2 pt-1">
         {editando && (

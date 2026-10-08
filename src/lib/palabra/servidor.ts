@@ -10,11 +10,14 @@ import {
   calcularEstadisticas,
   calcularRacha,
   fechaEnZona,
+  esCategoria,
   inicioDeSemana,
-  pistaDesdeReferencia,
+  pistaCapitulo,
   rachaEfectiva,
+  tieneSegundaPista,
 } from "./logica";
 import type {
+  PalabraCategoria,
   PalabraEstadoJugador,
   PalabraFilaRankingIglesia,
   PalabraFilaRankingRacha,
@@ -38,6 +41,34 @@ export interface FilaPartida {
 
 export const COLUMNAS_PARTIDA = "id, fecha, intentos, num_intentos, resuelta, terminada, pista_usada, origen";
 
+/** Palabra del día con sus pistas. Solo servidor: nunca se manda entera antes de terminar. */
+export interface PalabraDelDia extends PalabraRevelada {
+  categoria: PalabraCategoria | null;
+}
+
+const COLUMNAS_PALABRA = "palabra, explicacion, referencia, categoria, libro, capitulo";
+
+function aPalabraDelDia(fila: Record<string, unknown>): PalabraDelDia {
+  return {
+    palabra: fila.palabra as string,
+    explicacion: fila.explicacion as string,
+    referencia: fila.referencia as string,
+    libro: fila.libro as string,
+    capitulo: fila.capitulo as number,
+    categoria: esCategoria(fila.categoria) ? fila.categoria : null,
+  };
+}
+
+/** Lo que se revela al terminar (sin la categoría, que ya se veía). */
+export function revelar(p: PalabraDelDia): PalabraRevelada {
+  return { palabra: p.palabra, explicacion: p.explicacion, referencia: p.referencia, libro: p.libro, capitulo: p.capitulo };
+}
+
+/** Segunda pista si ya le toca (2 intentos fallidos); null si todavía no. */
+export function segundaPista(p: PalabraDelDia, numIntentos: number, resuelta: boolean): string | null {
+  return tieneSegundaPista(numIntentos, resuelta) ? pistaCapitulo(p.libro, p.capitulo, p.palabra) : null;
+}
+
 export function fechaDeHoy(): string {
   return fechaEnZona();
 }
@@ -45,18 +76,18 @@ export function fechaDeHoy(): string {
 export async function getPalabraPorFecha(
   fecha: string,
   service?: ServiceClient
-): Promise<PalabraRevelada | null> {
+): Promise<PalabraDelDia | null> {
   const client = service ?? (await createServiceClient());
   const { data, error } = await client
     .from("palabra_diaria")
-    .select("palabra, explicacion, referencia")
+    .select(COLUMNAS_PALABRA)
     .eq("fecha", fecha)
     .maybeSingle();
   if (error) {
     console.error("[palabra] no se pudo leer la palabra del día:", error.message);
     return null;
   }
-  return (data as PalabraRevelada | null) ?? null;
+  return data ? aPalabraDelDia(data as Record<string, unknown>) : null;
 }
 
 export async function getPalabrasPorFechas(
@@ -67,10 +98,10 @@ export async function getPalabrasPorFechas(
   if (fechas.length === 0) return mapa;
   const { data } = await service
     .from("palabra_diaria")
-    .select("fecha, palabra, explicacion, referencia")
+    .select(`fecha, ${COLUMNAS_PALABRA}`)
     .in("fecha", fechas);
-  for (const fila of (data ?? []) as Array<PalabraRevelada & { fecha: string }>) {
-    mapa.set(fila.fecha, { palabra: fila.palabra, explicacion: fila.explicacion, referencia: fila.referencia });
+  for (const fila of (data ?? []) as Array<Record<string, unknown>>) {
+    mapa.set(fila.fecha as string, revelar(aPalabraDelDia(fila)));
   }
   return mapa;
 }
@@ -128,10 +159,10 @@ export async function getEstadoJugador(
     : calcularRacha([]);
   const { racha, comodinesUsados } = rachaEfectiva(rachaGuardada, hoy);
 
-  // La palabra de hoy solo se lee si hace falta: al terminar (para
-  // revelarla) o si pidió la pista (para volver a mostrársela).
-  const palabraHoy =
-    deHoy && (deHoy.terminada || deHoy.pista_usada) ? await getPalabraPorFecha(hoy, client) : null;
+  // La palabra de hoy se lee en el servidor para sus pistas; al navegador
+  // solo llegan la categoría, la segunda pista cuando ya le toca y, al
+  // terminar, la palabra revelada.
+  const palabraHoy = await getPalabraPorFecha(hoy, client);
 
   return {
     partida: deHoy
@@ -142,8 +173,9 @@ export async function getEstadoJugador(
           pistaUsada: deHoy.pista_usada,
         }
       : null,
-    revelado: deHoy?.terminada ? palabraHoy : null,
-    pista: deHoy?.pista_usada && palabraHoy ? pistaDesdeReferencia(palabraHoy.referencia, palabraHoy.palabra) : null,
+    revelado: deHoy?.terminada && palabraHoy ? revelar(palabraHoy) : null,
+    categoria: palabraHoy?.categoria ?? null,
+    pista: deHoy && palabraHoy ? segundaPista(palabraHoy, deHoy.num_intentos, deHoy.resuelta) : null,
     racha,
     comodinesUsados,
     estadisticas: calcularEstadisticas(

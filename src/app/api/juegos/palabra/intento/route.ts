@@ -2,6 +2,8 @@
 //
 // Evalúa UN intento de la Palabra del Día en el servidor y devuelve solo
 // los colores. La respuesta se revela únicamente cuando la partida termina.
+// Después del 2.º intento fallido devuelve también la segunda pista
+// ("Búscala en Mateo 6").
 //
 // - Con sesión: la partida vive en palabra_partidas (una por usuario y
 //   día). El servidor es la fuente de verdad: guarda cada intento, impide
@@ -17,6 +19,8 @@ import {
   getEstadoJugador,
   getPalabraPorFecha,
   recalcularRacha,
+  revelar,
+  segundaPista,
   type FilaPartida,
 } from "@/lib/palabra/servidor";
 import { PALABRAS_VALIDAS } from "@/lib/palabra/validas";
@@ -115,10 +119,16 @@ export async function POST(request: Request) {
   }
 
   if (!terminada) {
-    return NextResponse.json({ intento: nuevo, terminada: false, resuelta: false, revelado: null });
+    return NextResponse.json({
+      intento: nuevo,
+      terminada: false,
+      resuelta: false,
+      revelado: null,
+      pista: segundaPista(palabraHoy, intentos.length, false),
+    });
   }
 
   await recalcularRacha(user.id, service);
   const estado = await getEstadoJugador(user.id, hoy, service);
-  return NextResponse.json({ intento: nuevo, terminada, resuelta, revelado: palabraHoy, estado });
+  return NextResponse.json({ intento: nuevo, terminada, resuelta, revelado: revelar(palabraHoy), estado });
 }
