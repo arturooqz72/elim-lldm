@@ -3,7 +3,8 @@
 // Evalúa UN intento de la Palabra del Día en el servidor y devuelve solo
 // los colores. La respuesta se revela únicamente cuando la partida termina.
 // Después del 2.º intento fallido devuelve también la segunda pista
-// ("Búscala en Mateo 6").
+// ("Búscala en Mateo 6"). Cada intento rechazado por "palabra no válida"
+// queda en palabra_rechazos (estadísticas de /admin/palabra).
 //
 // - Con sesión: la partida vive en palabra_partidas (una por usuario y
 //   día). El servidor es la fuente de verdad: guarda cada intento, impide
@@ -47,19 +48,26 @@ export async function POST(request: Request) {
   const palabraHoy = await getPalabraPorFecha(hoy, service);
   if (!palabraHoy) return error(404, "sin_palabra", "Hoy no hay palabra programada. Vuelve más tarde.");
 
-  const respuesta = normalizarPalabra(palabraHoy.palabra);
-  // La respuesta siempre es un intento válido aunque un admin haya agregado
-  // un nombre propio que no está en la lista general.
-  const esValida = (p: string) => p === respuesta || PALABRAS_VALIDAS.has(p);
-  if (!esValida(intento)) return error(422, "no_valida", "No está en la lista de palabras.");
-
-  const colores = evaluarIntento(intento, respuesta);
-  const nuevo: PalabraIntento = { palabra: intento, colores };
-
   const authClient = await createClient();
   const {
     data: { user },
   } = await authClient.auth.getUser();
+
+  const respuesta = normalizarPalabra(palabraHoy.palabra);
+  // La respuesta siempre es un intento válido aunque un admin haya agregado
+  // un nombre propio que no está en la lista general.
+  const esValida = (p: string) => p === respuesta || PALABRAS_VALIDAS.has(p);
+  if (!esValida(intento)) {
+    // Solo estadística: si no se guarda, el jugador recibe el mismo aviso.
+    const { error: errorRechazo } = await service
+      .from("palabra_rechazos")
+      .insert({ user_id: user?.id ?? null, fecha: hoy, intento });
+    if (errorRechazo) console.error("[palabra] no se registró el rechazo:", errorRechazo.message);
+    return error(422, "no_valida", "No está en la lista de palabras.");
+  }
+
+  const colores = evaluarIntento(intento, respuesta);
+  const nuevo: PalabraIntento = { palabra: intento, colores };
 
   // Se exige sesión, igual que en la página: nada de partidas anónimas.
   if (!user) return error(401, "sin_sesion", "Inicia sesión para jugar.");

@@ -41,3 +41,6 @@ export const PALABRA_URL_COMPARTIR = "elimlldm.net/juegos/palabra";
  * de esta fecha, /admin/palabra no separa "antes/después de la 2.ª pista".
  */
 export const PALABRA_INICIO_PISTAS = "2026-10-09";
+
+/** Desde este día se guardan los intentos rechazados por "palabra no válida" (0067). */
+export const PALABRA_INICIO_RECHAZOS = "2026-10-08";
