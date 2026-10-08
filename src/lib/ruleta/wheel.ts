@@ -36,7 +36,7 @@ export const SEG_COLORS = [
 ];
 
 export const VOWEL_COST = 700;
-export const TURN_SECONDS = 15;
+export const TURN_SECONDS = 20;
 // Tras caer en puntos: tiempo para elegir consonante, contado desde que la
 // ruleta deja de girar (la animación dura SPIN_ANIMATION_MS).
 export const ANSWER_SECONDS = 10;
