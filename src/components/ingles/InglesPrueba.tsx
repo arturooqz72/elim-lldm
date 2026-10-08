@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GraduationCap, Send } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesPruebaFin } from "./InglesPruebaFin";
+import { InglesInstalar } from "./InglesInstalar";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje } from "@/types";
 
@@ -103,14 +104,15 @@ export function InglesPrueba(props: Props) {
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="flex items-center gap-3 min-w-0">
+          {/* En celulares angostos se oculta para dejar lugar a "Instalar". */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-full hidden min-[400px]:flex items-center justify-center shrink-0"
             style={{ background: `${GOLD}1A`, border: `1px solid ${GOLD}55` }}
           >
             <GraduationCap size={20} style={{ color: GOLD }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base font-bold" style={{ color: "var(--color-text)" }}>
+            <h1 className="text-base font-bold whitespace-nowrap" style={{ color: "var(--color-text)" }}>
               Elim English
             </h1>
             <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
@@ -118,13 +120,12 @@ export function InglesPrueba(props: Props) {
             </p>
           </div>
         </div>
-        <Link
-          href="/login?returnUrl=%2Fingles"
-          className="text-xs font-semibold shrink-0 hover:underline"
-          style={{ color: GOLD }}
-        >
-          Iniciar sesión
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <InglesInstalar />
+          <Link href="/login?returnUrl=%2Fingles" className="text-xs font-semibold hover:underline" style={{ color: GOLD }}>
+            Entrar
+          </Link>
+        </div>
       </div>
 
       <div

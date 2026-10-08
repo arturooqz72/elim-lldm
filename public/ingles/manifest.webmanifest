@@ -1,0 +1,33 @@
+{
+  "id": "/ingles",
+  "name": "Elim English",
+  "short_name": "Elim English",
+  "description": "Practica inglés con tu tutora de IA: conversación, situaciones reales, gramática, vocabulario y pronunciación.",
+  "lang": "es",
+  "start_url": "/ingles",
+  "scope": "/ingles",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A12",
+  "theme_color": "#f5c842",
+  "icons": [
+    {
+      "src": "/ingles/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ingles/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ingles/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

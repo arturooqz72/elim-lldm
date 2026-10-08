@@ -39,7 +39,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const { dias, totales, modos, alLimite, prueba } = await leerEstadisticas(supabase, numDias);
+  const { dias, totales, modos, alLimite, prueba, app } = await leerEstadisticas(supabase, numDias);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
   return (
@@ -106,16 +106,33 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           }${prueba.yaTeniaCuenta ? ` · ${prueba.yaTeniaCuenta} ya tenían cuenta` : ""} · ${prueba.mensajes} mensajes`}
         />
         <Tarjeta
+          valor={totales.aperturasApp}
+          titulo="Veces que se abrió desde la app instalada"
+          nota={`${app.personas} ${app.personas === 1 ? "persona" : "personas"} · iPhone ${app.ios} · Android ${app.android}${
+            app.otro ? ` · otros ${app.otro}` : ""
+          }`}
+        />
+        <Tarjeta
           valor={totales.usuariosActivos ? (totales.mensajes / totales.usuariosActivos).toFixed(1) : "—"}
           titulo="Mensajes por persona activa"
         />
       </div>
 
       <div className="rounded-2xl overflow-x-auto mb-8" style={borde}>
-        <table className="w-full text-sm min-w-[720px]">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
-              {["Día", "Entraron", "Usaron", "Regresaron", "Mensajes", "Al límite", "Pronunciación", "Lista de espera"].map((t) => (
+              {[
+                "Día",
+                "Entraron",
+                "Usaron",
+                "Regresaron",
+                "Mensajes",
+                "Al límite",
+                "Pronunciación",
+                "Lista de espera",
+                "App",
+              ].map((t) => (
                 <th
                   key={t}
                   className="text-left font-semibold px-4 py-3"
@@ -147,6 +164,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 <td className="px-4 py-2.5">{d.llegaronAlLimite}</td>
                 <td className="px-4 py-2.5">{d.intentosPronunciacion}</td>
                 <td className="px-4 py-2.5">{d.nuevosEnLista}</td>
+                <td className="px-4 py-2.5">{d.aperturasApp}</td>
               </tr>
             ))}
           </tbody>

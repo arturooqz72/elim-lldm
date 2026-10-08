@@ -9,7 +9,13 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) =>
+        Promise.all(
+          // Solo sus propias versiones viejas: las cachés "elim-ingles-*" son
+          // del service worker de Elim English (/ingles-sw.js).
+          keys.filter((key) => key.startsWith("elim-static-") && key !== CACHE_NAME).map((key) => caches.delete(key))
+        )
+      )
   );
 });
 

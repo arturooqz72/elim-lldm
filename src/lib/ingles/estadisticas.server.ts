@@ -29,6 +29,8 @@ export interface DiaIngles {
   llegaronAlLimite: number;
   intentosPronunciacion: number;
   nuevosEnLista: number;
+  /** Veces que se abrió Elim English desde la app instalada (PWA). */
+  aperturasApp: number;
 }
 
 /** Persona que llegó al límite diario al menos una vez en el rango. */
@@ -42,6 +44,15 @@ export interface PersonaAlLimite {
   mensajes: number;
   ultimoDiaAlLimite: string;
   enListaEspera: boolean;
+}
+
+/** Aperturas desde la app instalada en el rango. */
+export interface AppIngles {
+  /** Personas distintas (cuenta o navegador anónimo). */
+  personas: number;
+  ios: number;
+  android: number;
+  otro: number;
 }
 
 /** Prueba sin cuenta en el rango. */
@@ -65,6 +76,7 @@ export interface EstadisticasIngles {
     listaEsperaTotal: number;
   };
   prueba: PruebaIngles;
+  app: AppIngles;
   modos: { modo: string; mensajes: number }[];
   alLimite: PersonaAlLimite[];
 }
@@ -107,7 +119,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   const excluir = new Set(((admins ?? []) as { id: string }[]).map((a) => a.id));
   const valido = (id: string | null) => !id || !excluir.has(id);
 
-  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba] = await Promise.all([
+  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba, aperturas] = await Promise.all([
     todas<{ created_at: string; profile_id: string | null; visitante_id: string | null }>((a, b) =>
       supabase
         .from("visitas_sitio")
@@ -161,6 +173,15 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         .order("created_at")
         .range(a, b),
     ),
+    todas<{ created_at: string; user_id: string | null; visitante_id: string | null; plataforma: keyof Omit<AppIngles, "personas"> }>(
+      (a, b) =>
+        supabase
+          .from("english_app_aperturas")
+          .select("created_at, user_id, visitante_id, plataforma")
+          .gte("created_at", desdeIso)
+          .order("created_at")
+          .range(a, b),
+    ),
   ]);
 
   const { gratisDiarios, azureUsdPorHora } = inglesConfig();
@@ -176,6 +197,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         llegaronAlLimite: 0,
         intentosPronunciacion: 0,
         nuevosEnLista: 0,
+        aperturasApp: 0,
         _personas: new Set<string>(),
         _activos: new Set<string>(),
       },
@@ -250,6 +272,18 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     if (d && valido(l.user_id)) d.nuevosEnLista++;
   }
 
+  const app: AppIngles = { personas: 0, ios: 0, android: 0, otro: 0 };
+  const personasApp = new Set<string>();
+  for (const a of aperturas) {
+    const d = porDia.get(diaPacifico(a.created_at));
+    const quien = a.user_id ?? a.visitante_id;
+    if (!d || !quien || !valido(a.user_id)) continue;
+    d.aperturasApp++;
+    personasApp.add(quien);
+    app[a.plataforma]++;
+  }
+  app.personas = personasApp.size;
+
   const dias: DiaIngles[] = [...porDia.values()].map(({ _personas, _activos, ...d }) => ({
     ...d,
     personasVisitaron: _personas.size,
@@ -310,11 +344,13 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
       llegaronAlLimite: suma("llegaronAlLimite"),
       intentosPronunciacion: suma("intentosPronunciacion"),
       nuevosEnLista: suma("nuevosEnLista"),
+      aperturasApp: suma("aperturasApp"),
       listaEsperaTotal: lista.filter((l) => valido(l.user_id)).length,
       costoAproxUsd: Math.round(llamadas * COSTO_APROX_POR_LLAMADA_USD * 100) / 100,
       costoAzureUsd: Math.round((segundosAzure / 3600) * azureUsdPorHora * 100) / 100,
       minutosAzure: Math.round((segundosAzure / 60) * 10) / 10,
     },
+    app,
     prueba: {
       visitantes: pruebasRango.length,
       crearonCuenta,

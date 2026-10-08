@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5c842" />
+    <title>Elim English — Sin conexión</title>
+    <link rel="icon" href="/ingles/icons/icon-192.png" />
+    <style>
+      :root {
+        --bg: #0a0a12;
+        --surface: #12121e;
+        --text: #f8f8ff;
+        --muted: #9090a8;
+        --gold: #f5c842;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main {
+        min-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+      }
+      .tarjeta {
+        width: 100%;
+        max-width: 380px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid rgba(245, 200, 66, 0.2);
+        border-radius: 16px;
+        padding: 32px 24px;
+      }
+      .icono {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 20px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(245, 200, 66, 0.1);
+        border: 1px solid rgba(245, 200, 66, 0.33);
+      }
+      h1 {
+        font-size: 18px;
+        line-height: 1.4;
+        margin: 0 0 8px;
+      }
+      p {
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--muted);
+        margin: 0 0 24px;
+      }
+      button {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 20px;
+        background: var(--gold);
+        color: #000;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="tarjeta">
+        <div class="icono" aria-hidden="true">
+          <svg
+            width="30"
+            height="30"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f5c842"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"
+            />
+            <path d="M22 10v6" />
+            <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+          </svg>
+        </div>
+        <h1>Necesitas conexión para practicar con tu tutora</h1>
+        <p>Revisa tu internet o tus datos móviles y vuelve a intentarlo.</p>
+        <button type="button" onclick="location.reload()">Reintentar</button>
+      </div>
+    </main>
+    <script>
+      // Al volver la conexión, recarga sola.
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

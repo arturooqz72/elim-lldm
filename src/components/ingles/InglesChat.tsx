@@ -8,6 +8,7 @@ import { InglesOpciones } from "./InglesOpciones";
 import { InglesAvisoLimite } from "./InglesAvisoLimite";
 import { InglesPronunciacion } from "./InglesPronunciacion";
 import { InglesSaldo } from "./InglesSaldo";
+import { InglesInstalar } from "./InglesInstalar";
 import { useAvisoCompra } from "./useAvisoCompra";
 import { BIENVENIDA, MODOS, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesModo, InglesPaquete, InglesPerfil, InglesSaldo as Saldo, PronFrase, PronProgreso } from "@/types";
@@ -144,14 +145,15 @@ export function InglesChat(props: Props) {
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         <div className="flex items-center gap-3 min-w-0">
+          {/* En celulares angostos se oculta para dejar lugar a "Instalar". */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            className="w-10 h-10 rounded-full hidden min-[400px]:flex items-center justify-center shrink-0"
             style={{ background: `${GOLD}1A`, border: `1px solid ${GOLD}55` }}
           >
             <GraduationCap size={20} style={{ color: GOLD }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base font-bold" style={{ color: "var(--color-text)" }}>
+            <h1 className="text-base font-bold whitespace-nowrap" style={{ color: "var(--color-text)" }}>
               Elim English
             </h1>
             <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
@@ -159,17 +161,20 @@ export function InglesChat(props: Props) {
             </p>
           </div>
         </div>
-        {!pron && (
-          <button
-            onClick={borrarConversacion}
-            className="p-2 rounded-lg transition-colors shrink-0"
-            style={{ color: "var(--color-text-muted)" }}
-            title="Borrar conversación"
-            aria-label="Borrar conversación"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <InglesInstalar />
+          {!pron && (
+            <button
+              onClick={borrarConversacion}
+              className="p-2 rounded-lg transition-colors shrink-0"
+              style={{ color: "var(--color-text-muted)" }}
+              title="Borrar conversación"
+              aria-label="Borrar conversación"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <InglesOpciones perfil={perfil} onCambiar={cambiarPerfil} />
