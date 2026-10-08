@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { esModo, esNivel, esSituacion, inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
 import { promptTutora } from "@/lib/ingles/prompts";
+import { leerRacha } from "@/lib/ingles/retos.server";
 import type { InglesSaldo } from "@/types";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -134,5 +135,8 @@ export async function POST(request: Request) {
   ]);
   if (insertError) console.error("Elim English — no se guardó el historial:", insertError.message);
 
-  return NextResponse.json({ estado: "ok", reply, saldo });
+  // La racha puede subir hoy al llegar a 3 mensajes (la flama se actualiza).
+  const racha = await leerRacha(admin, user.id);
+
+  return NextResponse.json({ estado: "ok", reply, saldo, racha });
 }

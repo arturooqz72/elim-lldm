@@ -562,6 +562,39 @@ export interface InglesPaquete {
   moneda: string;
 }
 
+// ── Elim English: Reto del día y racha ─────────────────────────────────────────
+
+export interface InglesRetoFrase {
+  en: string;
+  es: string;
+}
+
+/** Reto del día: el mismo para todos, guardado con anticipación. */
+export interface InglesReto {
+  /** "YYYY-MM-DD" en hora del Pacífico. */
+  dia: string;
+  titulo: string;
+  descripcion: string;
+  frases: InglesRetoFrase[];
+}
+
+/** Avance del usuario en el reto de hoy. */
+export interface InglesRetoAvance {
+  completado: boolean;
+  /** Mensajes que mandó hoy en el reto. */
+  mensajes: number;
+  /** Mensajes necesarios para completarlo. */
+  requeridos: number;
+}
+
+/** Racha de días practicando (completó el reto o mandó al menos 3 mensajes). */
+export interface InglesRacha {
+  actual: number;
+  maxima: number;
+  /** Ya cuenta el día de hoy (no se pierde si deja de practicar hoy). */
+  hoyCuenta: boolean;
+}
+
 // ── Elim English: modo Pronunciación ───────────────────────────────────────────
 
 /** Sonidos difíciles para hispanohablantes que se siguen en el progreso. */

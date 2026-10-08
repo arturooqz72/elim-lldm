@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { HISTORIAL_TZ } from "@/lib/historial";
 import { ETIQUETA_MODO } from "./etiquetas";
 import { inglesConfig } from "./config";
+import { rachaDesdeFechas } from "./retos.server";
 import type { InglesModo } from "@/types";
 
 /**
@@ -31,6 +32,18 @@ export interface DiaIngles {
   nuevosEnLista: number;
   /** Veces que se abrió Elim English desde la app instalada (PWA). */
   aperturasApp: number;
+  /** Personas que completaron el Reto del día ese día. */
+  retosCompletados: number;
+}
+
+/** Rachas (días seguidos practicando), de todo el historial, sin admins. */
+export interface RachasIngles {
+  /** La racha más larga que alguien ha logrado. */
+  masLarga: number;
+  /** Quién la logró (si hay empate, el primero). */
+  nombre: string | null;
+  /** La racha más larga que sigue viva hoy. */
+  activaMasLarga: number;
 }
 
 /** Persona que llegó al límite diario al menos una vez en el rango. */
@@ -77,6 +90,7 @@ export interface EstadisticasIngles {
   };
   prueba: PruebaIngles;
   app: AppIngles;
+  rachas: RachasIngles;
   modos: { modo: string; mensajes: number }[];
   alLimite: PersonaAlLimite[];
 }
@@ -119,7 +133,8 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   const excluir = new Set(((admins ?? []) as { id: string }[]).map((a) => a.id));
   const valido = (id: string | null) => !id || !excluir.has(id);
 
-  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba, aperturas] = await Promise.all([
+  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba, aperturas, retosHechos] =
+    await Promise.all([
     todas<{ created_at: string; profile_id: string | null; visitante_id: string | null }>((a, b) =>
       supabase
         .from("visitas_sitio")
@@ -182,9 +197,13 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
           .order("created_at")
           .range(a, b),
     ),
+    // Todo el historial: también sirve para calcular las rachas.
+    todas<{ dia: string; user_id: string }>((a, b) =>
+      supabase.from("english_retos_completados").select("dia, user_id").order("dia").range(a, b),
+    ),
   ]);
 
-  const { gratisDiarios, azureUsdPorHora } = inglesConfig();
+  const { gratisDiarios, azureUsdPorHora, rachaMensajesDia } = inglesConfig();
   const porDia = new Map<string, DiaIngles & { _personas: Set<string>; _activos: Set<string> }>(
     claves.map((dia) => [
       dia,
@@ -198,6 +217,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         intentosPronunciacion: 0,
         nuevosEnLista: 0,
         aperturasApp: 0,
+        retosCompletados: 0,
         _personas: new Set<string>(),
         _activos: new Set<string>(),
       },
@@ -255,7 +275,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
       continue;
     }
     d.mensajes++;
-    const etiqueta = ETIQUETA_MODO[m.modo] ?? m.modo;
+    const etiqueta = (m.modo as string) === "reto" ? "Reto del día" : (ETIQUETA_MODO[m.modo] ?? m.modo);
     modos.set(etiqueta, (modos.get(etiqueta) ?? 0) + 1);
   }
   for (const m of mensajesPrueba) if (porDia.has(diaPacifico(m.created_at))) mensajesDePrueba++;
@@ -283,6 +303,37 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     app[a.plataforma]++;
   }
   app.personas = personasApp.size;
+
+  for (const r of retosHechos) {
+    const d = porDia.get(r.dia);
+    if (d && valido(r.user_id)) d.retosCompletados++;
+  }
+
+  // Rachas: días con el reto completado o con 3+ mensajes, por persona
+  // (misma lógica que la racha que ve cada usuario en /ingles).
+  const diasRacha = new Map<string, string[]>();
+  const sumarDia = (id: string, dia: string) => {
+    if (!valido(id)) return;
+    const lista = diasRacha.get(id) ?? [];
+    lista.push(dia);
+    diasRacha.set(id, lista);
+  };
+  for (const u of uso) if (u.usados >= rachaMensajesDia) sumarDia(u.user_id, u.dia);
+  for (const r of retosHechos) sumarDia(r.user_id, r.dia);
+  const rachas: RachasIngles = { masLarga: 0, nombre: null, activaMasLarga: 0 };
+  let idMasLarga: string | null = null;
+  for (const [id, fechas] of diasRacha) {
+    const r = rachaDesdeFechas(fechas, hoy);
+    if (r.maxima > rachas.masLarga) {
+      rachas.masLarga = r.maxima;
+      idMasLarga = id;
+    }
+    rachas.activaMasLarga = Math.max(rachas.activaMasLarga, r.actual);
+  }
+  if (idMasLarga) {
+    const { data: p } = await supabase.from("profiles").select("display_name").eq("id", idMasLarga).maybeSingle();
+    rachas.nombre = (p as { display_name: string } | null)?.display_name ?? "Usuario";
+  }
 
   const dias: DiaIngles[] = [...porDia.values()].map(({ _personas, _activos, ...d }) => ({
     ...d,
@@ -345,12 +396,14 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
       intentosPronunciacion: suma("intentosPronunciacion"),
       nuevosEnLista: suma("nuevosEnLista"),
       aperturasApp: suma("aperturasApp"),
+      retosCompletados: suma("retosCompletados"),
       listaEsperaTotal: lista.filter((l) => valido(l.user_id)).length,
       costoAproxUsd: Math.round(llamadas * COSTO_APROX_POR_LLAMADA_USD * 100) / 100,
       costoAzureUsd: Math.round((segundosAzure / 3600) * azureUsdPorHora * 100) / 100,
       minutosAzure: Math.round((segundosAzure / 60) * 10) / 10,
     },
     app,
+    rachas,
     prueba: {
       visitantes: pruebasRango.length,
       crearonCuenta,

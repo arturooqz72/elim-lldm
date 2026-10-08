@@ -39,7 +39,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const { dias, totales, modos, alLimite, prueba, app } = await leerEstadisticas(supabase, numDias);
+  const { dias, totales, modos, alLimite, prueba, app, rachas } = await leerEstadisticas(supabase, numDias);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
   return (
@@ -105,6 +105,16 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
             prueba.visitantes ? ` (${Math.round((prueba.crearonCuenta / prueba.visitantes) * 100)}%)` : ""
           }${prueba.yaTeniaCuenta ? ` · ${prueba.yaTeniaCuenta} ya tenían cuenta` : ""} · ${prueba.mensajes} mensajes`}
         />
+        <Tarjeta valor={totales.retosCompletados} titulo="Retos del día completados" nota="uno por persona por día" />
+        <Tarjeta
+          valor={`${rachas.masLarga} ${rachas.masLarga === 1 ? "día" : "días"}`}
+          titulo="Racha más larga"
+          nota={
+            rachas.nombre
+              ? `${rachas.nombre} · la más larga activa hoy: ${rachas.activaMasLarga}`
+              : "reto completado o 3+ mensajes al día; desde siempre"
+          }
+        />
         <Tarjeta
           valor={totales.aperturasApp}
           titulo="Veces que se abrió desde la app instalada"
@@ -119,7 +129,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
       </div>
 
       <div className="rounded-2xl overflow-x-auto mb-8" style={borde}>
-        <table className="w-full text-sm min-w-[800px]">
+        <table className="w-full text-sm min-w-[880px]">
           <thead>
             <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
               {[
@@ -131,6 +141,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 "Al límite",
                 "Pronunciación",
                 "Lista de espera",
+                "Retos",
                 "App",
               ].map((t) => (
                 <th
@@ -164,6 +175,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 <td className="px-4 py-2.5">{d.llegaronAlLimite}</td>
                 <td className="px-4 py-2.5">{d.intentosPronunciacion}</td>
                 <td className="px-4 py-2.5">{d.nuevosEnLista}</td>
+                <td className="px-4 py-2.5">{d.retosCompletados}</td>
                 <td className="px-4 py-2.5">{d.aperturasApp}</td>
               </tr>
             ))}

@@ -1,7 +1,7 @@
 // src/lib/ingles/prompts.ts
 // Instrucciones de sistema para la tutora de Elim English.
 
-import type { InglesModo, InglesNivel, InglesSituacion } from "@/types";
+import type { InglesModo, InglesNivel, InglesReto, InglesSituacion } from "@/types";
 
 const BASE = `Eres "Elim English", una tutora de inglés amable y paciente dentro de Elim LLDM, una plataforma cristiana de la Iglesia La Luz del Mundo. Tus alumnos son hispanohablantes.
 
@@ -51,4 +51,26 @@ function modo(m: InglesModo, situacion: InglesSituacion): string {
 
 export function promptTutora(nivel: InglesNivel, m: InglesModo, situacion: InglesSituacion): string {
   return `${BASE}\n\n${NIVEL[nivel]}\n\n${modo(m, situacion)}`;
+}
+
+/**
+ * Tutora en el Reto del día: guía al alumno por las 3 frases, una por
+ * mensaje. Cuándo se completa lo decide el servidor (contando mensajes),
+ * no la tutora; ella solo felicita al final.
+ */
+export function promptReto(nivel: InglesNivel, reto: InglesReto, mensajesRequeridos: number): string {
+  const frases = reto.frases.map((f, i) => `${i + 1}. "${f.en}" (${f.es})`).join("\n");
+  return `${BASE}
+
+${NIVEL[nivel]}
+
+Modo: RETO DEL DÍA — "${reto.titulo}". ${reto.descripcion}
+Frases del reto:
+${frases}
+
+Cómo guiar el reto:
+- El alumno practica una frase por mensaje, en orden: con su mensaje 1 la frase 1, con el 2 la frase 2 y así. Puede adaptarla a su caso (otro lugar, otra comida, etc.).
+- En cada respuesta: corrige brevemente su frase como siempre, responde dentro de una situación corta y realista del tema, y pídele la siguiente frase del reto en una línea (por ejemplo: "Ahora usa la frase 2: ...").
+- El reto se completa con ${mensajesRequeridos} mensajes del alumno. En tu respuesta al mensaje ${mensajesRequeridos}, felicítalo en una línea por completar el reto de hoy; no pidas más frases.
+- Si el alumno se sale del tema, ayúdale con amabilidad y regresa al reto.`;
 }

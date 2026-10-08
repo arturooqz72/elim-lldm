@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { GraduationCap, Send } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesPruebaFin } from "./InglesPruebaFin";
 import { InglesInstalar } from "./InglesInstalar";
+import { InglesEncabezado } from "./InglesEncabezado";
+import { InglesEntrada } from "./InglesEntrada";
+import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
-import type { InglesMensaje } from "@/types";
+import type { InglesMensaje, InglesReto } from "@/types";
 
 const GOLD = "#f5c842";
 
@@ -20,6 +22,8 @@ interface Props {
   gratisDiarios: number;
   maxCaracteres: number;
   reclamadoInicial: boolean;
+  /** Reto del día: sin cuenta solo se puede ver (invita a registrarse). */
+  reto: InglesReto | null;
 }
 
 /**
@@ -86,47 +90,17 @@ export function InglesPrueba(props: Props) {
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void enviar();
-    }
-  }
-
   return (
     <div
       className="flex flex-col h-full rounded-2xl overflow-hidden"
       style={{ background: "var(--color-surface)", border: `1px solid ${GOLD}33` }}
     >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between gap-2 px-3 py-4 min-[400px]:gap-3 min-[400px]:px-5 shrink-0"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {/* En celulares angostos se oculta para dejar lugar a "Instalar". */}
-          <div
-            className="w-10 h-10 rounded-full hidden min-[400px]:flex items-center justify-center shrink-0"
-            style={{ background: `${GOLD}1A`, border: `1px solid ${GOLD}55` }}
-          >
-            <GraduationCap size={20} style={{ color: GOLD }} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-[15px] min-[400px]:text-base font-bold whitespace-nowrap" style={{ color: "var(--color-text)" }}>
-              Elim English
-            </h1>
-            <p className="text-xs truncate" style={{ color: "var(--color-text-muted)" }}>
-              Prueba gratis, sin cuenta
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 min-[400px]:gap-3 shrink-0">
-          <InglesInstalar />
-          <Link href="/login?returnUrl=%2Fingles" className="text-xs font-semibold hover:underline" style={{ color: GOLD }}>
-            Entrar
-          </Link>
-        </div>
-      </div>
+      <InglesEncabezado subtitulo="Prueba gratis, sin cuenta">
+        <InglesInstalar />
+        <Link href="/login?returnUrl=%2Fingles" className="text-xs font-semibold hover:underline" style={{ color: GOLD }}>
+          Entrar
+        </Link>
+      </InglesEncabezado>
 
       <div
         className="px-5 py-2 shrink-0 text-xs flex flex-wrap justify-between gap-x-3 gap-y-1"
@@ -140,6 +114,8 @@ export function InglesPrueba(props: Props) {
           </strong>
         </span>
       </div>
+
+      {props.reto && <InglesRetoTarjeta reto={props.reto} avance={null} enReto={false} />}
 
       {/* Mensajes */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
@@ -167,48 +143,18 @@ export function InglesPrueba(props: Props) {
         {terminada && !loading && <InglesPruebaFin gratisDiarios={gratisDiarios} reclamado={reclamado} />}
       </div>
 
-      {/* Entrada */}
-      <div className="px-5 py-4 shrink-0" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <div className="flex items-end gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={maxCaracteres}
-            placeholder={
-              terminada ? "Crea tu cuenta gratis para seguir" : "Escribe en inglés (o en español si no sabes cómo decirlo)..."
-            }
-            disabled={terminada}
-            rows={1}
-            className="flex-1 resize-none rounded-xl px-4 py-3 text-sm outline-none disabled:opacity-50"
-            style={{
-              background: "var(--color-surface-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
-              maxHeight: "120px",
-            }}
-          />
-          <button
-            onClick={() => void enviar()}
-            disabled={loading || terminada || !input.trim()}
-            className="p-3 rounded-xl shrink-0 transition-opacity disabled:opacity-40"
-            style={{ background: GOLD, color: "#000" }}
-            aria-label="Enviar"
-          >
-            <Send size={16} />
-          </button>
-        </div>
-        <div className="flex justify-between mt-1.5 text-[11px]" style={{ color: "var(--color-text-muted)" }}>
-          <Link href="/ingles/terminos" className="hover:underline">
-            Términos
-          </Link>
-          {input.length > maxCaracteres * 0.8 && (
-            <span>
-              {input.length}/{maxCaracteres}
-            </span>
-          )}
-        </div>
-      </div>
+      <InglesEntrada
+        valor={input}
+        onCambiar={setInput}
+        onEnviar={() => void enviar()}
+        bloqueada={terminada}
+        enviando={loading}
+        placeholder={
+          terminada ? "Crea tu cuenta gratis para seguir" : "Escribe en inglés (o en español si no sabes cómo decirlo)..."
+        }
+        maxCaracteres={maxCaracteres}
+        textoTerminos="Términos"
+      />
     </div>
   );
 }

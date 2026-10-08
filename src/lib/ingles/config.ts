@@ -45,6 +45,12 @@ export function inglesConfig() {
      * gratis (F0) las primeras 5 horas al mes no se cobran.
      */
     azureUsdPorHora: decimal("ENGLISH_AZURE_USD_PER_HOUR", 1.3),
+    /** Reto del día: mensajes a la tutora para completarlo (uno por frase). */
+    retoMensajes: entero("ENGLISH_CHALLENGE_MESSAGES", 3),
+    /** Días de retos que se generan por adelantado. */
+    retoDiasAdelanto: entero("ENGLISH_CHALLENGE_DAYS_AHEAD", 7),
+    /** Mensajes en un día (sin reto) que también cuentan para la racha. */
+    rachaMensajesDia: entero("ENGLISH_STREAK_DAILY_MESSAGES", 3),
   };
 }
 
