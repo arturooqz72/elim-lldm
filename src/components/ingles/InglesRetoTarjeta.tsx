@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronDown, Circle, Flame, Target } from "lucide-react";
 import type { InglesReto, InglesRetoAvance } from "@/types";
@@ -17,29 +17,20 @@ interface Props {
 }
 
 /**
- * Reto del día, arriba del chat. Cerrado ocupa una línea; abierto muestra
- * las 3 frases. Mientras se hace el reto queda abierto y marca las frases
- * que ya practicó (una por mensaje).
+ * Reto del día, arriba del chat. Cerrado ocupa una línea; al tocarla se ven
+ * las 3 frases. Dentro del reto se abre sola (solo las frases en inglés,
+ * para dejar lugar a la conversación), marca las que ya practicó y se
+ * cierra sola al completarlo.
  */
 export function InglesRetoTarjeta({ reto, avance, enReto, onEmpezar, onSalir }: Props) {
   const [abierta, setAbierta] = useState(false);
-  const verFrases = abierta || enReto;
+  const completado = Boolean(avance?.completado);
   const hechas = avance ? Math.min(avance.mensajes, reto.frases.length) : 0;
 
-  let estado: React.ReactNode = null;
-  if (avance?.completado) {
-    estado = (
-      <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--color-success)" }}>
-        <CheckCircle2 size={14} /> Completado
-      </span>
-    );
-  } else if (avance && enReto) {
-    estado = (
-      <span className="text-xs font-semibold" style={{ color: GOLD }}>
-        {Math.min(avance.mensajes, avance.requeridos)}/{avance.requeridos}
-      </span>
-    );
-  }
+  // Al entrar al reto se abre; al completarlo se cierra (la felicitación queda en el chat).
+  useEffect(() => {
+    if (enReto) setAbierta(!completado);
+  }, [enReto, completado]);
 
   return (
     <div className="px-3 min-[400px]:px-5 py-2 shrink-0" style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -48,23 +39,23 @@ export function InglesRetoTarjeta({ reto, avance, enReto, onEmpezar, onSalir }: 
           type="button"
           onClick={() => setAbierta((a) => !a)}
           className="flex items-center gap-2 min-w-0 flex-1 text-left"
-          aria-expanded={verFrases}
+          aria-expanded={abierta}
         >
           <Target size={15} className="shrink-0" style={{ color: GOLD }} />
-          <span className="text-xs min-w-0 truncate" style={{ color: "var(--color-text)" }}>
+          <span className="text-xs min-w-0 line-clamp-2" style={{ color: "var(--color-text)" }}>
             <span style={{ color: "var(--color-text-muted)" }}>Reto de hoy: </span>
             <strong>{reto.titulo}</strong>
           </span>
-          {!enReto && (
-            <ChevronDown
-              size={14}
-              className="shrink-0 transition-transform"
-              style={{ color: "var(--color-text-muted)", transform: verFrases ? "rotate(180deg)" : undefined }}
-            />
-          )}
+          <ChevronDown
+            size={14}
+            className="shrink-0 transition-transform"
+            style={{ color: "var(--color-text-muted)", transform: abierta ? "rotate(180deg)" : undefined }}
+          />
         </button>
-        {estado}
-        {avance && !enReto && !avance.completado && onEmpezar && (
+        {!enReto && completado && (
+          <CheckCircle2 size={15} className="shrink-0" style={{ color: "var(--color-success)" }} aria-label="Completado" />
+        )}
+        {avance && !enReto && !completado && onEmpezar && (
           <button
             type="button"
             onClick={onEmpezar}
@@ -74,24 +65,42 @@ export function InglesRetoTarjeta({ reto, avance, enReto, onEmpezar, onSalir }: 
             Hacer reto
           </button>
         )}
-        {enReto && onSalir && (
-          <button
-            type="button"
-            onClick={onSalir}
-            className="text-xs font-semibold shrink-0 whitespace-nowrap hover:underline"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Volver al chat
-          </button>
-        )}
       </div>
 
-      {verFrases && (
+      {enReto && avance && (
+        <div className="flex items-center justify-between gap-3 mt-1.5 pl-[23px] text-xs">
+          {completado ? (
+            <span className="flex items-center gap-1 font-semibold" style={{ color: "var(--color-success)" }}>
+              <CheckCircle2 size={14} /> Completado
+            </span>
+          ) : (
+            <span style={{ color: "var(--color-text-muted)" }}>
+              Frase{" "}
+              <strong style={{ color: GOLD }}>{Math.min(avance.mensajes + 1, avance.requeridos)}</strong> de{" "}
+              {avance.requeridos}
+            </span>
+          )}
+          {onSalir && (
+            <button
+              type="button"
+              onClick={onSalir}
+              className="font-semibold whitespace-nowrap hover:underline"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              Volver al chat
+            </button>
+          )}
+        </div>
+      )}
+
+      {abierta && (
         <div className="mt-2 flex flex-col gap-1.5">
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {reto.descripcion}
-          </p>
-          <ol className="flex flex-col gap-1.5">
+          {!enReto && (
+            <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              {reto.descripcion}
+            </p>
+          )}
+          <ol className="flex flex-col gap-1">
             {reto.frases.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-xs">
                 {avance && i < hechas ? (
@@ -101,7 +110,8 @@ export function InglesRetoTarjeta({ reto, avance, enReto, onEmpezar, onSalir }: 
                 )}
                 <span>
                   <strong style={{ color: "var(--color-text)" }}>{f.en}</strong>
-                  <span style={{ color: "var(--color-text-muted)" }}> — {f.es}</span>
+                  {/* Dentro del reto, sin traducción: deja más lugar a la conversación. */}
+                  {!enReto && <span style={{ color: "var(--color-text-muted)" }}> — {f.es}</span>}
                 </span>
               </li>
             ))}
