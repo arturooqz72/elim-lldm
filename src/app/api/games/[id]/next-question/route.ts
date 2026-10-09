@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { preguntasDeJuego } from "@/lib/juegos/preguntas.server";
 
 export async function POST(
   _request: Request,
@@ -22,13 +23,9 @@ export async function POST(
   if (game.status !== "in_progress") return NextResponse.json({ error: "Game not in progress" }, { status: 400 });
 
   // Get all questions for this game
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("id, question_text, option_a, option_b, option_c, option_d, correct_option, time_limit_seconds, points, order_index, bible_reference")
-    .eq("question_set_id", game.question_set_id)
-    .order("order_index");
+  const questions = await preguntasDeJuego(game.question_set_id);
 
-  if (!questions) return NextResponse.json({ error: "No questions found" }, { status: 500 });
+  if (questions.length === 0) return NextResponse.json({ error: "No questions found" }, { status: 500 });
 
   const currentIndex = game.current_question_index;
   const nextIndex = currentIndex + 1;

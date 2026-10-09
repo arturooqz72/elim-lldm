@@ -227,13 +227,13 @@ export function TikTokTriviaControl({ questionSets }: TikTokTriviaControlProps) 
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Sesión expirada, vuelve a iniciar sesión.");
 
-      const { data: preguntas, error: preguntasError } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("question_set_id", selectedSetId)
-        .order("order_index");
-      if (preguntasError) throw preguntasError;
-      if (!preguntas || preguntas.length === 0) throw new Error("Ese set no tiene preguntas.");
+      // Las preguntas (con su respuesta correcta, que necesita el bridge
+      // para calificar) solo las entrega el servidor al anfitrión.
+      const preguntasRes = await fetch(`/api/tiktok-trivia/preguntas?set=${encodeURIComponent(selectedSetId)}`);
+      const preguntasJson = (await preguntasRes.json()) as { preguntas?: Question[]; error?: string };
+      if (!preguntasRes.ok) throw new Error(preguntasJson.error ?? "No se pudieron cargar las preguntas.");
+      const preguntas = preguntasJson.preguntas ?? [];
+      if (preguntas.length === 0) throw new Error("Ese set no tiene preguntas.");
 
       const res = await fetch("/api/tiktok-trivia/bridge-credentials", { method: "POST" });
       const creds = await res.json();

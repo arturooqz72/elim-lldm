@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { registrarRespuesta } from "@/lib/trivia/banco.server";
 import type { AnswerOption } from "@/types";
 
 const ANSWER_OPTIONS: AnswerOption[] = ["a", "b", "c", "d"];
@@ -10,6 +11,13 @@ export async function POST(
   { params }: { params: Promise<{ codigo: string }> }
 ) {
   const { codigo } = await params;
+
+  const authClient = await createClient();
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
+
   const supabase = await createServiceClient();
 
   let body: {
@@ -47,9 +55,22 @@ export async function POST(
     return NextResponse.json({ error: "No se puede responder en este momento" }, { status: 400 });
   }
 
+  // Solo puedes responder por tu propio jugador y en su sala.
+  const { data: jugadorPropio } = await supabase
+    .from("elim_arena_jugadores")
+    .select("id")
+    .eq("id", jugador_id)
+    .eq("sala_id", sala.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!jugadorPropio) {
+    return NextResponse.json({ error: "No eres jugador de esta sala" }, { status: 403 });
+  }
+
   const { data: pregunta } = await supabase
     .from("elim_arena_preguntas")
-    .select("id, sala_id, orden")
+    .select("id, sala_id, orden, question_id")
     .eq("id", pregunta_id)
     .maybeSingle();
 
@@ -86,6 +107,8 @@ export async function POST(
   if (insertError) {
     return NextResponse.json({ error: "Ya respondiste esta pregunta" }, { status: 409 });
   }
+
+  if (pregunta.question_id) await registrarRespuesta(pregunta.question_id, esCorrecta);
 
   const { data: jugador } = await supabase
     .from("elim_arena_jugadores")

@@ -1,6 +1,7 @@
-import { getProfile, createClient } from "@/lib/supabase/server";
+import { getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { setsConPreguntasActivas } from "@/lib/trivia/sets.server";
 import { TikTokTriviaControl } from "@/components/tiktok-trivia/TikTokTriviaControl";
 
 export const metadata: Metadata = { title: "Trivia TikTok — Elim LLDM" };
@@ -12,18 +13,7 @@ export default async function TikTokTriviaPage() {
     redirect("/");
   }
 
-  const supabase = await createClient();
-  const { data: questionSets } = await supabase
-    .from("question_sets")
-    .select("id, title, questions(count)")
-    .eq("is_public", true)
-    .order("title");
-
-  const sets = (questionSets ?? []).map((s) => ({
-    id: s.id as string,
-    title: s.title as string,
-    count: ((s.questions as unknown as { count: number }[])[0]?.count) ?? 0,
-  }));
+  const sets = await setsConPreguntasActivas();
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>

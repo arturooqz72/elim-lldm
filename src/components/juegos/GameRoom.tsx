@@ -34,7 +34,6 @@ interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: AnswerOption;
   bible_reference: string | null;
   time_limit_seconds: number;
   points: number;

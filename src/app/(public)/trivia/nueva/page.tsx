@@ -1,4 +1,4 @@
-import { createClient, createServiceClient, getProfile } from "@/lib/supabase/server";
+import { createServiceClient, getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -6,6 +6,7 @@ import { VerJugadoresLink } from "@/components/juegos/VerJugadoresLink";
 import { generateJoinCode } from "@/lib/utils";
 import { TRIVIA_CATEGORIES, TRIVIA_DIFFICULTY_LABEL } from "@/types";
 import type { TriviaDifficulty } from "@/types";
+import { setsConPreguntasActivas } from "@/lib/trivia/sets.server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Nueva sala de Trivia — Elim LLDM" };
@@ -69,12 +70,7 @@ export default async function NuevaSalaTriviaPage() {
     redirect("/trivia");
   }
 
-  const supabase = await createClient();
-  const { data: questionSets } = await supabase
-    .from("question_sets")
-    .select("id, title, questions(count)")
-    .eq("is_public", true)
-    .order("title");
+  const questionSets = await setsConPreguntasActivas();
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -158,7 +154,7 @@ export default async function NuevaSalaTriviaPage() {
 
           {/* Question set */}
           <Field label="Set de preguntas" required>
-            {!questionSets || questionSets.length === 0 ? (
+            {questionSets.length === 0 ? (
               <div
                 className="rounded-xl px-4 py-3 text-sm"
                 style={{
@@ -177,7 +173,7 @@ export default async function NuevaSalaTriviaPage() {
                 <option value="" disabled>
                   Seleccionar set...
                 </option>
-                {(questionSets as unknown as Array<{ id: string; title: string; questions: unknown[] }>).map(
+                {questionSets.map(
                   (s) => (
                     <option key={s.id} value={s.id}>
                       {s.title}

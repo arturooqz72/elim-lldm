@@ -29,7 +29,7 @@ interface SalaRow {
   pregunta_actual: number;
   created_at: string;
   jugadores: { count: number }[];
-  preguntas: { count: number }[];
+  total_preguntas: number;
 }
 
 export default async function AdminArenaAbiertaPage() {
@@ -38,7 +38,7 @@ export default async function AdminArenaAbiertaPage() {
   const { data: salas } = await supabase
     .from("arena_publica_salas")
     .select(
-      "id, status, pregunta_actual, created_at, jugadores:arena_publica_jugadores(count), preguntas:arena_publica_preguntas(count)"
+      "id, status, pregunta_actual, total_preguntas, created_at, jugadores:arena_publica_jugadores(count)"
     )
     .order("created_at", { ascending: false })
     .limit(30);
@@ -71,7 +71,7 @@ export default async function AdminArenaAbiertaPage() {
         <div className="flex flex-col gap-3">
           {rows.map((sala) => {
             const jugadores = sala.jugadores?.[0]?.count ?? 0;
-            const totalPreguntas = sala.preguntas?.[0]?.count ?? 0;
+            const totalPreguntas = sala.total_preguntas;
             const colors = STATUS_COLOR[sala.status];
 
             return (

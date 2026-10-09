@@ -68,7 +68,7 @@ export function ArenaRoom({ sala, preguntas, jugadoresIniciales, isHost }: Arena
     const endsAt = sala.pregunta_termina_en
       ? new Date(sala.pregunta_termina_en).getTime()
       : Date.now() + ROUND_SECONDS * 1000;
-    return preguntaToPayload(p, preguntas.length, endsAt);
+    return preguntaToPayload(p, sala.total_preguntas ?? preguntas.length, endsAt);
   });
   const [selected, setSelected] = useState<AnswerOption | null>(null);
   const [correct, setCorrect] = useState<AnswerOption | null>(null);
@@ -162,13 +162,20 @@ export function ArenaRoom({ sala, preguntas, jugadoresIniciales, isHost }: Arena
   async function handleExpire() {
     if (phase !== "question" || !currentQuestion) return;
     setPhase("reveal");
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("elim_arena_preguntas")
-      .select("respuesta_correcta")
-      .eq("id", currentQuestion.pregunta_id)
-      .single();
-    if (data) setCorrect(data.respuesta_correcta as AnswerOption);
+    // La correcta solo la da el servidor, y solo cuando el tiempo ya
+    // terminó; si este reloj va un poco adelantado, se reintenta.
+    for (let intento = 0; intento < 4; intento++) {
+      const res = await fetch(
+        `/api/arena/${sala.codigo}/correcta?pregunta_id=${encodeURIComponent(currentQuestion.pregunta_id)}`
+      ).catch(() => null);
+      if (res?.ok) {
+        const data = (await res.json()) as { respuesta_correcta: AnswerOption | null };
+        if (data.respuesta_correcta) setCorrect(data.respuesta_correcta);
+        return;
+      }
+      if (res && res.status !== 425) return;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
   }
 
   async function handleAnswer(option: AnswerOption) {

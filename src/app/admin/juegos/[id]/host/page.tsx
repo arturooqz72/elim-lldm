@@ -1,6 +1,7 @@
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { GameHostPanel } from "./GameHostPanel";
+import { preguntasDeJuego } from "@/lib/juegos/preguntas.server";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -30,7 +31,7 @@ export default async function GameHostPage({ params }: Props) {
     question_set_id: string;
   };
 
-  const [{ data: teamsRaw }, { data: playersRaw }, { data: questionsRaw }] = await Promise.all([
+  const [{ data: teamsRaw }, { data: playersRaw }, questionsRaw] = await Promise.all([
     supabase
       .from("game_teams")
       .select("id, name, color, score")
@@ -41,11 +42,7 @@ export default async function GameHostPage({ params }: Props) {
       .select("id, user_id, team_id, score, profiles(display_name, avatar_url)")
       .eq("game_id", id)
       .order("score", { ascending: false }),
-    supabase
-      .from("questions")
-      .select("id, question_text, option_a, option_b, option_c, option_d, correct_option, time_limit_seconds, points")
-      .eq("question_set_id", g.question_set_id)
-      .order("order_index"),
+    preguntasDeJuego(g.question_set_id),
   ]);
 
   return (
@@ -53,7 +50,7 @@ export default async function GameHostPage({ params }: Props) {
       game={g}
       initialTeams={(teamsRaw ?? []) as Parameters<typeof GameHostPanel>[0]["initialTeams"]}
       initialPlayers={(playersRaw ?? []) as unknown as Parameters<typeof GameHostPanel>[0]["initialPlayers"]}
-      questions={(questionsRaw ?? []) as Parameters<typeof GameHostPanel>[0]["questions"]}
+      questions={questionsRaw as Parameters<typeof GameHostPanel>[0]["questions"]}
     />
   );
 }

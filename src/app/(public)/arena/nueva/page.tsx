@@ -1,9 +1,10 @@
-import { getProfile, createClient } from "@/lib/supabase/server";
+import { getProfile } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ArenaCreateForm } from "@/components/arena/ArenaCreateForm";
 import { VerJugadoresLink } from "@/components/juegos/VerJugadoresLink";
+import { setsConPreguntasActivas } from "@/lib/trivia/sets.server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Nueva sala — Elim Arena" };
@@ -15,18 +16,7 @@ export default async function NuevaSalaArenaPage() {
     redirect("/arena");
   }
 
-  const supabase = await createClient();
-  const { data: questionSets } = await supabase
-    .from("question_sets")
-    .select("id, title, questions(count)")
-    .eq("is_public", true)
-    .order("title");
-
-  const sets = (questionSets ?? []).map((s) => ({
-    id: s.id as string,
-    title: s.title as string,
-    count: ((s.questions as unknown as { count: number }[])[0]?.count) ?? 0,
-  }));
+  const sets = await setsConPreguntasActivas();
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>

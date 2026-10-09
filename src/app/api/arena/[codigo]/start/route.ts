@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { prepararPreguntaDelBanco } from "@/lib/trivia/salas-banco.server";
 
 const ROUND_SECONDS = 15;
 
@@ -13,7 +14,9 @@ export async function POST(
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: sala } = await supabase
+  const service = await createServiceClient();
+
+  const { data: sala } = await service
     .from("elim_arena_salas")
     .select("*")
     .eq("codigo", codigo.toUpperCase())
@@ -23,23 +26,34 @@ export async function POST(
   if (sala.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (sala.status !== "lobby") return NextResponse.json({ error: "El juego ya comenzó" }, { status: 400 });
 
-  const { data: pregunta } = await supabase
-    .from("elim_arena_preguntas")
-    .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
-    .eq("sala_id", sala.id)
-    .eq("orden", 1)
-    .single();
+  // Modo banco: la primera pregunta se elige ahora, ya con los jugadores
+  // dentro — fácil y que ninguno haya visto.
+  const pregunta =
+    sala.modo === "banco"
+      ? await prepararPreguntaDelBanco("elim_arena", sala.id, 1)
+      : (
+          await service
+            .from("elim_arena_preguntas")
+            .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
+            .eq("sala_id", sala.id)
+            .eq("orden", 1)
+            .maybeSingle()
+        ).data;
 
-  if (!pregunta) return NextResponse.json({ error: "La sala no tiene preguntas" }, { status: 500 });
-
-  const { count } = await supabase
-    .from("elim_arena_preguntas")
-    .select("id", { count: "exact", head: true })
-    .eq("sala_id", sala.id);
+  if (!pregunta) {
+    return NextResponse.json(
+      {
+        error:
+          sala.modo === "banco"
+            ? "Los jugadores de esta sala ya vieron todas las preguntas del banco."
+            : "La sala no tiene preguntas",
+      },
+      { status: 500 }
+    );
+  }
 
   const endsAt = Date.now() + ROUND_SECONDS * 1000;
 
-  const service = await createServiceClient();
   await service
     .from("elim_arena_salas")
     .update({
@@ -63,7 +77,7 @@ export async function POST(
         d: pregunta.opcion_d,
       },
       orden: pregunta.orden,
-      total: count ?? 0,
+      total: sala.total_preguntas,
       endsAt,
     },
   });

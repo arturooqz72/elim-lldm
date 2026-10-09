@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { prepararPreguntaDelBanco } from "@/lib/trivia/salas-banco.server";
 
 const ROUND_SECONDS = 15;
 
@@ -13,7 +14,9 @@ export async function POST(
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: sala } = await supabase
+  const service = await createServiceClient();
+
+  const { data: sala } = await service
     .from("elim_arena_salas")
     .select("*")
     .eq("codigo", codigo.toUpperCase())
@@ -22,21 +25,11 @@ export async function POST(
   if (!sala) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
   if (sala.created_by !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data: preguntas } = await supabase
-    .from("elim_arena_preguntas")
-    .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
-    .eq("sala_id", sala.id)
-    .order("orden");
-
-  if (!preguntas || preguntas.length === 0) {
-    return NextResponse.json({ error: "La sala no tiene preguntas" }, { status: 500 });
-  }
-
-  const service = await createServiceClient();
   const channel = supabase.channel(`arena:${codigo.toUpperCase()}`);
+  const total = sala.total_preguntas as number;
   const nextOrden = sala.pregunta_actual + 1;
 
-  if (nextOrden > preguntas.length) {
+  async function terminar() {
     await service
       .from("elim_arena_salas")
       .update({ status: "finished" })
@@ -47,7 +40,25 @@ export async function POST(
     return NextResponse.json({ success: true, finished: true });
   }
 
-  const pregunta = preguntas[nextOrden - 1];
+  if (nextOrden > total) return terminar();
+
+  // Modo banco: la siguiente sube de nivel si la mayoría acertó la
+  // anterior, y nunca es una que alguno de los jugadores ya haya visto. Si
+  // ya no queda ninguna, la partida termina aquí.
+  const pregunta =
+    sala.modo === "banco"
+      ? await prepararPreguntaDelBanco("elim_arena", sala.id, nextOrden)
+      : (
+          await service
+            .from("elim_arena_preguntas")
+            .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
+            .eq("sala_id", sala.id)
+            .eq("orden", nextOrden)
+            .maybeSingle()
+        ).data;
+
+  if (!pregunta) return terminar();
+
   const endsAt = Date.now() + ROUND_SECONDS * 1000;
 
   await service
@@ -72,7 +83,7 @@ export async function POST(
         d: pregunta.opcion_d,
       },
       orden: pregunta.orden,
-      total: preguntas.length,
+      total,
       endsAt,
     },
   });

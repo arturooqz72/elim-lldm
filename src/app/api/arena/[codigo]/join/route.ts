@@ -40,7 +40,8 @@ export async function POST(
 
   const { data: jugador, error } = await supabase
     .from("elim_arena_jugadores")
-    .insert({ sala_id: sala.id, nombre, puntos: 0 })
+    // user_id: para saber qué preguntas del banco ya vio y no repetírselas.
+    .insert({ sala_id: sala.id, nombre, puntos: 0, user_id: user.id })
     .select("id")
     .single();
 

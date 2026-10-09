@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { BANCO_SET_ID } from "@/lib/trivia/banco";
+import { revolver, revolverOpciones } from "@/lib/trivia/banco.server";
+import { PREGUNTAS_POR_PARTIDA } from "@/lib/arena-publica/config";
 import type { AnswerOption } from "@/types";
 
 interface CreatePregunta {
@@ -9,6 +12,9 @@ interface CreatePregunta {
   opcion_c: string;
   opcion_d: string;
   respuesta_correcta: AnswerOption;
+  question_id?: string;
+  dificultad?: string | null;
+  categoria?: string | null;
 }
 
 interface CreateBody {
@@ -56,11 +62,19 @@ export async function POST(request: Request) {
   const service = await createServiceClient();
 
   let titulo = body.titulo?.trim() || "Elim Arena";
-  let preguntas: CreatePregunta[];
+  let modo: "propias" | "banco" = "propias";
+  let preguntas: CreatePregunta[] = [];
 
-  if (body.question_set_id) {
+  if (body.question_set_id === BANCO_SET_ID) {
+    // Banco bíblico: las preguntas se eligen una por una durante la partida
+    // (ver prepararPreguntaDelBanco), cuando ya se sabe quién juega, para
+    // no repetirle a nadie una que ya vio y subir de nivel según acierten.
+    modo = "banco";
+    if (!body.titulo?.trim()) titulo = "Banco bíblico";
+  } else if (body.question_set_id) {
     // Set de preguntas ya existente (el mismo banco que usa Trivia en Vivo)
-    // en vez de escribirlas a mano.
+    // en vez de escribirlas a mano: preguntas activas, en orden al azar y
+    // con las opciones revueltas.
     const { data: set } = await service
       .from("question_sets")
       .select("title")
@@ -71,10 +85,10 @@ export async function POST(request: Request) {
 
     const { data: preguntasSet, error: setPreguntasError } = await service
       .from("questions")
-      .select("question_text, option_a, option_b, option_c, option_d, correct_option")
+      .select("id, question_text, option_a, option_b, option_c, option_d, correct_option, dificultad, categoria")
       .eq("question_set_id", body.question_set_id)
-      .order("order_index")
-      .limit(MAX_PREGUNTAS);
+      .eq("estado", "aprobada")
+      .eq("activa", true);
 
     if (setPreguntasError) {
       return NextResponse.json({ error: setPreguntasError.message }, { status: 500 });
@@ -87,14 +101,22 @@ export async function POST(request: Request) {
     }
 
     if (!body.titulo?.trim()) titulo = set.title;
-    preguntas = preguntasSet.map((q) => ({
-      pregunta: q.question_text,
-      opcion_a: q.option_a,
-      opcion_b: q.option_b,
-      opcion_c: q.option_c,
-      opcion_d: q.option_d,
-      respuesta_correcta: q.correct_option as AnswerOption,
-    }));
+    preguntas = revolver(preguntasSet)
+      .slice(0, MAX_PREGUNTAS)
+      .map((q) => {
+        const opciones = revolverOpciones({ ...q, correct_option: q.correct_option as AnswerOption });
+        return {
+          pregunta: q.question_text,
+          opcion_a: opciones.opcion_a,
+          opcion_b: opciones.opcion_b,
+          opcion_c: opciones.opcion_c,
+          opcion_d: opciones.opcion_d,
+          respuesta_correcta: opciones.correcta,
+          question_id: q.id,
+          dificultad: q.dificultad,
+          categoria: q.categoria,
+        };
+      });
   } else {
     preguntas = body.preguntas ?? [];
 
@@ -117,6 +139,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Pregunta inválida" }, { status: 400 });
       }
     }
+
+    // Las escritas a mano no vienen del banco: nada de question_id que el
+    // navegador pudiera inventar.
+    preguntas = preguntas.map((p) => ({
+      pregunta: p.pregunta,
+      opcion_a: p.opcion_a,
+      opcion_b: p.opcion_b,
+      opcion_c: p.opcion_c,
+      opcion_d: p.opcion_d,
+      respuesta_correcta: p.respuesta_correcta,
+    }));
   }
 
   // Generar código único de 4 letras
@@ -141,7 +174,13 @@ export async function POST(request: Request) {
 
   const { data: sala, error: salaError } = await service
     .from("elim_arena_salas")
-    .insert({ codigo, titulo, created_by: user.id })
+    .insert({
+      codigo,
+      titulo,
+      created_by: user.id,
+      modo,
+      total_preguntas: modo === "banco" ? PREGUNTAS_POR_PARTIDA : preguntas.length,
+    })
     .select("id, codigo")
     .single();
 
@@ -151,6 +190,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  if (modo === "banco") return NextResponse.json({ codigo: sala.codigo });
 
   const { data: preguntasInsertadas, error: pregError } = await service
     .from("elim_arena_preguntas")
@@ -163,6 +204,9 @@ export async function POST(request: Request) {
         opcion_c: p.opcion_c.trim(),
         opcion_d: p.opcion_d.trim(),
         orden: i + 1,
+        question_id: p.question_id ?? null,
+        dificultad: p.dificultad ?? null,
+        categoria: p.categoria ?? null,
       }))
     )
     .select("id");

@@ -9,28 +9,19 @@ export interface SalaActual {
   status: "lobby" | "counting" | "playing" | "reveal" | "finished";
   pregunta_actual: number;
   jugadores_deseados: number;
+  total_preguntas: number;
   cuenta_termina_en: string | null;
   pregunta_termina_en: string | null;
   reveal_termina_en: string | null;
   created_at: string;
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 /**
  * Devuelve la sala "abierta a unirse" (la más reciente en 'lobby' o
  * 'counting' — todavía acepta jugadores nuevos). Si no existe ninguna —
  * primera visita de siempre, o la única que había ya arrancó a jugar — crea
- * una sala nueva en 'lobby' con un set de preguntas sorteado del banco
- * público (todas las questions de question_sets con is_public = true), en
- * vez de devolver una sala que ya está en 'playing'/'reveal' y rechazaría el
+ * una sala nueva en 'lobby' (sus preguntas salen del banco una por una
+ * durante la partida — ver prepararPreguntaDelBanco), en vez de devolver una sala que ya está en 'playing'/'reveal' y rechazaría el
  * join. Así, varias partidas pueden estar en curso a la vez — el que llega
  * mientras otra sala ya juega no espera, entra a una sala propia.
  * No hay cron job: esta función se llama desde la página en cada visita,
@@ -61,46 +52,34 @@ export async function getOrCreateOpenRoom(jugadoresDeseados = 2): Promise<{
 
   if (existente) return { sala: existente as SalaActual, error: null };
 
-  // Dos consultas simples en vez de un filtro anidado sobre la tabla
-  // embebida (question_sets.is_public) — más fácil de verificar que
-  // realmente filtra bien, y evita depender de sintaxis de PostgREST menos
-  // común para algo que se ejecuta cada vez que arranca una partida nueva.
-  const { data: setsPublicos, error: setsError } = await service
-    .from("question_sets")
-    .select("id")
-    .eq("is_public", true);
-
-  if (setsError) {
-    return { sala: null, error: setsError.message };
-  }
-  const setIds = (setsPublicos ?? []).map((s) => s.id as string);
-  if (setIds.length === 0) {
-    return {
-      sala: null,
-      error: `Todavía no hay suficientes preguntas públicas (se necesitan al menos ${MIN_PREGUNTAS_DISPONIBLES}).`,
-    };
-  }
-
-  const { data: preguntasDisponibles, error: preguntasError } = await service
+  // Las preguntas ya no se sortean aquí: cada una se elige del banco justo
+  // cuando le toca (ver prepararPreguntaDelBanco), con los jugadores ya
+  // dentro, para no repetirles ninguna que hayan visto. Aquí solo se
+  // comprueba que el banco tenga preguntas aprobadas.
+  const { count: disponibles, error: bancoError } = await service
     .from("questions")
-    .select("question_text, option_a, option_b, option_c, option_d, correct_option")
-    .in("question_set_id", setIds);
+    .select("id", { count: "exact", head: true })
+    .eq("estado", "aprobada")
+    .eq("activa", true)
+    .not("dificultad", "is", null);
 
-  if (preguntasError) {
-    return { sala: null, error: preguntasError.message };
+  if (bancoError) {
+    return { sala: null, error: bancoError.message };
   }
-  if (!preguntasDisponibles || preguntasDisponibles.length < MIN_PREGUNTAS_DISPONIBLES) {
+  if ((disponibles ?? 0) < MIN_PREGUNTAS_DISPONIBLES) {
     return {
       sala: null,
-      error: `Todavía no hay suficientes preguntas públicas (se necesitan al menos ${MIN_PREGUNTAS_DISPONIBLES}).`,
+      error: `Todavía no hay suficientes preguntas en el banco (se necesitan al menos ${MIN_PREGUNTAS_DISPONIBLES}).`,
     };
   }
-
-  const elegidas = shuffle(preguntasDisponibles).slice(0, PREGUNTAS_POR_PARTIDA);
 
   const { data: nuevaSala, error: salaError } = await service
     .from("arena_publica_salas")
-    .insert({ status: "lobby", jugadores_deseados: jugadoresDeseados })
+    .insert({
+      status: "lobby",
+      jugadores_deseados: jugadoresDeseados,
+      total_preguntas: PREGUNTAS_POR_PARTIDA,
+    })
     .select("*")
     .single();
 
@@ -115,38 +94,6 @@ export async function getOrCreateOpenRoom(jugadoresDeseados = 2): Promise<{
       if (salaGanadora) return { sala: salaGanadora as SalaActual, error: null };
     }
     return { sala: null, error: salaError?.message ?? "No se pudo crear la sala" };
-  }
-
-  const { data: preguntasInsertadas, error: insertPreguntasError } = await service
-    .from("arena_publica_preguntas")
-    .insert(
-      elegidas.map((q, i) => ({
-        sala_id: nuevaSala.id,
-        pregunta: q.question_text,
-        opcion_a: q.option_a,
-        opcion_b: q.option_b,
-        opcion_c: q.option_c,
-        opcion_d: q.option_d,
-        orden: i + 1,
-      }))
-    )
-    .select("id");
-
-  if (insertPreguntasError || !preguntasInsertadas) {
-    await service.from("arena_publica_salas").delete().eq("id", nuevaSala.id);
-    return { sala: null, error: insertPreguntasError?.message ?? "No se pudieron crear las preguntas" };
-  }
-
-  const { error: insertRespuestasError } = await service.from("arena_publica_respuestas_correctas").insert(
-    preguntasInsertadas.map((p, i) => ({
-      pregunta_id: p.id,
-      respuesta_correcta: elegidas[i].correct_option,
-    }))
-  );
-
-  if (insertRespuestasError) {
-    await service.from("arena_publica_salas").delete().eq("id", nuevaSala.id);
-    return { sala: null, error: insertRespuestasError.message };
   }
 
   return { sala: nuevaSala as SalaActual, error: null };

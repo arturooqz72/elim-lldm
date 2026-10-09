@@ -50,7 +50,9 @@ interface ArenaPublicaRoomProps {
   cuentaTerminaEn: number | null;
   preguntaTerminaEn: number | null;
   revealTerminaEn: number | null;
+  // Solo las que ya salieron: cada pregunta se elige del banco cuando le toca.
   preguntas: PreguntaPublica[];
+  totalPreguntas: number;
   jugadoresIniciales: ArenaJugador[];
 }
 
@@ -74,6 +76,7 @@ export function ArenaPublicaRoom({
   preguntaTerminaEn,
   revealTerminaEn,
   preguntas,
+  totalPreguntas,
   jugadoresIniciales,
 }: ArenaPublicaRoomProps) {
   const router = useRouter();
@@ -86,7 +89,7 @@ export function ArenaPublicaRoom({
     const p = preguntas.find((pr) => pr.orden === preguntaActual);
     if (!p) return null;
     const endsAt = preguntaTerminaEn ?? Date.now() + ROUND_SECONDS * 1000;
-    return preguntaToPayload(p, preguntas.length, endsAt);
+    return preguntaToPayload(p, totalPreguntas, endsAt);
   });
   const [revealEndsAt, setRevealEndsAt] = useState<number | null>(revealTerminaEn);
   const [selected, setSelected] = useState<AnswerOption | null>(null);

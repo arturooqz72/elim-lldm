@@ -57,6 +57,7 @@ export default async function ArenaAbiertaPage() {
       preguntaTerminaEn={toMs(sala.pregunta_termina_en)}
       revealTerminaEn={toMs(sala.reveal_termina_en)}
       preguntas={preguntasRaw ?? []}
+      totalPreguntas={sala.total_preguntas}
       jugadoresIniciales={(jugadoresRaw ?? []) as ArenaJugador[]}
     />
   );

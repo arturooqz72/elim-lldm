@@ -82,6 +82,10 @@ export function ReglasTrivia() {
       <Seccion titulo="Cómo se juega">
         <li>La partida empieza sola cuando hay al menos {MIN_JUGADORES_PARA_INICIAR} jugadores en la sala.</li>
         <li>Son {PREGUNTAS_POR_PARTIDA} preguntas. Cada una dura {ROUND_SECONDS} segundos.</li>
+        <li>
+          Se empieza con preguntas fáciles y, cuando la mayoría acierta, se sube a normales y luego a difíciles.
+        </li>
+        <li>Nunca te sale una pregunta que ya hayas visto.</li>
         <li>Toca la respuesta que creas correcta. Solo cuenta tu primera respuesta.</li>
         <li>Después de cada pregunta se muestra la respuesta correcta y el marcador.</li>
       </Seccion>

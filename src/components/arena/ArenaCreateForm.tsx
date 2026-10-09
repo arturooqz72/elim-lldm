@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2, Sparkles, ListChecks, PenLine } from "lucide-react";
 import type { AnswerOption } from "@/types";
+import { BANCO_SET_ID } from "@/lib/trivia/banco";
+import { PREGUNTAS_POR_PARTIDA } from "@/lib/arena-publica/config";
 
 interface QuestionSetOption {
   id: string;
@@ -228,10 +230,18 @@ export function ArenaCreateForm({ questionSets = [] }: { questionSets?: Question
               Este set tiene menos de {MIN_PREGUNTAS} preguntas — elige otro.
             </p>
           )}
-          {selectedSet && selectedSet.count > MAX_PREGUNTAS && (
+          {selectedSet?.id === BANCO_SET_ID ? (
             <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Este set tiene {selectedSet.count} preguntas — se usarán las primeras {MAX_PREGUNTAS}.
+              {PREGUNTAS_POR_PARTIDA} preguntas al azar: empiezan fáciles y suben de nivel cuando la mayoría
+              acierta. A nadie le sale una pregunta que ya vio.
             </p>
+          ) : (
+            selectedSet &&
+            selectedSet.count > MAX_PREGUNTAS && (
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Este set tiene {selectedSet.count} preguntas — se usarán {MAX_PREGUNTAS} al azar.
+              </p>
+            )
           )}
         </div>
       ) : (

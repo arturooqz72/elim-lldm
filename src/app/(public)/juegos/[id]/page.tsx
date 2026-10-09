@@ -1,6 +1,7 @@
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { GameRoom } from "@/components/juegos/GameRoom";
+import { preguntasDeJuego } from "@/lib/juegos/preguntas.server";
 import type { Metadata } from "next";
 
 interface Props {
@@ -31,7 +32,6 @@ type QuestionRow = {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: "a" | "b" | "c" | "d";
   bible_reference: string | null;
   time_limit_seconds: number;
   points: number;
@@ -68,7 +68,7 @@ export default async function GameRoomPage({ params }: Props) {
     profiles: { display_name: string } | null;
   };
 
-  const [{ data: teamsRaw }, { data: playersRaw }, { data: questionsRaw }] = await Promise.all([
+  const [{ data: teamsRaw }, { data: playersRaw }, preguntas] = await Promise.all([
     supabase
       .from("game_teams")
       .select("id, name, color, score")
@@ -79,18 +79,24 @@ export default async function GameRoomPage({ params }: Props) {
       .select("id, user_id, team_id, score, profiles(display_name, avatar_url)")
       .eq("game_id", id)
       .order("score", { ascending: false }),
-    supabase
-      .from("questions")
-      .select(
-        "id, question_text, option_a, option_b, option_c, option_d, correct_option, bible_reference, time_limit_seconds, points"
-      )
-      .eq("question_set_id", g.question_set_id)
-      .order("order_index", { ascending: true }),
+    preguntasDeJuego(g.question_set_id),
   ]);
 
   const teams = (teamsRaw ?? []) as unknown as TeamRow[];
   let players = (playersRaw ?? []) as unknown as PlayerRow[];
-  const questions = (questionsRaw ?? []) as unknown as QuestionRow[];
+  // Al navegador del jugador nunca le llega la respuesta correcta: la
+  // revela el servidor (QUESTION_END) cuando termina cada pregunta.
+  const questions: QuestionRow[] = preguntas.map((q) => ({
+    id: q.id,
+    question_text: q.question_text,
+    option_a: q.option_a,
+    option_b: q.option_b,
+    option_c: q.option_c,
+    option_d: q.option_d,
+    bible_reference: q.bible_reference,
+    time_limit_seconds: q.time_limit_seconds,
+    points: q.points,
+  }));
 
   // Auto-join in lobby if not already a player
   const existingPlayer = players.find((p) => p.user_id === profile.id);

@@ -7,11 +7,43 @@ import {
   REVEAL_SECONDS,
   MIN_JUGADORES_PARA_INICIAR,
 } from "./config";
+import { prepararPreguntaDelBanco } from "@/lib/trivia/salas-banco.server";
 
 async function broadcast(salaId: string, event: string, payload: object) {
   const supabase = await createClient();
   const channel = supabase.channel(`arena-publica:${salaId}`);
   await channel.httpSend(event, payload);
+}
+
+/**
+ * Cierra la partida si la sala sigue en la fase y el deadline que vimos
+ * (misma guarda optimista que las transiciones: si otra petición ya la
+ * movió, no hace nada). Se usa al llegar al total de preguntas y cuando a
+ * estos jugadores ya no les queda ninguna pregunta sin ver en el banco.
+ */
+async function terminarSala(
+  salaId: string,
+  statusEsperado: "counting" | "reveal",
+  campoDeadline: "cuenta_termina_en" | "reveal_termina_en",
+  deadline: string | null
+): Promise<{ applied: boolean; error?: string }> {
+  const service = await createServiceClient();
+  const { data: updated, error: updateError } = await service
+    .from("arena_publica_salas")
+    .update({ status: "finished" })
+    .eq("id", salaId)
+    .eq("status", statusEsperado)
+    .eq(campoDeadline, deadline)
+    .select("id");
+
+  if (updateError) return { applied: false, error: updateError.message };
+
+  if (updated && updated.length > 0) {
+    await broadcast(salaId, "GAME_FINISHED", {});
+    return { applied: true };
+  }
+
+  return { applied: false };
 }
 
 // Cuántas transiciones seguidas puede aplicar la auto-sanación (ningún
@@ -118,28 +150,18 @@ async function applyTransition(
     sala.cuenta_termina_en &&
     new Date(sala.cuenta_termina_en).getTime() <= now
   ) {
-    const { data: pregunta, error: preguntaError } = await service
-      .from("arena_publica_preguntas")
-      .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
-      .eq("sala_id", salaId)
-      .eq("orden", 1)
-      .maybeSingle();
-
-    if (preguntaError) return { applied: false, error: preguntaError.message };
+    // La primera pregunta se elige ahora, ya con los jugadores dentro: del
+    // banco, fácil, y que ninguno de ellos haya visto antes.
+    const pregunta = await prepararPreguntaDelBanco("arena_publica", salaId, 1);
     if (!pregunta) {
       console.error(
-        "[arena-publica/advance] Transición 1 (counting->playing): falta la pregunta con orden=1 — dato inconsistente",
-        { salaId: sala.id, orden: 1 }
+        "[arena-publica/advance] Transición 1 (counting->playing): no quedan preguntas sin ver para estos jugadores — se cierra la sala",
+        { salaId: sala.id }
       );
-      return { applied: false };
+      return terminarSala(salaId, "counting", "cuenta_termina_en", sala.cuenta_termina_en);
     }
 
-    const { count: total, error: totalError } = await service
-      .from("arena_publica_preguntas")
-      .select("id", { count: "exact", head: true })
-      .eq("sala_id", salaId);
-
-    if (totalError) return { applied: false, error: totalError.message };
+    const total = sala.total_preguntas as number;
 
     const endsAt = now + ROUND_SECONDS * 1000;
     const { data: updated, error: updateError } = await service
@@ -167,7 +189,7 @@ async function applyTransition(
           d: pregunta.opcion_d,
         },
         orden: pregunta.orden,
-        total: total ?? 0,
+        total,
         endsAt,
       });
       return { applied: true };
@@ -248,48 +270,22 @@ async function applyTransition(
     sala.reveal_termina_en &&
     new Date(sala.reveal_termina_en).getTime() <= now
   ) {
-    const { count: total, error: totalError } = await service
-      .from("arena_publica_preguntas")
-      .select("id", { count: "exact", head: true })
-      .eq("sala_id", salaId);
-
-    if (totalError) return { applied: false, error: totalError.message };
-
+    const total = sala.total_preguntas as number;
     const siguienteOrden = sala.pregunta_actual + 1;
 
-    if (siguienteOrden > (total ?? 0)) {
-      const { data: updated, error: updateError } = await service
-        .from("arena_publica_salas")
-        .update({ status: "finished" })
-        .eq("id", salaId)
-        .eq("status", "reveal")
-        .eq("reveal_termina_en", sala.reveal_termina_en)
-        .select("id");
-
-      if (updateError) return { applied: false, error: updateError.message };
-
-      if (updated && updated.length > 0) {
-        await broadcast(salaId, "GAME_FINISHED", {});
-        return { applied: true };
-      }
-
-      return { applied: false };
+    if (siguienteOrden > total) {
+      return terminarSala(salaId, "reveal", "reveal_termina_en", sala.reveal_termina_en);
     }
 
-    const { data: pregunta, error: preguntaError } = await service
-      .from("arena_publica_preguntas")
-      .select("id, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, orden")
-      .eq("sala_id", salaId)
-      .eq("orden", siguienteOrden)
-      .maybeSingle();
-
-    if (preguntaError) return { applied: false, error: preguntaError.message };
+    // La siguiente se elige ahora: sube de nivel si la mayoría acertó la
+    // anterior, y nunca una que alguno de los jugadores ya haya visto.
+    const pregunta = await prepararPreguntaDelBanco("arena_publica", salaId, siguienteOrden);
     if (!pregunta) {
       console.error(
-        "[arena-publica/advance] Transición 3 (reveal->siguiente pregunta): falta la pregunta con orden=siguienteOrden — dato inconsistente",
+        "[arena-publica/advance] Transición 3 (reveal->siguiente pregunta): no quedan preguntas sin ver para estos jugadores — se cierra la sala",
         { salaId: sala.id, orden: siguienteOrden }
       );
-      return { applied: false };
+      return terminarSala(salaId, "reveal", "reveal_termina_en", sala.reveal_termina_en);
     }
 
     const endsAt = now + ROUND_SECONDS * 1000;
@@ -318,7 +314,7 @@ async function applyTransition(
           d: pregunta.opcion_d,
         },
         orden: pregunta.orden,
-        total: total ?? 0,
+        total,
         endsAt,
       });
       return { applied: true };

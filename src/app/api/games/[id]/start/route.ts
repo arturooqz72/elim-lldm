@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { preguntasDeJuego } from "@/lib/juegos/preguntas.server";
 
 export async function POST(
   _request: Request,
@@ -13,7 +14,7 @@ export async function POST(
 
   const { data: game } = await supabase
     .from("games")
-    .select("*, question_sets(id), questions:question_sets(questions(*))")
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -22,14 +23,7 @@ export async function POST(
   if (game.status !== "lobby") return NextResponse.json({ error: "Game already started" }, { status: 400 });
 
   // Get first question to include endsAt in GAME_STARTED broadcast
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("id, time_limit_seconds")
-    .eq("question_set_id", game.question_set_id)
-    .order("order_index")
-    .limit(1);
-
-  const firstQuestion = questions?.[0];
+  const [firstQuestion] = await preguntasDeJuego(game.question_set_id);
   const endsAt = firstQuestion
     ? Date.now() + firstQuestion.time_limit_seconds * 1000
     : Date.now() + 30000;

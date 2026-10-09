@@ -86,6 +86,13 @@ export interface Question {
   points: number;
   order_index: number;
   created_at: string;
+  dificultad: "facil" | "normal" | "dificil" | null;
+  categoria: string | null;
+  activa: boolean;
+  estado: "aprobada" | "pendiente" | "rechazada";
+  origen: "manual" | "banco_inicial" | "generada";
+  veces_respondida: number;
+  veces_acertada: number;
 }
 
 export interface GameBroadcastEvent {
@@ -264,6 +271,8 @@ export interface ArenaSala {
   pregunta_termina_en: string | null;
   created_by: string;
   created_at: string;
+  modo: "propias" | "banco";
+  total_preguntas: number | null;
 }
 
 export interface ArenaPregunta {

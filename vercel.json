@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/ingles-retos",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/banco-preguntas",
+      "schedule": "0 11 * * 1"
     }
   ]
 }
