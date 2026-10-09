@@ -62,7 +62,7 @@ function repartir(total: number): { nivel: Nivel; categoria: Categoria }[] {
 async function pedirPropuestas(
   encargo: { nivel: Nivel; categoria: Categoria }[],
   existentes: string[]
-): Promise<Propuesta[]> {
+): Promise<{ propuestas: Propuesta[]; uso: UsoModelo }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Falta ANTHROPIC_API_KEY");
 
@@ -95,13 +95,17 @@ async function pedirPropuestas(
   });
 
   if (!res.ok) throw new Error(`Anthropic respondió ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const data = (await res.json()) as { content: { type: string; text?: string }[] };
+  const data = (await res.json()) as {
+    content: { type: string; text?: string }[];
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const uso = { entrada: data.usage?.input_tokens ?? 0, salida: data.usage?.output_tokens ?? 0 };
   const textoRespuesta = data.content.map((b) => (b.type === "text" ? (b.text ?? "") : "")).join("");
   const inicio = textoRespuesta.indexOf("[");
   const fin = textoRespuesta.lastIndexOf("]");
   if (inicio < 0 || fin < inicio) throw new Error("La respuesta del modelo no trae un arreglo JSON");
   const lista = JSON.parse(textoRespuesta.slice(inicio, fin + 1)) as unknown[];
-  return lista.filter((p): p is Propuesta => {
+  const propuestas = lista.filter((p): p is Propuesta => {
     const q = p as Partial<Propuesta>;
     return (
       typeof q.pregunta === "string" &&
@@ -115,6 +119,7 @@ async function pedirPropuestas(
       typeof q.categoria === "string"
     );
   });
+  return { propuestas, uso };
 }
 
 export async function revisarBanco(): Promise<ResultadoRevision> {
@@ -147,6 +152,46 @@ export async function revisarBanco(): Promise<ResultadoRevision> {
     };
   }
 
+  const g = await generarPendientes(A_GENERAR);
+  if (g.error) return { mensaje: "", error: g.error, generadas: 0 };
+
+  const mensaje =
+    `Quedaban ${frescas} preguntas frescas (${activos} jugadores activos). ` +
+    `Se generaron ${g.aceptadas.length} nuevas, pendientes de tu revisión` +
+    (g.descartadas.length > 0
+      ? `; ${g.descartadas.length} se descartaron por no pasar la verificación con la RV1960 o por repetidas`
+      : "") +
+    (g.llamadasFallidas > 0 ? `; ${g.llamadasFallidas} de ${g.llamadas} llamadas al modelo fallaron` : "") +
+    ".";
+  return g.aceptadas.length === 0 && g.llamadasFallidas > 0
+    ? { mensaje: "", error: mensaje, generadas: 0 }
+    : { mensaje, generadas: g.aceptadas.length };
+}
+
+export interface UsoModelo {
+  entrada: number;
+  salida: number;
+}
+
+export interface ResultadoGeneracion {
+  aceptadas: { pregunta: string; correcta: string; cita: string; nivel: string; categoria: string }[];
+  descartadas: { pregunta: string; cita: string; clave: string; motivo: string }[];
+  llamadas: number;
+  llamadasFallidas: number;
+  uso: UsoModelo;
+  modelo: string;
+  error?: string;
+}
+
+/**
+ * Pide `cantidad` preguntas al modelo, las comprueba (formato, repetidas,
+ * clave contra la RV1960) y guarda las que pasan como "pendiente". No mira
+ * el umbral del banco: eso lo decide revisarBanco().
+ */
+export async function generarPendientes(cantidad: number): Promise<ResultadoGeneracion> {
+  const service = await createServiceClient();
+  const uso: UsoModelo = { entrada: 0, salida: 0 };
+
   // Todas las preguntas que ya existen (de 1000 en 1000, el tope de la API).
   const existentes: string[] = [];
   for (let desde = 0; ; desde += 1000) {
@@ -161,29 +206,40 @@ export async function revisarBanco(): Promise<ResultadoRevision> {
   }
   const vistas = new Set(existentes.map(normalizar));
 
-  const reparto = revolver(repartir(A_GENERAR));
+  const reparto = revolver(repartir(cantidad));
   const lotes: { nivel: Nivel; categoria: Categoria }[][] = [];
   for (let i = 0; i < reparto.length; i += POR_LLAMADA) lotes.push(reparto.slice(i, i + POR_LLAMADA));
 
   const resultados = await Promise.allSettled(lotes.map((lote) => pedirPropuestas(lote, existentes)));
-  const propuestas = resultados.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-  const fallos = resultados.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
-  for (const f of fallos) console.error("[trivia/generar] Falló una llamada al modelo:", f.reason);
+  const propuestas: Propuesta[] = [];
+  let llamadasFallidas = 0;
+  for (const r of resultados) {
+    if (r.status === "fulfilled") {
+      propuestas.push(...r.value.propuestas);
+      uso.entrada += r.value.uso.entrada;
+      uso.salida += r.value.uso.salida;
+    } else {
+      llamadasFallidas++;
+      console.error("[trivia/generar] Falló una llamada al modelo:", r.reason);
+    }
+  }
 
-  let descartadas = 0;
+  const descartadas: ResultadoGeneracion["descartadas"] = [];
   const aceptadas: Propuesta[] = [];
-  for (const p of propuestas) {
+  for (const p of propuestas.slice(0, cantidad)) {
     const opciones = [p.correcta, ...p.distractores].map((o) => o.trim());
-    const ok =
-      esNivel(p.nivel) &&
-      esCategoria(p.categoria) &&
-      opciones.every((o) => o.length > 0 && o.length <= 200) &&
-      p.pregunta.length <= 400 &&
-      new Set(opciones.map(normalizar)).size === 4 &&
-      !vistas.has(normalizar(p.pregunta)) &&
-      (await claveEnCita(p.cita, p.clave)) === true;
-    if (!ok) {
-      descartadas++;
+    let motivo = "";
+    if (!esNivel(p.nivel) || !esCategoria(p.categoria)) motivo = "nivel o categoría no válidos";
+    else if (!opciones.every((o) => o.length > 0 && o.length <= 200) || p.pregunta.length > 400) motivo = "textos vacíos o demasiado largos";
+    else if (new Set(opciones.map(normalizar)).size !== 4) motivo = "opciones repetidas";
+    else if (vistas.has(normalizar(p.pregunta))) motivo = "pregunta repetida";
+    else {
+      const enCita = await claveEnCita(p.cita, p.clave);
+      if (enCita === null) motivo = "no se pudo consultar el texto de la RV1960";
+      else if (!enCita) motivo = "la clave no aparece en la cita de la RV1960";
+    }
+    if (motivo) {
+      descartadas.push({ pregunta: p.pregunta, cita: p.cita, clave: p.clave, motivo });
       continue;
     }
     vistas.add(normalizar(p.pregunta));
@@ -222,17 +278,18 @@ export async function revisarBanco(): Promise<ResultadoRevision> {
         };
       })
     );
-    if (insertError) return { mensaje: "", error: insertError.message, generadas: 0 };
+    if (insertError) {
+      return { aceptadas: [], descartadas, llamadas: lotes.length, llamadasFallidas, uso, modelo: MODELO, error: insertError.message };
+    }
   }
 
-  const mensaje =
-    `Quedaban ${frescas} preguntas frescas (${activos} jugadores activos). ` +
-    `Se generaron ${aceptadas.length} nuevas, pendientes de tu revisión` +
-    (descartadas > 0 ? `; ${descartadas} se descartaron por no pasar la verificación con la RV1960 o por repetidas` : "") +
-    (fallos.length > 0 ? `; ${fallos.length} de ${lotes.length} llamadas al modelo fallaron` : "") +
-    ".";
-  return aceptadas.length === 0 && fallos.length > 0
-    ? { mensaje: "", error: mensaje, generadas: 0 }
-    : { mensaje, generadas: aceptadas.length };
+  return {
+    aceptadas: aceptadas.map((p) => ({ pregunta: p.pregunta, correcta: p.correcta, cita: p.cita, nivel: p.nivel, categoria: p.categoria })),
+    descartadas,
+    llamadas: lotes.length,
+    llamadasFallidas,
+    uso,
+    modelo: MODELO,
+    error: aceptadas.length === 0 && llamadasFallidas === lotes.length ? "Todas las llamadas al modelo fallaron" : undefined,
+  };
 }
-
