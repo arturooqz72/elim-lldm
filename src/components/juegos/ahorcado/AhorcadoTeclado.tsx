@@ -2,18 +2,19 @@
 const LETRAS = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
 
 interface AhorcadoTecladoProps {
-  palabra: string;
+  /** Letras usadas que sí están en la palabra (las califica el servidor). */
+  correctas: string[];
   letrasAdivinadas: string[];
   disabled: boolean;
   onLetra: (letra: string) => void;
 }
 
-export function AhorcadoTeclado({ palabra, letrasAdivinadas, disabled, onLetra }: AhorcadoTecladoProps) {
+export function AhorcadoTeclado({ correctas, letrasAdivinadas, disabled, onLetra }: AhorcadoTecladoProps) {
   return (
     <div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
       {LETRAS.map((letra) => {
         const yaUsada = letrasAdivinadas.includes(letra);
-        const esCorrecta = palabra.includes(letra);
+        const esCorrecta = correctas.includes(letra);
 
         return (
           <button

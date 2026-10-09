@@ -10,39 +10,41 @@ import type { AhorcadoCategoria } from "@/types";
 
 const VIDAS_INICIALES = 6;
 
-interface Palabra {
-  id: string;
-  palabra: string;
+// Estado que devuelve el servidor (ver EstadoAhorcado en ahorcado.server.ts):
+// nunca trae la palabra completa mientras se juega.
+interface EstadoPartida {
+  mascara: string[];
+  letras: string[];
+  correctas: string[];
+  vidas: number;
+  estado: "jugando" | "ganada" | "perdida";
+  puntos: number;
+  ganadas: number;
+  puntosPalabra: number;
   categoria: AhorcadoCategoria;
   pista: string;
   referencia_biblica: string | null;
+  palabra: string | null;
+  nuevoRecord?: boolean;
 }
 
 export function AhorcadoGame() {
-  const [palabraActual, setPalabraActual] = useState<Palabra | null>(null);
-  const [letrasAdivinadas, setLetrasAdivinadas] = useState<string[]>([]);
-  const [intentosRestantes, setIntentosRestantes] = useState(VIDAS_INICIALES);
-  const [puntuacion, setPuntuacion] = useState(0);
-  const [palabrasGanadas, setPalabrasGanadas] = useState(0);
-  const [juegoTerminado, setJuegoTerminado] = useState(false);
-  const [ganado, setGanado] = useState(false);
+  const [partida, setPartida] = useState<EstadoPartida | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mensajeRanking, setMensajeRanking] = useState("");
 
-  const pedirPalabra = useCallback(async () => {
+  const pedirPalabra = useCallback(async (reiniciar = false) => {
     setCargando(true);
     setError(null);
     try {
-      const res = await fetch("/api/juegos/ahorcado/palabra-aleatoria");
+      const res = await fetch("/api/juegos/ahorcado/palabra", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reiniciar }),
+      });
       if (!res.ok) throw new Error("No se pudo cargar una palabra nueva.");
-      const data = (await res.json()) as Palabra;
-      setPalabraActual(data);
-      setLetrasAdivinadas([]);
-      setIntentosRestantes(VIDAS_INICIALES);
-      setJuegoTerminado(false);
-      setGanado(false);
-      setMensajeRanking("");
+      setPartida((await res.json()) as EstadoPartida);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo cargar una palabra nueva.");
     } finally {
@@ -54,61 +56,36 @@ export function AhorcadoGame() {
     pedirPalabra();
   }, [pedirPalabra]);
 
-  async function guardarRanking(score: number, ganadas: number) {
+  async function manejarLetra(letra: string) {
+    if (!partida || partida.estado !== "jugando" || partida.letras.includes(letra) || enviando) return;
+    setEnviando(true);
+    setError(null);
     try {
-      const res = await fetch("/api/juegos/ahorcado/ranking", {
+      const res = await fetch("/api/juegos/ahorcado/letra", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ score, palabras_ganadas: ganadas }),
+        body: JSON.stringify({ letra }),
       });
-      if (!res.ok) throw new Error("No se pudo guardar el ranking.");
-      const data = (await res.json()) as { mejorado: boolean };
-      setMensajeRanking(
-        data.mejorado ? "¡Nuevo récord guardado!" : "Tu récord anterior sigue siendo mayor."
-      );
+      if (!res.ok) throw new Error("No se pudo enviar la letra. Intenta de nuevo.");
+      setPartida((await res.json()) as EstadoPartida);
     } catch (err) {
-      setMensajeRanking(err instanceof Error ? err.message : "No se pudo guardar el ranking.");
+      setError(err instanceof Error ? err.message : "No se pudo enviar la letra. Intenta de nuevo.");
+    } finally {
+      setEnviando(false);
     }
   }
 
-  function manejarLetra(letra: string) {
-    if (!palabraActual || juegoTerminado || letrasAdivinadas.includes(letra)) return;
-
-    const nuevasLetras = [...letrasAdivinadas, letra];
-    setLetrasAdivinadas(nuevasLetras);
-
-    if (!palabraActual.palabra.includes(letra)) {
-      const restantes = intentosRestantes - 1;
-      setIntentosRestantes(restantes);
-      if (restantes === 0) {
-        setJuegoTerminado(true);
-        setGanado(false);
-      }
-      return;
-    }
-
-    const completa = palabraActual.palabra
-      .split("")
-      .every((l) => l === " " || nuevasLetras.includes(l));
-
-    if (completa) {
-      const puntosGanados = intentosRestantes * 10;
-      const nuevoScore = puntuacion + puntosGanados;
-      const nuevasGanadas = palabrasGanadas + 1;
-
-      setJuegoTerminado(true);
-      setGanado(true);
-      setPuntuacion(nuevoScore);
-      setPalabrasGanadas(nuevasGanadas);
-      guardarRanking(nuevoScore, nuevasGanadas);
-    }
-  }
-
-  function reiniciar() {
-    setPuntuacion(0);
-    setPalabrasGanadas(0);
-    pedirPalabra();
-  }
+  const palabraActual = partida;
+  const juegoTerminado = partida ? partida.estado !== "jugando" : false;
+  const ganado = partida?.estado === "ganada";
+  const intentosRestantes = partida?.vidas ?? VIDAS_INICIALES;
+  const puntuacion = partida?.puntos ?? 0;
+  const mensajeRanking =
+    partida?.nuevoRecord === true
+      ? "¡Nuevo récord guardado!"
+      : partida?.nuevoRecord === false
+        ? "Tu récord anterior sigue siendo mayor."
+        : "";
 
   if (cargando && !palabraActual) {
     return (
@@ -165,11 +142,10 @@ export function AhorcadoGame() {
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <AhorcadoPista
-            palabra={palabraActual.palabra}
+            mascara={palabraActual.mascara}
             categoria={palabraActual.categoria}
             pista={palabraActual.pista}
             referenciaBiblica={palabraActual.referencia_biblica}
-            letrasAdivinadas={letrasAdivinadas}
           />
 
           {juegoTerminado && (
@@ -186,7 +162,7 @@ export function AhorcadoGame() {
                     ¡Ganaste!
                   </p>
                   <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                    +{intentosRestantes * 10} puntos
+                    +{palabraActual.puntosPalabra} puntos
                   </p>
                   {mensajeRanking && (
                     <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
@@ -211,7 +187,7 @@ export function AhorcadoGame() {
               )}
               <button
                 type="button"
-                onClick={pedirPalabra}
+                onClick={() => pedirPalabra()}
                 disabled={cargando}
                 className="mt-3 px-4 py-2 rounded-xl text-sm font-bold"
                 style={{ background: "var(--color-primary)", color: "#000" }}
@@ -228,9 +204,9 @@ export function AhorcadoGame() {
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         <AhorcadoTeclado
-          palabra={palabraActual.palabra}
-          letrasAdivinadas={letrasAdivinadas}
-          disabled={juegoTerminado}
+          correctas={palabraActual.correctas}
+          letrasAdivinadas={palabraActual.letras}
+          disabled={juegoTerminado || enviando}
           onLetra={manejarLetra}
         />
       </div>
@@ -243,7 +219,7 @@ export function AhorcadoGame() {
         )}
         <button
           type="button"
-          onClick={reiniciar}
+          onClick={() => pedirPalabra(true)}
           disabled={cargando}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
           style={{

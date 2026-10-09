@@ -10,19 +10,18 @@ const ETIQUETAS_CATEGORIA: Record<AhorcadoCategoria, string> = {
 };
 
 interface AhorcadoPistaProps {
-  palabra: string;
+  /** Una entrada por carácter: la letra adivinada, "_" o " " (ver ahorcado.server.ts). */
+  mascara: string[];
   categoria: AhorcadoCategoria;
   pista: string;
   referenciaBiblica: string | null;
-  letrasAdivinadas: string[];
 }
 
 export function AhorcadoPista({
-  palabra,
+  mascara,
   categoria,
   pista,
   referenciaBiblica,
-  letrasAdivinadas,
 }: AhorcadoPistaProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -52,7 +51,7 @@ export function AhorcadoPista({
       </div>
 
       <div className="flex flex-wrap justify-center gap-2">
-        {palabra.split("").map((letra, index) =>
+        {mascara.map((letra, index) =>
           letra === " " ? (
             <div key={index} className="w-4" />
           ) : (
@@ -62,7 +61,7 @@ export function AhorcadoPista({
               style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
             >
               <span className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-                {letrasAdivinadas.includes(letra) ? letra : "_"}
+                {letra}
               </span>
             </div>
           )
