@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { buildLldmSystemPrompt, SYSTEM_PROMPT_GENERAL } from "@/lib/elim-ia/prompts";
 import { elimIaEnMantenimiento, MENSAJE_MANTENIMIENTO } from "@/lib/elim-ia/mantenimiento";
 import type { ElimIADocument, ElimIAMessage, ElimIAMode } from "@/types";
@@ -62,7 +62,10 @@ export async function POST(request: Request) {
     // Más reciente primero: si el presupuesto de buildLldmSystemPrompt no
     // alcanza para todos los documentos, lo que se queda afuera es lo más
     // viejo — un documento recién subido siempre llega al contexto.
-    const { data: docsData } = await supabase
+    // Con service role: desde 0068 la tabla solo la lee un admin, para que
+    // ningún usuario pueda bajar el texto completo por la API REST.
+    const service = await createServiceClient();
+    const { data: docsData } = await service
       .from("elim_ia_documents")
       .select("title, content")
       .order("created_at", { ascending: false });

@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, getProfile } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle, XCircle, ShieldCheck, User } from "lucide-react";
@@ -25,9 +25,30 @@ async function fetchAuthEmails(supabase: SupabaseClient): Promise<Map<string, st
 
 export const metadata = { title: "Usuarios — Admin" };
 
+const ROLES_VALIDOS = [
+  "admin",
+  "super_moderador",
+  "moderador",
+  "anfitrion",
+  "oyente_plus",
+  "participante",
+] as const;
+
+// Cada acción revisa por sí misma que quien la usa sea admin. El middleware
+// ya protege /admin, pero una acción del servidor es un endpoint propio y no
+// debe depender solo de eso.
+async function requireAdmin(): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || profile.role !== "admin") {
+    throw new Error("Solo un administrador puede hacer esto");
+  }
+}
+
 async function toggleVerified(formData: FormData) {
   "use server";
-  const id = formData.get("id") as string;
+  await requireAdmin();
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) return;
   const verified = formData.get("verified") === "true";
   const supabase = await createServiceClient();
   await supabase.from("profiles").update({ verified_lldm: !verified }).eq("id", id);
@@ -36,8 +57,11 @@ async function toggleVerified(formData: FormData) {
 
 async function setRole(formData: FormData) {
   "use server";
-  const id = formData.get("id") as string;
-  const role = formData.get("role") as string;
+  await requireAdmin();
+  const id = formData.get("id");
+  const role = formData.get("role");
+  if (typeof id !== "string" || !id) return;
+  if (typeof role !== "string" || !(ROLES_VALIDOS as readonly string[]).includes(role)) return;
   const supabase = await createServiceClient();
   await supabase.from("profiles").update({ role }).eq("id", id);
   revalidatePath("/admin/usuarios");
