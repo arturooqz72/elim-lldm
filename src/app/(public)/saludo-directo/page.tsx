@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import type { Metadata } from "next";
 import { Mic, LogIn, Lock, Radio } from "lucide-react";
-import { getProfile, createClient } from "@/lib/supabase/server";
+import { getProfile, createServiceClient } from "@/lib/supabase/server";
 import { SaludoDirectoButton } from "@/components/saludo-directo/SaludoDirectoButton";
 import type { Profile } from "@/types";
 
@@ -20,7 +20,10 @@ export default async function SaludoDirectoPage() {
 
   let isLive = false;
   if (profile && eligible) {
-    const supabase = await createClient();
+    // Service role: también cuentan las transmisiones ocultas o privadas,
+    // que por RLS no le aparecen a un oyente. Un saludo nunca debe
+    // interrumpir una transmisión, sea cual sea su visibilidad.
+    const supabase = await createServiceClient();
     const { data: livePláticas } = await supabase
       .from("platikas")
       .select("id")

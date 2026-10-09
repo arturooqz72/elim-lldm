@@ -33,6 +33,9 @@ export function useLivePlatika(initial: LivePlatika | null = null) {
         .from("platikas")
         .select("id, title, programas(nombre)")
         .eq("status", "live")
+        // El aviso EN VIVO del menú solo anuncia transmisiones públicas,
+        // aunque quien mire sea del equipo y RLS le deje ver las demás.
+        .eq("visibilidad", "publico")
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateLiveKitToken, type ParticipantRole } from "@/lib/livekit/tokens";
+import { cargarPlatikaConEnlace, type PlatikaAcceso } from "@/lib/platikas/acceso.server";
 
 // El rol (viewer/speaker/host) se decide 100% aquí, contra la base de
 // datos — nunca a partir de lo que el cliente diga ser. Antes esta ruta
@@ -23,11 +24,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing platikaId" }, { status: 400 });
   }
 
-  const { data: platika } = await supabase
-    .from("platikas")
-    .select("id, host_id, status, livekit_room_name")
-    .eq("id", platikaId)
-    .single();
+  // Con el enlace: ocultas para cualquiera, privadas solo para el equipo
+  // (por RLS una oculta no le aparece a un espectador normal).
+  const platika = await cargarPlatikaConEnlace<
+    PlatikaAcceso & { id: string; status: string; livekit_room_name: string | null }
+  >(platikaId, "id, host_id, status, livekit_room_name, programa_id, visibilidad", user.id);
 
   if (!platika || !platika.livekit_room_name) {
     return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 });

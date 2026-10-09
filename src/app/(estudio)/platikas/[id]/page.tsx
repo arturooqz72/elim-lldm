@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/server";
+import { cargarPlatikaConEnlace, type PlatikaAcceso } from "@/lib/platikas/acceso.server";
 import { notFound } from "next/navigation";
 import { StudioShell } from "@/components/platikas/StudioShell";
 import { UnderConstruction } from "@/components/platikas/UnderConstruction";
@@ -15,14 +16,9 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("platikas")
-    .select("title, description, thumbnail_url")
-    .eq("id", id)
-    .single();
-
-  const p = data as { title?: string; description?: string; thumbnail_url?: string | null } | null;
+  const p = await cargarPlatikaConEnlace<
+    PlatikaAcceso & { title: string; description: string | null; thumbnail_url: string | null }
+  >(id, "title, description, thumbnail_url, host_id, programa_id, visibilidad");
 
   return {
     title: p?.title ? `${p.title} — Elim LLDM` : "Estudio en Vivo — Elim LLDM",
@@ -35,15 +31,16 @@ export default async function PlatikaRoomPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: platica } = await supabase
-    .from("platikas")
-    .select("*, profiles(display_name, avatar_url, role)")
-    .eq("id", id)
-    .single();
+  // Ocultas: cualquiera con el enlace. Privadas: solo el equipo (ver
+  // src/lib/platikas/acceso.server.ts y la migración 0070).
+  const platica = await cargarPlatikaConEnlace<PlatikaAcceso & { id: string }>(
+    id,
+    "*, profiles(display_name, avatar_url, role)"
+  );
 
   if (!platica) notFound();
 
-  const p = platica as {
+  const p = platica as unknown as {
     id: string;
     title: string;
     description: string | null;

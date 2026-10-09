@@ -1,17 +1,19 @@
 import { AudioLines, Radio } from "lucide-react";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { SaludoRecorder } from "@/components/saludo/SaludoRecorder";
+import { cargarPlatikaConEnlace, type PlatikaAcceso } from "@/lib/platikas/acceso.server";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
+type PlatikaSaludo = PlatikaAcceso & { id: string; title: string; status: string };
+const COLUMNAS = "id, title, status, host_id, programa_id, visibilidad";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase.from("platikas").select("title").eq("id", id).single();
+  const data = await cargarPlatikaConEnlace<PlatikaSaludo>(id, COLUMNAS);
 
   return {
     title: data?.title ? `Deja tu saludo — ${data.title}` : "Deja tu saludo — Elim LLDM",
@@ -21,12 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SaludoEnVivoPage({ params }: Props) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: platika } = await supabase
-    .from("platikas")
-    .select("id, title, status")
-    .eq("id", id)
-    .single();
+  // Ocultas: cualquiera con el enlace. Privadas: solo el equipo.
+  const platika = await cargarPlatikaConEnlace<PlatikaSaludo>(id, COLUMNAS);
 
   if (!platika) notFound();
 

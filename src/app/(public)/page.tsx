@@ -34,6 +34,7 @@ export default async function LandingPage() {
         .from("platikas")
         .select("id, title, status, scheduled_at, host_id")
         .in("status", ["live", "scheduled"])
+        .eq("visibilidad", "publico")
         .order("scheduled_at", { ascending: true })
         .limit(3),
       supabase

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST() {
   const supabase = await createClient();
@@ -17,7 +17,10 @@ export async function POST() {
     profile?.role === "oyente_plus" || profile?.role === "admin" || profile?.role === "moderador";
   if (!eligible) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data: livePláticas } = await supabase
+  // Service role: también cuentan las transmisiones ocultas o privadas,
+  // que por RLS no le aparecen a un oyente.
+  const service = await createServiceClient();
+  const { data: livePláticas } = await service
     .from("platikas")
     .select("id")
     .in("status", ["live", "backstage"])
