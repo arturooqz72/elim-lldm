@@ -11,6 +11,7 @@ import { InglesInstalar } from "./InglesInstalar";
 import { InglesEncabezado } from "./InglesEncabezado";
 import { InglesEntrada } from "./InglesEntrada";
 import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
+import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
 import { InglesRetoLogro } from "./InglesRetoLogro";
 import { useAvisoCompra } from "./useAvisoCompra";
 import { BIENVENIDA, MODOS, SUGERENCIAS } from "@/lib/ingles/etiquetas";
@@ -210,6 +211,10 @@ export function InglesChat(props: Props) {
           }}
           onSalir={() => setEnReto(false)}
         />
+      )}
+
+      {!pron && !enReto && (
+        <InglesPronunciacionAtajo onAbrir={() => cambiarPerfil({ ...perfil, modo: "pronunciacion" })} />
       )}
 
       {/* Mensajes */}

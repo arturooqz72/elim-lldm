@@ -45,7 +45,7 @@ export const ETIQUETA_PAQUETE: Record<InglesPaqueteId, string> = {
 /** Primer mensaje que se muestra (no se guarda ni cuesta) cuando el modo está vacío. */
 export const BIENVENIDA: Record<InglesModo, string> = {
   conversacion:
-    "Hi! I'm your English tutor. ¡Hola! Escríbeme lo que quieras en inglés y platicamos. Si te equivocas, te corrijo y te explico en español.",
+    "Hi! I'm your English tutor. ¡Hola! Escríbeme lo que quieras en inglés y platicamos. Si te equivocas, te corrijo y te explico en español. 🎤 También puedo corregir tu pronunciación con tu voz: toca \"Practica tu pronunciación\" arriba del chat.",
   situaciones:
     "Vamos a practicar una situación real. Elige arriba dónde estamos y escríbeme tu primera frase en inglés (o \"start\" para que yo empiece).",
   gramatica:

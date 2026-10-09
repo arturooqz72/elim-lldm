@@ -9,6 +9,7 @@ import { InglesEncabezado } from "./InglesEncabezado";
 import { InglesEntrada } from "./InglesEntrada";
 import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
 import { InglesAvisoApp } from "./InglesAvisoApp";
+import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesReto } from "@/types";
 
@@ -119,6 +120,8 @@ export function InglesPrueba(props: Props) {
       {!terminada && <InglesAvisoApp gratisDiarios={gratisDiarios} />}
 
       {props.reto && <InglesRetoTarjeta reto={props.reto} avance={null} enReto={false} />}
+
+      {!terminada && <InglesPronunciacionAtajo href="/login?returnUrl=%2Fingles&modo=registro" />}
 
       {/* Mensajes */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
