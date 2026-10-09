@@ -38,9 +38,9 @@ export function PalabraAyuda() {
         <li>Los acentos no importan (á = a). La Ñ sí cuenta como letra.</li>
         <li>Después de cada intento, los colores te dicen qué tan cerca estás.</li>
         <li>
-          Pistas gratis: arriba del tablero ves si la palabra es persona, lugar, objeto, acción o
-          concepto, y después de {PALABRA_FALLOS_SEGUNDA_PISTA} intentos fallidos, el libro y
-          capítulo de la Biblia donde aparece. No restan puntos.
+          Dos pistas gratis arriba del tablero, que no restan puntos: 💡 la <strong>Pista 1</strong> te dice
+          desde el principio si es persona, lugar, objeto, acción o concepto, y 🔒 la <strong>Pista 2</strong>{" "}
+          se desbloquea al fallar {PALABRA_FALLOS_SEGUNDA_PISTA} veces y te dice 📖 el libro y capítulo donde aparece.
         </li>
       </ul>
 

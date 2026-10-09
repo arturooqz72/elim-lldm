@@ -20,7 +20,13 @@ export const ESTILOS_PALABRA = `
   40%, 60% { transform: translateX(6px); }
 }
 .palabra-sacudir { animation: palabra-sacudir 500ms ease-in-out; }
+@keyframes palabra-pista-aparece {
+  0% { opacity: 0; transform: scale(0.92); box-shadow: 0 0 0 0 rgba(74,222,128,0.6); }
+  60% { opacity: 1; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(74,222,128,0.25); }
+  100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+}
+.palabra-pista-aparece { animation: palabra-pista-aparece 700ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .palabra-girar, .palabra-pop, .palabra-sacudir { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .palabra-girar, .palabra-pop, .palabra-sacudir, .palabra-pista-aparece { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }
 `;
