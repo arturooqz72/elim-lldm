@@ -80,6 +80,11 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           titulo="Regresaron"
           nota="la usaron en el rango y ya la habían usado otro día antes"
         />
+        <Tarjeta
+          valor={totales.volvieronAbrir}
+          titulo="Volvieron a abrir"
+          nota="abrieron /ingles en el rango y ya lo habían abierto otro día, aunque no escribieran"
+        />
         <Tarjeta valor={totales.mensajes} titulo="Mensajes de chat" />
         <Tarjeta valor={totales.intentosPronunciacion} titulo="Intentos de pronunciación" />
         <Tarjeta
@@ -123,13 +128,18 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           }`}
         />
         <Tarjeta
+          valor={`${app.conSesion} / ${app.sinSesion}`}
+          titulo="App: con sesión / sin sesión"
+          nota={`de los ${app.sinSesion} sin sesión: ${app.sinSesionUsaronPrueba} usaron la prueba · ${app.sinSesionEntraronDespues} iniciaron sesión después (se mide desde el 9 oct.)`}
+        />
+        <Tarjeta
           valor={totales.usuariosActivos ? (totales.mensajes / totales.usuariosActivos).toFixed(1) : "—"}
           titulo="Mensajes por persona activa"
         />
       </div>
 
       <div className="rounded-2xl overflow-x-auto mb-8" style={borde}>
-        <table className="w-full text-sm min-w-[880px]">
+        <table className="w-full text-sm min-w-[980px]">
           <thead>
             <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
               {[
@@ -137,6 +147,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 "Entraron",
                 "Usaron",
                 "Regresaron",
+                "Volvieron a abrir",
                 "Mensajes",
                 "Al límite",
                 "Pronunciación",
@@ -163,6 +174,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
                 <td className="px-4 py-2.5">{d.personasVisitaron}</td>
                 <td className="px-4 py-2.5">{d.usuariosActivos}</td>
                 <td className="px-4 py-2.5">{d.regresaron}</td>
+                <td className="px-4 py-2.5">{d.volvieronAbrir}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-8 text-right">{d.mensajes}</span>

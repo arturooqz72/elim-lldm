@@ -18,6 +18,8 @@ import type { InglesModo } from "@/types";
 const COSTO_APROX_POR_LLAMADA_USD = 0.003;
 /** Duración supuesta de los intentos guardados antes de que se midiera (0062). */
 const SEGUNDOS_POR_INTENTO_SIN_DATO = 5;
+/** visitas_sitio guarda 90 días (0058): más atrás no hay de dónde leer. */
+const DIAS_HISTORIAL_VISITAS = 90;
 const PAGINA = 1000;
 
 export interface DiaIngles {
@@ -26,6 +28,8 @@ export interface DiaIngles {
   usuariosActivos: number;
   /** Usaron la tutora ese día y ya la habían usado otro día antes. */
   regresaron: number;
+  /** Abrieron /ingles ese día y ya lo habían abierto otro día antes (aunque no escribieran). */
+  volvieronAbrir: number;
   mensajes: number;
   llegaronAlLimite: number;
   intentosPronunciacion: number;
@@ -66,6 +70,14 @@ export interface AppIngles {
   ios: number;
   android: number;
   otro: number;
+  /** Cuentas distintas que abrieron la app con la sesión iniciada. */
+  conSesion: number;
+  /** Navegadores distintos que abrieron la app sin sesión. */
+  sinSesion: number;
+  /** De los que abrieron sin sesión, cuántos usaron la prueba sin cuenta (desde 0075). */
+  sinSesionUsaronPrueba: number;
+  /** De los que abrieron sin sesión, cuántos iniciaron sesión después en ese navegador (desde 0075). */
+  sinSesionEntraronDespues: number;
 }
 
 /** Prueba sin cuenta en el rango. */
@@ -128,6 +140,8 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   const desdeDia = claves[0];
   // Un día de margen hacia atrás; luego se filtra por día del Pacífico.
   const desdeIso = new Date(new Date(`${desdeDia}T00:00:00Z`).getTime() - 86_400_000).toISOString();
+  // Para "Volvieron a abrir" se necesitan también las visitas de antes del rango.
+  const desdeVisitasIso = new Date(Date.now() - DIAS_HISTORIAL_VISITAS * 86_400_000).toISOString();
 
   const { data: admins } = await supabase.from("profiles").select("id").eq("role", "admin");
   const excluir = new Set(((admins ?? []) as { id: string }[]).map((a) => a.id));
@@ -140,7 +154,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         .from("visitas_sitio")
         .select("created_at, profile_id, visitante_id")
         .like("ruta", "/ingles%")
-        .gte("created_at", desdeIso)
+        .gte("created_at", desdeVisitasIso)
         .order("created_at")
         .range(a, b),
     ),
@@ -169,10 +183,10 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
       supabase.from("english_lista_espera").select("created_at, user_id").order("created_at").range(a, b),
     ),
     // Todas las pruebas: la de un usuario cuenta como su primer uso.
-    todas<{ created_at: string; usados: number; user_id: string | null }>((a, b) =>
+    todas<{ anon_id: string; created_at: string; usados: number; user_id: string | null }>((a, b) =>
       supabase
         .from("english_prueba_visitantes")
-        .select("created_at, usados, user_id")
+        .select("anon_id, created_at, usados, user_id")
         .gt("usados", 0)
         .order("created_at")
         .range(a, b),
@@ -188,14 +202,19 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         .order("created_at")
         .range(a, b),
     ),
-    todas<{ created_at: string; user_id: string | null; visitante_id: string | null; plataforma: keyof Omit<AppIngles, "personas"> }>(
-      (a, b) =>
-        supabase
-          .from("english_app_aperturas")
-          .select("created_at, user_id, visitante_id, plataforma")
-          .gte("created_at", desdeIso)
-          .order("created_at")
-          .range(a, b),
+    // Todo el historial: también cuenta para "Volvieron a abrir".
+    todas<{
+      created_at: string;
+      user_id: string | null;
+      visitante_id: string | null;
+      prueba_id: string | null;
+      plataforma: "ios" | "android" | "otro";
+    }>((a, b) =>
+      supabase
+        .from("english_app_aperturas")
+        .select("created_at, user_id, visitante_id, prueba_id, plataforma")
+        .order("created_at")
+        .range(a, b),
     ),
     // Todo el historial: también sirve para calcular las rachas.
     todas<{ dia: string; user_id: string }>((a, b) =>
@@ -212,6 +231,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
         personasVisitaron: 0,
         usuariosActivos: 0,
         regresaron: 0,
+        volvieronAbrir: 0,
         mensajes: 0,
         llegaronAlLimite: 0,
         intentosPronunciacion: 0,
@@ -292,8 +312,57 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     if (d && valido(l.user_id)) d.nuevosEnLista++;
   }
 
-  const app: AppIngles = { personas: 0, ios: 0, android: 0, otro: 0 };
+  // Desde 0075 el id del navegador se guarda también con sesión: así una
+  // visita sin sesión se une con la cuenta que después entró en ese navegador.
+  const cuentaDeNavegador = new Map<string, string>();
+  /** Última vez que cada navegador se usó con sesión (para "entró después"). */
+  const ultimaConSesion = new Map<string, string>();
+  const conCuenta = (navegador: string | null, cuenta: string | null, fecha: string) => {
+    if (!navegador || !cuenta) return;
+    cuentaDeNavegador.set(navegador, cuenta);
+    if (fecha > (ultimaConSesion.get(navegador) ?? "")) ultimaConSesion.set(navegador, fecha);
+  };
+  for (const v of visitas) conCuenta(v.visitante_id, v.profile_id, v.created_at);
+  for (const a of aperturas) conCuenta(a.visitante_id, a.user_id, a.created_at);
+  const persona = (cuenta: string | null, navegador: string | null) =>
+    cuenta ?? (navegador ? (cuentaDeNavegador.get(navegador) ?? navegador) : null);
+
+  // Volvieron a abrir: días distintos en que cada persona abrió /ingles
+  // (visitas en el navegador o aperturas de la app), del historial que haya.
+  const diasAbiertos = new Map<string, Set<string>>();
+  const abrio = (quien: string | null, fecha: string) => {
+    if (!quien || excluir.has(quien)) return;
+    const fechas = diasAbiertos.get(quien) ?? new Set<string>();
+    fechas.add(diaPacifico(fecha));
+    diasAbiertos.set(quien, fechas);
+  };
+  for (const v of visitas) abrio(persona(v.profile_id, v.visitante_id), v.created_at);
+  for (const a of aperturas) abrio(persona(a.user_id, a.visitante_id), a.created_at);
+  const volvieronRango = new Set<string>();
+  for (const [quien, fechas] of diasAbiertos) {
+    const primero = [...fechas].sort()[0];
+    for (const dia of fechas) {
+      const d = porDia.get(dia);
+      if (!d || dia === primero) continue;
+      d.volvieronAbrir++;
+      volvieronRango.add(quien);
+    }
+  }
+
+  const app: AppIngles = {
+    personas: 0,
+    ios: 0,
+    android: 0,
+    otro: 0,
+    conSesion: 0,
+    sinSesion: 0,
+    sinSesionUsaronPrueba: 0,
+    sinSesionEntraronDespues: 0,
+  };
   const personasApp = new Set<string>();
+  const cuentasApp = new Set<string>();
+  // Navegador sin sesión → su primera apertura en el rango y las pruebas que traía.
+  const sinSesionApp = new Map<string, { desde: string; pruebas: Set<string> }>();
   for (const a of aperturas) {
     const d = porDia.get(diaPacifico(a.created_at));
     const quien = a.user_id ?? a.visitante_id;
@@ -301,8 +370,28 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     d.aperturasApp++;
     personasApp.add(quien);
     app[a.plataforma]++;
+    if (a.user_id) {
+      cuentasApp.add(a.user_id);
+    } else if (a.visitante_id) {
+      const info = sinSesionApp.get(a.visitante_id) ?? { desde: a.created_at, pruebas: new Set<string>() };
+      if (a.prueba_id) info.pruebas.add(a.prueba_id);
+      sinSesionApp.set(a.visitante_id, info);
+    }
   }
   app.personas = personasApp.size;
+  app.conSesion = cuentasApp.size;
+
+  // De quienes abrieron sin sesión: ¿usaron la prueba? ¿entraron después con su cuenta?
+  const pruebaPorId = new Map(visitantesPrueba.map((p) => [p.anon_id, p]));
+  const entroDespues = (navegador: string, desde: string) => (ultimaConSesion.get(navegador) ?? "") > desde;
+  for (const [navegador, info] of sinSesionApp) {
+    const cuenta = cuentaDeNavegador.get(navegador);
+    if (cuenta && excluir.has(cuenta)) continue;
+    app.sinSesion++;
+    const pruebas = [...info.pruebas].flatMap((id) => pruebaPorId.get(id) ?? []);
+    if (pruebas.length) app.sinSesionUsaronPrueba++;
+    if (entroDespues(navegador, info.desde) || pruebas.some((p) => p.user_id)) app.sinSesionEntraronDespues++;
+  }
 
   for (const r of retosHechos) {
     const d = porDia.get(r.dia);
@@ -391,6 +480,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
       personasVisitaron: personasRango.size,
       usuariosActivos: activosRango.size,
       regresaron: regresaronRango.size,
+      volvieronAbrir: volvieronRango.size,
       mensajes: suma("mensajes"),
       llegaronAlLimite: suma("llegaronAlLimite"),
       intentosPronunciacion: suma("intentosPronunciacion"),

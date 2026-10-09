@@ -8,6 +8,7 @@ import { InglesInstalar } from "./InglesInstalar";
 import { InglesEncabezado } from "./InglesEncabezado";
 import { InglesEntrada } from "./InglesEntrada";
 import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
+import { InglesAvisoApp } from "./InglesAvisoApp";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesReto } from "@/types";
 
@@ -114,6 +115,8 @@ export function InglesPrueba(props: Props) {
           </strong>
         </span>
       </div>
+
+      {!terminada && <InglesAvisoApp gratisDiarios={gratisDiarios} />}
 
       {props.reto && <InglesRetoTarjeta reto={props.reto} avance={null} enReto={false} />}
 

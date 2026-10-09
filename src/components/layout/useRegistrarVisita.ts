@@ -8,8 +8,10 @@ const CLAVE_VISITANTE = "elim-visitante-id";
 
 /**
  * Id aleatorio por navegador para agrupar las visitas de quien no inició
- * sesión. No identifica a nadie; si localStorage no está disponible
- * (modo privado, bloqueado) la visita se guarda sin él.
+ * sesión. Se manda también con sesión, para saber si ese navegador entró
+ * antes sin cuenta (p. ej. "Volvieron a abrir" en /admin/ingles). Por sí
+ * solo no identifica a nadie; si localStorage no está disponible (modo
+ * privado, bloqueado) la visita se guarda sin él.
  */
 function idVisitante(): string | null {
   try {
@@ -40,7 +42,7 @@ export function useRegistrarVisita(profileId: string | null, pathname: string) {
     const supabase = createClient();
     void supabase
       .from("visitas_sitio")
-      .insert({ ruta: pathname.slice(0, 300), visitante_id: profileId ? null : idVisitante() })
+      .insert({ ruta: pathname.slice(0, 300), visitante_id: idVisitante() })
       .then(({ error }) => {
         if (error) console.warn("[visitas] no se pudo registrar la visita:", error.message);
       });
