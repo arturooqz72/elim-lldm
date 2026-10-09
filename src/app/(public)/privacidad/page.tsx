@@ -90,8 +90,9 @@ export default function PrivacidadPage() {
         <Seccion titulo="Para qué los usamos">
           <p>
             Solo para que el sitio funcione: iniciar sesión, mostrar tu nombre en los juegos y rankings, avisarte cuando
-            alguien quiere jugar, poner tu saludo en la radio y responderte cuando nos escribes. Tu WhatsApp solo lo ven
-            otros miembros con cuenta que abren una sala, para invitarte a jugar.
+            alguien quiere jugar, poner tu saludo en la radio y responderte cuando nos escribes. Si dejas tu WhatsApp en
+            la lista de jugadores, solo lo ven los administradores; los demás miembros te invitan a jugar con un aviso
+            dentro del sitio, sin ver tu número.
           </p>
         </Seccion>
 

@@ -6,10 +6,10 @@ export function VerJugadoresLink() {
     <Link
       href="/juegos/jugadores"
       className="flex items-center gap-2 text-sm font-medium mb-6 transition-opacity hover:opacity-80"
-      style={{ color: "#25D366" }}
+      style={{ color: "var(--color-primary)" }}
     >
       <Users size={15} />
-      Ver quién quiere jugar (invítalos por WhatsApp)
+      Ver quién quiere jugar e invitarlos
       <ChevronRight size={14} />
     </Link>
   );
