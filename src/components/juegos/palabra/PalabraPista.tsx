@@ -24,7 +24,7 @@ const CATEGORIA_CON_ARTICULO: Record<PalabraCategoria, string> = {
   concepto: "un concepto",
 };
 
-const tarjeta = "flex items-start gap-2 w-full rounded-xl px-3 py-2 text-[13px] leading-snug";
+const tarjeta = "flex items-start gap-2 w-full rounded-xl px-3 py-1.5 text-[13px] leading-snug";
 
 /**
  * Pistas gratis arriba del tablero (no restan puntos), como dos tarjetas:

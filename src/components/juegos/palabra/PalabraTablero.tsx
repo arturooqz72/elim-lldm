@@ -26,10 +26,11 @@ export function PalabraTablero({ intentos, actual, revelandoFila, sacudir, termi
       className="grid gap-1.5 mx-auto w-full"
       style={{
         // El alto del tablero es ~1.2 × su ancho: se limita por la altura de
-        // la pantalla para que tablero + teclado quepan sin scroll en
-        // celulares chicos (375×667, incluidas las dos tarjetas de pistas, que
-        // pueden ocupar hasta 3 líneas), y a 330px en los grandes.
-        maxWidth: "clamp(220px, calc((100dvh - 435px) / 1.2), 330px)",
+        // la pantalla para que tablero + teclado quepan sin scroll (medido a
+        // 360px de ancho con las dos tarjetas de pistas: cabe todo desde
+        // ~720px de alto), y a 330px en los grandes. No baja de 220px: más
+        // chico, las letras ya no caben y las fichas se estiran.
+        maxWidth: "clamp(220px, calc((100dvh - 450px) / 1.2), 330px)",
         gridTemplateRows: `repeat(${PALABRA_MAX_INTENTOS}, 1fr)`,
       }}
       role="grid"
