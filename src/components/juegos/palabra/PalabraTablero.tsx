@@ -23,13 +23,15 @@ export function PalabraTablero({ intentos, actual, revelandoFila, sacudir, termi
 
   return (
     <div
-      className="grid gap-1.5 mx-auto w-full"
+      className="palabra-tablero grid gap-1.5 mx-auto w-full"
       style={{
         // El alto del tablero es ~1.2 × su ancho: se limita por la altura de
         // la pantalla para que tablero + teclado quepan sin scroll (medido a
         // 360px de ancho con las dos tarjetas de pistas: cabe todo desde
         // ~720px de alto), y a 330px en los grandes. No baja de 220px: más
-        // chico, las letras ya no caben y las fichas se estiran.
+        // chico, las letras ya no caben y las fichas se estiran. En pantallas
+        // más bajas, ver .palabra-tablero en estilos.ts: tablero y letras más
+        // chicos para que el teclado siga cabiendo.
         maxWidth: "clamp(220px, calc((100dvh - 450px) / 1.2), 330px)",
         gridTemplateRows: `repeat(${PALABRA_MAX_INTENTOS}, 1fr)`,
       }}
@@ -57,7 +59,7 @@ export function PalabraTablero({ intentos, actual, revelandoFila, sacudir, termi
                   key={`${col}-${letra}`}
                   role="gridcell"
                   aria-label={letra ? `${letra}${color ? `, ${ETIQUETA_COLOR[color]}` : ""}` : "vacía"}
-                  className={`aspect-square flex items-center justify-center rounded-lg font-bold select-none ${
+                  className={`palabra-ficha aspect-square flex items-center justify-center rounded-lg font-bold select-none ${
                     animarGiro ? "palabra-girar" : letra && !evaluada ? "palabra-pop" : ""
                   }`}
                   style={

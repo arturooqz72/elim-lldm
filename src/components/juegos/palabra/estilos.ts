@@ -26,6 +26,14 @@ export const ESTILOS_PALABRA = `
   100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(74,222,128,0); }
 }
 .palabra-pista-aparece { animation: palabra-pista-aparece 700ms ease-out; }
+/* Pantallas bajas (menos de 720px de alto, con las dos tarjetas de pistas):
+   el tablero baja hasta 170px de ancho y la letra se ajusta al tamaño de la
+   ficha (cqw = % del ancho del tablero) para que tablero + teclado quepan sin
+   scroll. Arriba de 720px el tablero se ve igual que siempre. */
+@media (max-height: 719px) {
+  .palabra-tablero { container-type: inline-size; max-width: clamp(170px, calc((100dvh - 450px) / 1.2), 330px) !important; }
+  .palabra-ficha { font-size: clamp(0.9rem, 9cqw, 1.4rem) !important; line-height: 1; }
+}
 @media (prefers-reduced-motion: reduce) {
   .palabra-girar, .palabra-pop, .palabra-sacudir, .palabra-pista-aparece { animation-duration: 1ms !important; animation-delay: 0ms !important; }
 }
