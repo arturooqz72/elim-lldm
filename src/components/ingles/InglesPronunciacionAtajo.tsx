@@ -31,7 +31,7 @@ const estilo = { background: `${GOLD}0F`, borderBottom: "1px solid var(--color-b
  * lo encontraban entre los modos). Con cuenta cambia de modo; en la prueba
  * sin cuenta lleva a crear la cuenta, porque la voz solo es con cuenta.
  */
-export function InglesPronunciacionAtajo(props: { onAbrir: () => void } | { href: string }) {
+export function InglesPronunciacionAtajo(props: { onAbrir: () => void; accion?: string } | { href: string }) {
   if ("href" in props) {
     return (
       <Link href={props.href} className={clase} style={estilo}>
@@ -41,7 +41,7 @@ export function InglesPronunciacionAtajo(props: { onAbrir: () => void } | { href
   }
   return (
     <button type="button" onClick={props.onAbrir} className={clase} style={estilo}>
-      {contenido("Probar")}
+      {contenido(props.accion ?? "Probar")}
     </button>
   );
 }

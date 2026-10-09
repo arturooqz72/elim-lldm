@@ -74,6 +74,9 @@ export interface AppIngles {
   conSesion: number;
   /** Navegadores distintos que abrieron la app sin sesión. */
   sinSesion: number;
+  /** De ellos, en iPhone / en Android (por la plataforma de su primera apertura en el rango). */
+  sinSesionIos: number;
+  sinSesionAndroid: number;
   /** De los que abrieron sin sesión, cuántos usaron la prueba sin cuenta (desde 0075). */
   sinSesionUsaronPrueba: number;
   /** De los que abrieron sin sesión, cuántos iniciaron sesión después en ese navegador (desde 0075). */
@@ -356,13 +359,15 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     otro: 0,
     conSesion: 0,
     sinSesion: 0,
+    sinSesionIos: 0,
+    sinSesionAndroid: 0,
     sinSesionUsaronPrueba: 0,
     sinSesionEntraronDespues: 0,
   };
   const personasApp = new Set<string>();
   const cuentasApp = new Set<string>();
   // Navegador sin sesión → su primera apertura en el rango y las pruebas que traía.
-  const sinSesionApp = new Map<string, { desde: string; pruebas: Set<string> }>();
+  const sinSesionApp = new Map<string, { desde: string; plataforma: "ios" | "android" | "otro"; pruebas: Set<string> }>();
   for (const a of aperturas) {
     const d = porDia.get(diaPacifico(a.created_at));
     const quien = a.user_id ?? a.visitante_id;
@@ -373,7 +378,11 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     if (a.user_id) {
       cuentasApp.add(a.user_id);
     } else if (a.visitante_id) {
-      const info = sinSesionApp.get(a.visitante_id) ?? { desde: a.created_at, pruebas: new Set<string>() };
+      const info = sinSesionApp.get(a.visitante_id) ?? {
+        desde: a.created_at,
+        plataforma: a.plataforma,
+        pruebas: new Set<string>(),
+      };
       if (a.prueba_id) info.pruebas.add(a.prueba_id);
       sinSesionApp.set(a.visitante_id, info);
     }
@@ -388,6 +397,8 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     const cuenta = cuentaDeNavegador.get(navegador);
     if (cuenta && excluir.has(cuenta)) continue;
     app.sinSesion++;
+    if (info.plataforma === "ios") app.sinSesionIos++;
+    else if (info.plataforma === "android") app.sinSesionAndroid++;
     const pruebas = [...info.pruebas].flatMap((id) => pruebaPorId.get(id) ?? []);
     if (pruebas.length) app.sinSesionUsaronPrueba++;
     if (entroDespues(navegador, info.desde) || pruebas.some((p) => p.user_id)) app.sinSesionEntraronDespues++;

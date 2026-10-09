@@ -130,7 +130,9 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
         <Tarjeta
           valor={`${app.conSesion} / ${app.sinSesion}`}
           titulo="App: con sesión / sin sesión"
-          nota={`de los ${app.sinSesion} sin sesión: ${app.sinSesionUsaronPrueba} usaron la prueba · ${app.sinSesionEntraronDespues} iniciaron sesión después (se mide desde el 9 oct.)`}
+          nota={`sin sesión: iPhone ${app.sinSesionIos} · Android ${app.sinSesionAndroid}${
+            app.sinSesion - app.sinSesionIos - app.sinSesionAndroid ? ` · otros ${app.sinSesion - app.sinSesionIos - app.sinSesionAndroid}` : ""
+          } · ${app.sinSesionUsaronPrueba} usaron la prueba · ${app.sinSesionEntraronDespues} iniciaron sesión después (estos dos se miden desde el 9 oct.)`}
         />
         <Tarjeta
           valor={totales.usuariosActivos ? (totales.mensajes / totales.usuariosActivos).toFixed(1) : "—"}
