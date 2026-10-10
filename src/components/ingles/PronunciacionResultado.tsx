@@ -1,6 +1,7 @@
 import { GraduationCap } from "lucide-react";
 import { nivelPalabra } from "@/lib/ingles/sonidos";
 import { ETIQUETA_SONIDO } from "@/lib/ingles/etiquetas";
+import { TextoConNegritas } from "./TextoConNegritas";
 import type { PronResultado } from "@/types";
 
 const GOLD = "#f5c842";
@@ -77,7 +78,7 @@ export function PronunciacionResultado({ resultado, compacto }: { resultado: Pro
         </p>
         <Palabras resultado={resultado} tamano="text-base" />
         <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--color-text)" }}>
-          {explicacionDe(resultado, "")}
+          <TextoConNegritas texto={explicacionDe(resultado, "")} />
         </p>
       </div>
     );
@@ -140,7 +141,7 @@ export function PronunciacionResultado({ resultado, compacto }: { resultado: Pro
           className="px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap"
           style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
         >
-          {explicacionDe(resultado, " Pasa a la siguiente frase.")}
+          <TextoConNegritas texto={explicacionDe(resultado, " Pasa a la siguiente frase.")} />
         </div>
       </div>
     </div>

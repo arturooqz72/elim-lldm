@@ -1,6 +1,7 @@
 import { GraduationCap, Loader2, User } from "lucide-react";
 import { piezas } from "@/lib/ingles/frases-chat";
 import { TarjetaFrase } from "./TarjetaFrase";
+import { TextoConNegritas } from "./TextoConNegritas";
 import type { InglesMensaje } from "@/types";
 
 const GOLD = "#f5c842";
@@ -23,7 +24,9 @@ function ContenidoTutora({ mensaje }: { mensaje: ChatMsg }) {
         p.tipo === "texto" ? (
           // Sin los espacios ni saltos de línea pegados a una tarjeta (dejan huecos).
           <span key={i}>
-            {recortarJuntoATarjeta(p.texto, todas[i - 1]?.tipo === "frase", todas[i + 1]?.tipo === "frase")}
+            <TextoConNegritas
+              texto={recortarJuntoATarjeta(p.texto, todas[i - 1]?.tipo === "frase", todas[i + 1]?.tipo === "frase")}
+            />
           </span>
         ) : (
           <TarjetaFrase key={i} texto={p.texto} mensajeId={mensaje.id} indice={p.indice} />

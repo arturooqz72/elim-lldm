@@ -11,6 +11,11 @@ export const MAX_TARJETAS = 2;
 const MAX_LARGO = 200;
 const MARCA = /\[\[say:\s*([^\]\n]*?)\s*\]\]/gi;
 
+/** La frase sin negritas de Markdown (**…**) ni espacios de sobra. */
+function limpia(frase: string): string {
+  return frase.replace(/\*\*/g, "").trim();
+}
+
 /** Letras que solo aparecen en español: esa frase no se evalúa como inglés. */
 const ESPANOL = /[¿¡ñÑáéíóúÁÉÍÓÚ]/;
 
@@ -32,7 +37,7 @@ function valida(texto: string): boolean {
 export function limpiarRespuesta(reply: string): string {
   let marcas = 0;
   return reply.replace(MARCA, (_completa, frase: string) => {
-    const texto = frase.trim();
+    const texto = limpia(frase);
     if (marcas < MAX_TARJETAS && valida(texto)) {
       marcas++;
       return `[[say: ${texto}]]`;
@@ -45,7 +50,7 @@ export function limpiarRespuesta(reply: string): string {
 export function frasesDe(content: string): string[] {
   const frases: string[] = [];
   for (const m of content.matchAll(MARCA)) {
-    const texto = m[1].trim();
+    const texto = limpia(m[1]);
     if (valida(texto)) frases.push(texto);
     if (frases.length === MAX_TARJETAS) break;
   }
@@ -61,7 +66,7 @@ export function piezas(content: string): Pieza[] {
   let indice = 0;
   for (const m of content.matchAll(MARCA)) {
     const antes = content.slice(desde, m.index);
-    const texto = m[1].trim();
+    const texto = limpia(m[1]);
     const esTarjeta = indice < MAX_TARJETAS && valida(texto);
     if (antes) resultado.push({ tipo: "texto", texto: antes });
     resultado.push(esTarjeta ? { tipo: "frase", texto, indice: indice++ } : { tipo: "texto", texto });
