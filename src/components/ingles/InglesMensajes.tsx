@@ -7,15 +7,23 @@ const GOLD = "#f5c842";
 
 type ChatMsg = Pick<InglesMensaje, "id" | "role" | "content">;
 
+/** Quita espacios y saltos de línea del lado que toca una tarjeta. */
+function recortarJuntoATarjeta(texto: string, trasTarjeta: boolean, antesDeTarjeta: boolean): string {
+  let t = texto;
+  if (trasTarjeta) t = t.replace(/^\s+/, "");
+  if (antesDeTarjeta) t = t.replace(/\s+$/, "");
+  return t;
+}
+
 /** Respuesta de la tutora: texto normal y, donde marcó una frase, su tarjeta de voz. */
 function ContenidoTutora({ mensaje }: { mensaje: ChatMsg }) {
   return (
     <>
       {piezas(mensaje.content).map((p, i, todas) =>
         p.tipo === "texto" ? (
-          // Sin el espacio que queda pegado a una tarjeta (se ve como sangría).
+          // Sin los espacios ni saltos de línea pegados a una tarjeta (dejan huecos).
           <span key={i}>
-            {todas[i - 1]?.tipo === "frase" ? p.texto.replace(/^[ \t]+/, "") : p.texto}
+            {recortarJuntoATarjeta(p.texto, todas[i - 1]?.tipo === "frase", todas[i + 1]?.tipo === "frase")}
           </span>
         ) : (
           <TarjetaFrase key={i} texto={p.texto} mensajeId={mensaje.id} indice={p.indice} />
