@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { CodigoConfirmacion } from "@/components/auth/CodigoConfirmacion";
 
 type SocialProvider = "google" | "facebook";
 
@@ -40,10 +41,13 @@ function LoginForm() {
       .catch(() => {});
   }, []);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  // Cuenta sin confirmar: se confirma escribiendo el código del correo (ver CodigoConfirmacion).
+  const [codigoPara, setCodigoPara] = useState<{ email: string; enviado: boolean } | null>(null);
 
   function switchMode(next: "login" | "register") {
     setMode(next);
     setMessage(null);
+    setCodigoPara(null);
     setPassword("");
     setConfirmPassword("");
   }
@@ -51,6 +55,7 @@ function LoginForm() {
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
+    setCodigoPara(null);
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
@@ -81,7 +86,8 @@ function LoginForm() {
         });
         if (error) throw error;
         if (!data.session) {
-          setMessage({ type: "success", text: "¡Cuenta creada! Revisa tu correo para confirmarla antes de entrar." });
+          setMessage({ type: "success", text: "¡Cuenta creada! Solo falta confirmar tu correo con el código que te mandamos." });
+          setCodigoPara({ email: cleanEmail, enviado: true });
         } else {
           window.location.replace(returnUrl);
         }
@@ -100,7 +106,8 @@ function LoginForm() {
       } else if (msg.includes("already registered") || msg.includes("user already registered")) {
         setMessage({ type: "error", text: "Ese correo ya está registrado. Inicia sesión." });
       } else if (msg.includes("email not confirmed")) {
-        setMessage({ type: "error", text: "Debes confirmar tu correo primero. Revisa tu bandeja de entrada." });
+        setMessage({ type: "error", text: "Tu correo todavía no está confirmado." });
+        setCodigoPara({ email: cleanEmail, enviado: false });
       } else if (msg.includes("rate limit")) {
         setMessage({ type: "error", text: "Demasiados intentos. Espera un momento e intenta de nuevo." });
       } else {
@@ -223,6 +230,7 @@ function LoginForm() {
               {message.text}
             </div>
           )}
+          {codigoPara && <CodigoConfirmacion key={codigoPara.email} {...codigoPara} returnUrl={returnUrl} />}
 
           {/* Google / Facebook: sirven igual para entrar que para crear cuenta */}
           {(["google", ...(facebookActivo ? ["facebook" as const] : [])] as SocialProvider[]).map((provider) => (

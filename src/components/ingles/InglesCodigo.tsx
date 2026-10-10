@@ -39,7 +39,9 @@ export function InglesCodigo() {
     setError(null);
     const { error: e } = await createClient().auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true, data: { full_name: email.split("@")[0] } },
+      // data solo se aplica si la cuenta es nueva: nombre_pendiente hace que
+      // /ingles le pida su nombre antes de empezar (ver InglesNombre).
+      options: { shouldCreateUser: true, data: { full_name: email.split("@")[0], nombre_pendiente: true } },
     });
     setCargando(false);
     if (e) setError(mensajeError(e.message));

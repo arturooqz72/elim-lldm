@@ -7,6 +7,7 @@ import { anonIdValido, COOKIE_PRUEBA, leerPrueba, reclamarPrueba } from "@/lib/i
 import { avanceReto, leerRacha, leerReto, mensajesRetoHoy } from "@/lib/ingles/retos.server";
 import { InglesChat } from "@/components/ingles/InglesChat";
 import { InglesPrueba } from "@/components/ingles/InglesPrueba";
+import { InglesNombre } from "@/components/ingles/InglesNombre";
 import type { InglesMensaje, InglesPerfil, Profile } from "@/types";
 
 export const metadata = { title: "Elim English — Elim LLDM" };
@@ -45,6 +46,18 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
 
   const { compra } = await searchParams;
   const supabase = await createClient();
+
+  // Cuenta recién creada con el código por correo: primero su nombre.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.user_metadata?.nombre_pendiente === true) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 h-[calc(100vh-4rem)]">
+        <InglesNombre />
+      </div>
+    );
+  }
 
   const { data: perfilData } = await supabase
     .from("english_perfiles")
