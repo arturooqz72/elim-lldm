@@ -22,6 +22,8 @@ const CLAVE_PROBAR = "elim-english-probar";
 
 type ChatMsg = Pick<InglesMensaje, "id" | "role" | "content">;
 const REGISTRO = "/login?returnUrl=%2Fingles&modo=registro";
+// Lo que manda "Probar" en la barra de pronunciación (gasta un mensaje de prueba).
+const PEDIR_FRASE = "Quiero practicar mi pronunciación. Dame una frase corta en inglés para decirla en voz alta.";
 
 interface Props {
   mensajesIniciales: ChatMsg[];
@@ -193,8 +195,12 @@ export function InglesPrueba(props: Props) {
 
       {props.reto && <InglesRetoTarjeta reto={props.reto} avance={null} enReto={false} />}
 
+      {/* Con su intento de voz de prueba: "Probar" le pide una frase a la tutora
+          (sale como tarjeta 🎤). Ya usado: invitación a crear la cuenta. */}
       {!terminada &&
-        (esApp ? (
+        (vozRestantes > 0 ? (
+          <InglesPronunciacionAtajo onAbrir={() => void enviar(PEDIR_FRASE)} accion="Probar" />
+        ) : esApp ? (
           <InglesPronunciacionAtajo onAbrir={() => setEntrada(true)} accion="Crear cuenta" />
         ) : (
           <InglesPronunciacionAtajo href={REGISTRO} />
