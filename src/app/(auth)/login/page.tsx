@@ -43,11 +43,14 @@ function LoginForm() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   // Cuenta sin confirmar: se confirma escribiendo el código del correo (ver CodigoConfirmacion).
   const [codigoPara, setCodigoPara] = useState<{ email: string; enviado: boolean } | null>(null);
+  // ?codigo=1 (p. ej. desde el correo a quienes no confirmaron): entrar solo con código, sin contraseña.
+  const [modoCodigo, setModoCodigo] = useState(searchParams.get("codigo") === "1");
 
   function switchMode(next: "login" | "register") {
     setMode(next);
     setMessage(null);
     setCodigoPara(null);
+    setModoCodigo(false);
     setPassword("");
     setConfirmPassword("");
   }
@@ -231,6 +234,9 @@ function LoginForm() {
             </div>
           )}
           {codigoPara && <CodigoConfirmacion key={codigoPara.email} {...codigoPara} returnUrl={returnUrl} />}
+          {modoCodigo && mode === "login" && (
+            <CodigoConfirmacion email={email} enviado={false} returnUrl={returnUrl} pedirCorreo />
+          )}
 
           {/* Google / Facebook: sirven igual para entrar que para crear cuenta */}
           {(["google", ...(facebookActivo ? ["facebook" as const] : [])] as SocialProvider[]).map((provider) => (
@@ -253,6 +259,7 @@ function LoginForm() {
             </button>
           ))}
 
+          {!(modoCodigo && mode === "login") && (
           <div className="flex items-center gap-3">
             <div className="h-px flex-1" style={{ background: "var(--color-border)" }} />
             <span className="text-xs font-medium tracking-wide" style={{ color: "var(--color-text-muted)" }}>
@@ -260,8 +267,10 @@ function LoginForm() {
             </span>
             <div className="h-px flex-1" style={{ background: "var(--color-border)" }} />
           </div>
+          )}
 
           {/* Email / password form */}
+          {!(modoCodigo && mode === "login") && (
           <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
             <input
               type="email"
@@ -329,9 +338,28 @@ function LoginForm() {
               {loading ? "Procesando…" : mode === "register" ? "Crear cuenta" : "Iniciar sesión"}
             </button>
           </form>
+          )}
+
+          {/* Entrar solo con código o con contraseña */}
+          {mode === "login" && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setModoCodigo(!modoCodigo);
+                  setMessage(null);
+                  setCodigoPara(null);
+                }}
+                className="text-xs font-semibold transition-opacity hover:opacity-75"
+                style={{ color: "var(--color-primary)" }}
+              >
+                {modoCodigo ? "Entrar con contraseña" : "Entrar con un código (sin contraseña)"}
+              </button>
+            </div>
+          )}
 
           {/* Forgot password */}
-          {mode === "login" && (
+          {mode === "login" && !modoCodigo && (
             <div className="text-center">
               <button
                 type="button"

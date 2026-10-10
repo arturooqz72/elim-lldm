@@ -8,7 +8,11 @@ interface Props {
   /** true si Supabase ya mandó el correo (recién registrado); si no, primero se pide. */
   enviado: boolean;
   returnUrl: string;
+  /** Entrar solo con código (sin contraseña): primero se escribe el correo aquí. */
+  pedirCorreo?: boolean;
 }
+
+const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function mensajeError(texto: string): string {
   const t = texto.toLowerCase();
@@ -16,6 +20,8 @@ function mensajeError(texto: string): string {
   if (segundos) return `Espera ${segundos} segundos antes de pedir otro código.`;
   if (t.includes("expired") || t.includes("invalid")) return "El código no es válido o ya venció. Revísalo o pide otro.";
   if (t.includes("rate limit")) return "Se pidieron muchos códigos. Intenta de nuevo en unos minutos.";
+  if (t.includes("signups not allowed") || t.includes("not found"))
+    return "No hay una cuenta con ese correo. Revisa que esté bien escrito o regístrate abajo.";
   return "No se pudo completar. Intenta de nuevo.";
 }
 
@@ -24,17 +30,22 @@ function mensajeError(texto: string): string {
  * nuevo o cuenta que nunca se confirmó). Escribir el código confirma la
  * cuenta y deja la sesión iniciada: ya no hace falta abrir el enlace.
  */
-export function CodigoConfirmacion({ email, enviado: enviadoInicial, returnUrl }: Props) {
+export function CodigoConfirmacion({ email: emailInicial, enviado: enviadoInicial, returnUrl, pedirCorreo }: Props) {
+  const [email, setEmail] = useState(emailInicial);
   const [enviado, setEnviado] = useState(enviadoInicial);
   const [codigo, setCodigo] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function pedir() {
+    if (!CORREO.test(email.trim())) {
+      setError("Escribe un correo válido.");
+      return;
+    }
     setCargando(true);
     setError(null);
     const { error: e } = await createFreshClient().auth.signInWithOtp({
-      email,
+      email: email.trim().toLowerCase(),
       options: { shouldCreateUser: false },
     });
     setCargando(false);
@@ -50,7 +61,7 @@ export function CodigoConfirmacion({ email, enviado: enviadoInicial, returnUrl }
     }
     setCargando(true);
     setError(null);
-    const { error: e } = await createFreshClient().auth.verifyOtp({ email, token, type: "email" });
+    const { error: e } = await createFreshClient().auth.verifyOtp({ email: email.trim().toLowerCase(), token, type: "email" });
     if (e) {
       setCargando(false);
       setError(mensajeError(e.message));
@@ -72,9 +83,28 @@ export function CodigoConfirmacion({ email, enviado: enviadoInicial, returnUrl }
     >
       {!enviado ? (
         <>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--color-text)" }}>
-            Pide un código a <strong>{email}</strong>: al escribirlo, tu correo queda confirmado y entras de una vez.
-          </p>
+          {pedirCorreo ? (
+            <>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text)" }}>
+                Escribe tu correo y te mandamos un código para entrar. No necesitas contraseña.
+              </p>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                style={estiloCampo}
+                aria-label="Correo electrónico"
+              />
+            </>
+          ) : (
+            <p className="text-xs leading-relaxed" style={{ color: "var(--color-text)" }}>
+              Pide un código a <strong>{email}</strong>: al escribirlo, tu correo queda confirmado y entras de una vez.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => void pedir()}
