@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { BellRing, Check, Loader2, Moon } from "lucide-react";
 import { InglesPaquetes } from "./InglesPaquetes";
-import type { InglesPaquete } from "@/types";
+import { EncuestaPrecio } from "./EncuestaPrecio";
+import type { EncuestaRespuesta, InglesPaquete } from "@/types";
 
 const GOLD = "#f5c842";
 
@@ -15,10 +16,13 @@ interface Props {
   /** Si el usuario ya está en la lista de espera (estado compartido del chat). */
   enLista: boolean;
   onApuntado: () => void;
+  /** Encuesta "¿Pagarías por mensajes ilimitados?" (lo que ya respondió). */
+  encuesta?: EncuestaRespuesta;
+  onEncuesta?: (respuesta: EncuestaRespuesta) => void;
 }
 
-/** Aviso al llegar al límite diario: paquetes de compra o lista de espera. */
-export function InglesAvisoLimite({ pagosActivos, paquetes, gratisDiarios, enLista, onApuntado }: Props) {
+/** Aviso al llegar al límite diario: paquetes de compra, o lista de espera y encuesta de precio. */
+export function InglesAvisoLimite({ pagosActivos, paquetes, gratisDiarios, enLista, onApuntado, encuesta, onEncuesta }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +73,8 @@ export function InglesAvisoLimite({ pagosActivos, paquetes, gratisDiarios, enLis
           {error}
         </p>
       )}
+
+      <EncuestaPrecio tipo="mensajes" inicial={encuesta} onRespondida={onEncuesta} />
     </div>
   );
 }

@@ -41,31 +41,34 @@ export function hashIp(request: Request): string {
 }
 
 export interface EstadoPrueba {
-  mensajes: Pick<InglesMensaje, "role" | "content">[];
+  mensajes: Pick<InglesMensaje, "id" | "role" | "content">[];
   restantes: number;
+  /** Intentos de voz que le quedan en la prueba (ENGLISH_TRIAL_VOICE). */
+  vozRestantes: number;
   /** Este navegador ya pasó su prueba a una cuenta: debe iniciar sesión. */
   reclamado: boolean;
 }
 
 /** Conversación y mensajes restantes del visitante (para /ingles sin sesión). */
 export async function leerPrueba(admin: SupabaseClient, anonId: string | null): Promise<EstadoPrueba> {
-  const total = inglesConfig().pruebaMensajes;
-  if (!anonId) return { mensajes: [], restantes: total, reclamado: false };
+  const { pruebaMensajes: total, pruebaVoz } = inglesConfig();
+  if (!anonId) return { mensajes: [], restantes: total, vozRestantes: pruebaVoz, reclamado: false };
 
   const [{ data: visitante }, { data: mensajes }] = await Promise.all([
-    admin.from("english_prueba_visitantes").select("usados, user_id").eq("anon_id", anonId).maybeSingle(),
+    admin.from("english_prueba_visitantes").select("usados, voz_usados, user_id").eq("anon_id", anonId).maybeSingle(),
     admin
       .from("english_prueba_mensajes")
-      .select("role, content")
+      .select("id, role, content")
       .eq("anon_id", anonId)
       .order("created_at")
       .limit(50),
   ]);
 
-  const v = visitante as { usados: number; user_id: string | null } | null;
+  const v = visitante as { usados: number; voz_usados: number; user_id: string | null } | null;
   return {
     mensajes: (mensajes ?? []) as EstadoPrueba["mensajes"],
     restantes: Math.max(0, total - (v?.usados ?? 0)),
+    vozRestantes: Math.max(0, pruebaVoz - (v?.voz_usados ?? 0)),
     reclamado: Boolean(v?.user_id),
   };
 }

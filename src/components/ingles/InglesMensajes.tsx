@@ -1,9 +1,29 @@
 import { GraduationCap, Loader2, User } from "lucide-react";
+import { piezas } from "@/lib/ingles/frases-chat";
+import { TarjetaFrase } from "./TarjetaFrase";
 import type { InglesMensaje } from "@/types";
 
 const GOLD = "#f5c842";
 
-type ChatMsg = Pick<InglesMensaje, "role" | "content">;
+type ChatMsg = Pick<InglesMensaje, "id" | "role" | "content">;
+
+/** Respuesta de la tutora: texto normal y, donde marcó una frase, su tarjeta de voz. */
+function ContenidoTutora({ mensaje }: { mensaje: ChatMsg }) {
+  return (
+    <>
+      {piezas(mensaje.content).map((p, i, todas) =>
+        p.tipo === "texto" ? (
+          // Sin el espacio que queda pegado a una tarjeta (se ve como sangría).
+          <span key={i}>
+            {todas[i - 1]?.tipo === "frase" ? p.texto.replace(/^[ \t]+/, "") : p.texto}
+          </span>
+        ) : (
+          <TarjetaFrase key={i} texto={p.texto} mensajeId={mensaje.id} indice={p.indice} />
+        ),
+      )}
+    </>
+  );
+}
 
 function Avatar({ rol }: { rol: ChatMsg["role"] }) {
   return (
@@ -68,17 +88,19 @@ export function InglesMensajes({ mensajes, bienvenida, escribiendo, sugerencias,
       )}
 
       {mensajes.map((m, i) => (
-        <div key={i} className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+        <div key={m.id ?? i} className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
           <Avatar rol={m.role} />
           <div
-            className="px-4 py-3 rounded-2xl text-sm max-w-[80%] whitespace-pre-wrap break-words"
+            className={`px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+              m.role === "assistant" ? "max-w-[88%]" : "max-w-[80%]"
+            }`}
             style={
               m.role === "user"
                 ? { background: GOLD, color: "#000" }
                 : { background: "var(--color-surface-elevated)", color: "var(--color-text)" }
             }
           >
-            {m.content}
+            {m.role === "assistant" ? <ContenidoTutora mensaje={m} /> : m.content}
           </div>
         </div>
       ))}

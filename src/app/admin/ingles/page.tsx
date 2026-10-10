@@ -2,6 +2,8 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
 import { leerEstadisticas } from "@/lib/ingles/estadisticas.server";
+import { leerEstadisticasVoz } from "@/lib/ingles/estadisticas-voz.server";
+import { SeccionVoz } from "./SeccionVoz";
 import { inglesConfig, pagosActivos } from "@/lib/ingles/config";
 
 export const metadata = { title: "Estadísticas de Elim English — Admin" };
@@ -39,7 +41,10 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const { dias, totales, modos, alLimite, prueba, app, rachas } = await leerEstadisticas(supabase, numDias);
+  const [{ dias, totales, modos, alLimite, prueba, app, rachas }, voz] = await Promise.all([
+    leerEstadisticas(supabase, numDias),
+    leerEstadisticasVoz(supabase, numDias),
+  ]);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
   return (
@@ -74,7 +79,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Tarjeta valor={totales.personasVisitaron} titulo="Personas que entraron a /ingles" nota="con o sin cuenta" />
-        <Tarjeta valor={totales.usuariosActivos} titulo="Usaron la tutora" nota="mandaron al menos un mensaje" />
+        <Tarjeta valor={totales.usuariosActivos} titulo="Usaron la tutora" nota="mandaron un mensaje o practicaron con la voz" />
         <Tarjeta
           valor={totales.regresaron}
           titulo="Regresaron"
@@ -86,7 +91,7 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           nota="abrieron /ingles en el rango y ya lo habían abierto otro día, aunque no escribieran"
         />
         <Tarjeta valor={totales.mensajes} titulo="Mensajes de chat" />
-        <Tarjeta valor={totales.intentosPronunciacion} titulo="Intentos de pronunciación" />
+        <Tarjeta valor={totales.intentosPronunciacion} titulo="Intentos de voz con cuenta" nota="chat + modo Pronunciación (detalle abajo)" />
         <Tarjeta
           valor={totales.llegaronAlLimite}
           titulo="Veces que alguien llegó al límite"
@@ -258,6 +263,8 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           </table>
         )}
       </div>
+
+      <SeccionVoz datos={voz} vozDiarios={inglesConfig().vozGratisDiarios} />
 
       <div className="rounded-2xl p-5" style={borde}>
         <p className="text-sm font-semibold mb-3" style={{ color: "var(--color-text)" }}>

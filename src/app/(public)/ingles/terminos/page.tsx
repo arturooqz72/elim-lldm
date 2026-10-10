@@ -26,7 +26,7 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 }
 
 export default function InglesTerminosPage() {
-  const { gratisDiarios, costoPronunciacion } = inglesConfig();
+  const { gratisDiarios, vozGratisDiarios } = inglesConfig();
   const paquetes = inglesPaquetes();
   // ENGLISH_PAYMENTS_ENABLED: con la venta pausada el servicio es solo gratuito.
   const conPagos = pagosActivos();
@@ -100,8 +100,8 @@ export default function InglesTerminosPage() {
               </li>
               <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
               <li>
-                En el modo Pronunciación cada intento cuesta {costoPronunciacion} mensajes. Si no se detecta tu voz o la
-                evaluación falla, no se descuenta.
+                La práctica de voz tiene su propio límite: {vozGratisDiarios} intentos gratis al día, aparte de los
+                mensajes. Si no se detecta tu voz o la evaluación falla, el intento no se cuenta.
               </li>
             </ul>
           </Seccion>
@@ -117,8 +117,9 @@ export default function InglesTerminosPage() {
                 y los que no uses no se acumulan.
               </li>
               <li>
-                En el modo Pronunciación cada intento usa {costoPronunciacion} de tus mensajes del día. Si no se detecta
-                tu voz o la evaluación falla, no se descuenta.
+                La práctica de voz (modo Pronunciación y las frases para practicar dentro del chat) tiene su propio
+                límite: {vozGratisDiarios} intentos gratis al día, aparte de los mensajes, que también se renuevan a
+                medianoche, hora del Pacífico. Si no se detecta tu voz o la evaluación falla, el intento no se cuenta.
               </li>
               <li>Si un mensaje falla por un error nuestro, no se descuenta.</li>
               <li>

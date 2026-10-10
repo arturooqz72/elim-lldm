@@ -113,25 +113,25 @@ export function diaDe(instante: string | Date): string {
   return fechaEnZona(new Date(instante), TZ);
 }
 
-/** Mensajes del reto de hoy (pregunta y respuesta), en orden. */
+/** Mensajes del reto de hoy (pregunta y respuesta), en orden, con su id. */
 export async function mensajesRetoHoy(
   admin: SupabaseClient,
   userId: string,
   dia: string = hoyPacifico(),
-): Promise<{ role: "user" | "assistant"; content: string }[]> {
+): Promise<{ id: string; role: "user" | "assistant"; content: string }[]> {
   // Margen de un día hacia atrás; luego se filtra por día del Pacífico.
   const desde = new Date(Date.parse(`${dia}T00:00:00Z`) - 86_400_000).toISOString();
   const { data } = await admin
     .from("english_mensajes")
-    .select("role, content, created_at")
+    .select("id, role, content, created_at")
     .eq("user_id", userId)
     .eq("modo", "reto")
     .gte("created_at", desde)
     .order("created_at")
     .limit(100);
-  return ((data ?? []) as { role: "user" | "assistant"; content: string; created_at: string }[])
+  return ((data ?? []) as { id: string; role: "user" | "assistant"; content: string; created_at: string }[])
     .filter((m) => diaDe(m.created_at) === dia)
-    .map(({ role, content }) => ({ role, content }));
+    .map(({ id, role, content }) => ({ id, role, content }));
 }
 
 export async function avanceReto(

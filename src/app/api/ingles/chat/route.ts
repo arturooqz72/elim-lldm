@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { esModo, esNivel, esSituacion, inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
+import { limpiarRespuesta } from "@/lib/ingles/frases-chat";
 import { promptTutora } from "@/lib/ingles/prompts";
 import { leerRacha } from "@/lib/ingles/retos.server";
-import type { InglesSaldo } from "@/types";
+import { saldoTrasMensaje } from "@/lib/ingles/saldo.server";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -58,11 +59,7 @@ export async function POST(request: Request) {
   }
 
   const consumo = consumoData as Consumo;
-  const saldo: InglesSaldo = {
-    gratisRestantes: consumo.gratis_restantes,
-    gratisDiarios: cfg.gratisDiarios,
-    creditos: consumo.creditos,
-  };
+  const saldo = await saldoTrasMensaje(admin, user.id, consumo);
 
   if (consumo.origen === "limite_alcanzado") {
     return NextResponse.json({ estado: "limite_alcanzado", saldo, paquetes: inglesPaquetes() });
@@ -125,18 +122,25 @@ export async function POST(request: Request) {
     await devolver();
     return NextResponse.json({ error: "La tutora no generó una respuesta. Tu mensaje no se cobró." }, { status: 502 });
   }
+  // Como mucho 2 frases marcadas para practicar con la voz (ver frases-chat.ts).
+  reply = limpiarRespuesta(reply);
 
   // 4) Guardar la conversación. created_at explícito para que la pregunta
-  // quede siempre antes que la respuesta al ordenar.
+  // quede siempre antes que la respuesta al ordenar. El id de la respuesta
+  // permite practicar con la voz sus frases marcadas.
   const ahora = Date.now();
-  const { error: insertError } = await admin.from("english_mensajes").insert([
-    { user_id: user.id, modo, role: "user", content: message, created_at: new Date(ahora).toISOString() },
-    { user_id: user.id, modo, role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
-  ]);
+  const { data: guardados, error: insertError } = await admin
+    .from("english_mensajes")
+    .insert([
+      { user_id: user.id, modo, role: "user", content: message, created_at: new Date(ahora).toISOString() },
+      { user_id: user.id, modo, role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
+    ])
+    .select("id, role");
   if (insertError) console.error("Elim English — no se guardó el historial:", insertError.message);
+  const mensajeId = (guardados as { id: string; role: string }[] | null)?.find((m) => m.role === "assistant")?.id ?? null;
 
   // La racha puede subir hoy al llegar a 3 mensajes (la flama se actualiza).
   const racha = await leerRacha(admin, user.id);
 
-  return NextResponse.json({ estado: "ok", reply, saldo, racha });
+  return NextResponse.json({ estado: "ok", reply, mensajeId, saldo, racha });
 }

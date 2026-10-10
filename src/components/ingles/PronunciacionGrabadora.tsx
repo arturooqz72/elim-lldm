@@ -5,13 +5,16 @@ import { useGrabadoraWav, type ErrorGrabadora } from "./useGrabadoraWav";
 
 const GOLD = "#f5c842";
 
-const AYUDA: Record<ErrorGrabadora, { titulo: string; pasos: string[] }> = {
+/** Cómo activar el micrófono según el problema (también lo usan las tarjetas del chat). */
+export const AYUDA_MICROFONO: Record<ErrorGrabadora, { titulo: string; pasos: string[] }> = {
   denegado: {
     titulo: "No tenemos permiso para usar tu micrófono",
     pasos: [
       "Chrome en computadora: toca el candado junto a la dirección del sitio → Micrófono → Permitir, y recarga la página.",
       "Chrome en Android: toca el candado (o los tres puntos → Configuración → Configuración de sitios) → Micrófono → Permitir.",
       "Safari en iPhone: toca \"aA\" en la barra de dirección → Configuración del sitio web → Micrófono → Permitir. Si no aparece, ve a Ajustes → Safari → Micrófono.",
+      "App instalada en iPhone: ve a Ajustes → Safari → Micrófono → Permitir (o Preguntar), cierra la app y ábrela otra vez.",
+      "App instalada en Android: mantén presionado el ícono de la app → Información de la app → Permisos → Micrófono → Permitir.",
     ],
   },
   sin_microfono: {
@@ -90,10 +93,10 @@ export function PronunciacionGrabadora({ maxSegundos, deshabilitado, onGrabado }
         >
           <p className="font-semibold flex items-center gap-2" style={{ color: "var(--color-destructive)" }}>
             <MicOff size={15} />
-            {AYUDA[error].titulo}
+            {AYUDA_MICROFONO[error].titulo}
           </p>
           <ul className="list-disc pl-5 flex flex-col gap-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-            {AYUDA[error].pasos.map((p) => (
+            {AYUDA_MICROFONO[error].pasos.map((p) => (
               <li key={p}>{p}</li>
             ))}
           </ul>

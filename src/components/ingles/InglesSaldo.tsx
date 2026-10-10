@@ -1,4 +1,4 @@
-import { Coins, Flame, MessageCircle } from "lucide-react";
+import { Coins, Flame, MessageCircle, Mic } from "lucide-react";
 import type { InglesRacha, InglesSaldo as Saldo } from "@/types";
 
 const GOLD = "#f5c842";
@@ -13,11 +13,19 @@ interface Props {
 
 export function InglesSaldo({ saldo, mostrarCreditos, racha }: Props) {
   const sinGratis = saldo.gratisRestantes === 0;
+  const sinVoz = saldo.vozRestantes === 0;
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
-      <span className="flex items-center gap-1.5">
+      {/* "20 mensajes · 10 de voz": lo que queda hoy de cada contador (se renuevan a medianoche, hora del Pacífico). */}
+      <span
+        className="flex items-center gap-1.5"
+        title={`Hoy: ${saldo.gratisDiarios} mensajes y ${saldo.vozDiarios} intentos de voz gratis`}
+      >
         <MessageCircle size={13} style={{ color: sinGratis ? "var(--color-destructive)" : GOLD }} />
-        <strong style={{ color: "var(--color-text)" }}>{saldo.gratisRestantes}</strong> de {saldo.gratisDiarios} gratis hoy
+        <strong style={{ color: "var(--color-text)" }}>{saldo.gratisRestantes}</strong> mensajes
+        <span aria-hidden>·</span>
+        <Mic size={13} style={{ color: sinVoz ? "var(--color-destructive)" : GOLD }} />
+        <strong style={{ color: "var(--color-text)" }}>{saldo.vozRestantes}</strong> de voz
       </span>
       {racha && (
         <span

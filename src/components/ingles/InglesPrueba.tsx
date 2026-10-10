@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesPruebaFin } from "./InglesPruebaFin";
@@ -12,6 +12,7 @@ import { InglesAvisoApp } from "./InglesAvisoApp";
 import { InglesEntradaApp } from "./InglesEntradaApp";
 import { abiertaComoApp } from "./instalacionApp";
 import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
+import { VozContext, type ContextoVoz } from "./contextoVoz";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesReto } from "@/types";
 
@@ -19,7 +20,8 @@ const GOLD = "#f5c842";
 /** sessionStorage: en esta apertura de la app ya eligió "Pruébala sin cuenta". */
 const CLAVE_PROBAR = "elim-english-probar";
 
-type ChatMsg = Pick<InglesMensaje, "role" | "content">;
+type ChatMsg = Pick<InglesMensaje, "id" | "role" | "content">;
+const REGISTRO = "/login?returnUrl=%2Fingles&modo=registro";
 
 interface Props {
   mensajesIniciales: ChatMsg[];
@@ -28,6 +30,10 @@ interface Props {
   gratisDiarios: number;
   maxCaracteres: number;
   reclamadoInicial: boolean;
+  /** Intento de voz de la prueba (tarjetas 🎤 del chat) y los que da una cuenta. */
+  vozRestantesIniciales: number;
+  vozDiarios: number;
+  pronMaxSegundos: number;
   /** Reto del día: sin cuenta solo se puede ver (invita a registrarse). */
   reto: InglesReto | null;
 }
@@ -44,8 +50,29 @@ export function InglesPrueba(props: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vozRestantes, setVozRestantes] = useState(props.reclamadoInicial ? 0 : props.vozRestantesIniciales);
+  // Tocó 🎤 sin intento de prueba: se muestra la invitación a crear cuenta.
+  const [vozFin, setVozFin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const terminada = restantes <= 0;
+
+  // Tarjetas de voz en la prueba: 1 intento; luego, la invitación.
+  const voz = useMemo<ContextoVoz>(
+    () => ({
+      prueba: true,
+      nivel: "principiante",
+      maxSegundos: props.pronMaxSegundos,
+      restantes: vozRestantes,
+      actualizar: ({ vozPrueba }) => {
+        if (typeof vozPrueba === "number") setVozRestantes(vozPrueba);
+      },
+      alLimite: () => {
+        setVozRestantes(0);
+        setVozFin(true);
+      },
+    }),
+    [props.pronMaxSegundos, vozRestantes],
+  );
   // App instalada sin sesión y sin prueba empezada: primero la pantalla de
   // entrada (iniciar sesión o probar). Solo se sabe en el cliente.
   const [entrada, setEntrada] = useState(false);
@@ -75,7 +102,7 @@ export function InglesPrueba(props: Props) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [mensajes, loading, terminada]);
+  }, [mensajes, loading, terminada, vozFin]);
 
   async function enviar(directo?: string) {
     const texto = (directo ?? input).trim();
@@ -97,7 +124,13 @@ export function InglesPrueba(props: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: texto }),
       });
-      const data = (await res.json()) as { estado?: string; reply?: string; restantes?: number; error?: string };
+      const data = (await res.json()) as {
+        estado?: string;
+        reply?: string;
+        mensajeId?: string | null;
+        restantes?: number;
+        error?: string;
+      };
 
       if (res.status === 409) {
         window.location.reload();
@@ -112,7 +145,7 @@ export function InglesPrueba(props: Props) {
       }
       if (!res.ok || !data.reply) throw new Error(data.error ?? "Error al consultar a la tutora");
 
-      setMensajes((prev) => [...prev, { role: "assistant", content: data.reply! }]);
+      setMensajes((prev) => [...prev, { id: data.mensajeId ?? undefined, role: "assistant", content: data.reply! }]);
       if (typeof data.restantes === "number") setRestantes(data.restantes);
     } catch (err) {
       deshacer();
@@ -152,6 +185,7 @@ export function InglesPrueba(props: Props) {
           <strong style={{ color: "var(--color-text)" }}>
             {Math.max(0, restantes)} de {totalPrueba}
           </strong>
+          {" · "}voz: <strong style={{ color: "var(--color-text)" }}>{vozRestantes}</strong>
         </span>
       </div>
 
@@ -163,18 +197,47 @@ export function InglesPrueba(props: Props) {
         (esApp ? (
           <InglesPronunciacionAtajo onAbrir={() => setEntrada(true)} accion="Crear cuenta" />
         ) : (
-          <InglesPronunciacionAtajo href="/login?returnUrl=%2Fingles&modo=registro" />
+          <InglesPronunciacionAtajo href={REGISTRO} />
         ))}
 
       {/* Mensajes */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-        <InglesMensajes
-          mensajes={mensajes}
-          bienvenida={BIENVENIDA.conversacion}
-          escribiendo={loading}
-          sugerencias={terminada ? undefined : SUGERENCIAS.conversacion}
-          onSugerencia={(t) => void enviar(t)}
-        />
+        <VozContext.Provider value={voz}>
+          <InglesMensajes
+            mensajes={mensajes}
+            bienvenida={BIENVENIDA.conversacion}
+            escribiendo={loading}
+            sugerencias={terminada ? undefined : SUGERENCIAS.conversacion}
+            onSugerencia={(t) => void enviar(t)}
+          />
+        </VozContext.Provider>
+
+        {vozFin && (
+          <div
+            className="rounded-2xl p-4 flex flex-col items-start gap-3"
+            style={{ background: `${GOLD}0F`, border: `1px solid ${GOLD}55` }}
+            role="status"
+          >
+            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+              🎤 Ya usaste tu práctica de voz de la prueba. Crea tu cuenta gratis para practicar con tu voz:{" "}
+              {props.vozDiarios} intentos al día, aparte de los mensajes.
+            </p>
+            {esApp ? (
+              <button
+                type="button"
+                onClick={() => setEntrada(true)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: GOLD, color: "#000" }}
+              >
+                Crear cuenta gratis
+              </button>
+            ) : (
+              <Link href={REGISTRO} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{ background: GOLD, color: "#000" }}>
+                Crear cuenta gratis
+              </Link>
+            )}
+          </div>
+        )}
 
         {error && (
           <div

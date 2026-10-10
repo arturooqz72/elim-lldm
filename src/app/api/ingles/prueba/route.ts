@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { inglesConfig } from "@/lib/ingles/config";
 import { promptTutora } from "@/lib/ingles/prompts";
 import { conversar, type MensajeModelo } from "@/lib/ingles/anthropic.server";
+import { limpiarRespuesta } from "@/lib/ingles/frases-chat";
 import { anonIdValido, COOKIE_PRUEBA, hashIp, opcionesCookiePrueba } from "@/lib/ingles/prueba.server";
 
 interface Consumo {
@@ -83,23 +84,31 @@ export async function POST(request: Request) {
   while (history.length && history[0].role !== "user") history.shift();
 
   // 3) Llamar al modelo; si falla, se devuelve el mensaje apartado.
-  const reply = await conversar(
+  const respuesta = await conversar(
     promptTutora("principiante", "conversacion", "restaurante"),
     [...history, { role: "user", content: message }],
     cfg.maxTokens,
   );
-  if (!reply) {
+  if (!respuesta) {
     await admin.rpc("english_prueba_devolver", { p_anon: anonId, p_ip_hash: ipHash, p_dia: consumo.dia_pacifico });
     return responder({ error: "Error al consultar a la tutora. Este mensaje no se contó; intenta de nuevo." }, 502);
   }
 
-  // 4) Guardar la conversación (pregunta siempre antes que la respuesta).
-  const ahora = Date.now();
-  const { error: insertError } = await admin.from("english_prueba_mensajes").insert([
-    { anon_id: anonId, role: "user", content: message, created_at: new Date(ahora).toISOString() },
-    { anon_id: anonId, role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
-  ]);
-  if (insertError) console.error("Elim English — no se guardó la prueba:", insertError.message);
+  // Como mucho 2 frases marcadas para practicar con la voz (ver frases-chat.ts).
+  const reply = limpiarRespuesta(respuesta);
 
-  return responder({ estado: "ok", reply, restantes: consumo.restantes });
+  // 4) Guardar la conversación (pregunta siempre antes que la respuesta). El
+  // id de la respuesta permite probar la voz con sus frases marcadas.
+  const ahora = Date.now();
+  const { data: guardados, error: insertError } = await admin
+    .from("english_prueba_mensajes")
+    .insert([
+      { anon_id: anonId, role: "user", content: message, created_at: new Date(ahora).toISOString() },
+      { anon_id: anonId, role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
+    ])
+    .select("id, role");
+  if (insertError) console.error("Elim English — no se guardó la prueba:", insertError.message);
+  const mensajeId = (guardados as { id: string; role: string }[] | null)?.find((m) => m.role === "assistant")?.id ?? null;
+
+  return responder({ estado: "ok", reply, mensajeId, restantes: consumo.restantes });
 }

@@ -562,6 +562,8 @@ export interface InglesPerfil {
 }
 
 export interface InglesMensaje {
+  /** Id en la base (para practicar con la voz las frases que marcó la tutora). */
+  id?: string;
   modo: InglesModo;
   role: "user" | "assistant";
   content: string;
@@ -572,7 +574,15 @@ export interface InglesSaldo {
   gratisRestantes: number;
   gratisDiarios: number;
   creditos: number;
+  /** Intentos de voz de hoy (contador aparte de los mensajes escritos). */
+  vozRestantes: number;
+  vozDiarios: number;
 }
+
+/** Encuesta "¿Pagarías…?" — solo una encuesta, no es un cobro. */
+export type EncuestaTipo = "voz" | "mensajes";
+export type EncuestaRespuesta = "no" | "3" | "5" | "10";
+export type EncuestasUsuario = Partial<Record<EncuestaTipo, EncuestaRespuesta>>;
 
 /** Paquete tal como se muestra en pantalla (precio ya decidido por el servidor). */
 export interface InglesPaquete {

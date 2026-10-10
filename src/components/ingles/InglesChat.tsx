@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesOpciones } from "./InglesOpciones";
-import { InglesAvisoLimite } from "./InglesAvisoLimite";
+import { InglesChatAvisos } from "./InglesChatAvisos";
 import { InglesPronunciacion } from "./InglesPronunciacion";
 import { InglesSaldo } from "./InglesSaldo";
 import { InglesInstalar } from "./InglesInstalar";
@@ -14,10 +14,12 @@ import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
 import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
 import { InglesRetoLogro } from "./InglesRetoLogro";
 import { useAvisoCompra } from "./useAvisoCompra";
-import { BIENVENIDA, MODOS, SUGERENCIAS } from "@/lib/ingles/etiquetas";
+import { VozContext, type ContextoVoz } from "./contextoVoz";
+import { agrupar, bienvenidaReto, type ChatMsg, type RespuestaChat as Respuesta } from "./chatAyudas";
+import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type {
+  EncuestasUsuario,
   InglesMensaje,
-  InglesModo,
   InglesPaquete,
   InglesPerfil,
   InglesRacha,
@@ -30,8 +32,6 @@ import type {
 
 const GOLD = "#f5c842";
 
-type ChatMsg = Pick<InglesMensaje, "role" | "content">;
-
 interface Props {
   displayName: string;
   perfilInicial: InglesPerfil;
@@ -40,38 +40,20 @@ interface Props {
   paquetes: InglesPaquete[];
   maxCaracteres: number;
   compra: "ok" | "cancelada" | null;
-  /** Modo Pronunciación */
-  costoPronunciacion: number;
+  /** Grabaciones de voz (modo Pronunciación y tarjetas del chat). */
   pronMaxSegundos: number;
   fraseInicial: PronFrase | null;
   progresoInicial: PronProgreso;
   /** ENGLISH_PAYMENTS_ENABLED y si el usuario ya está en la lista de espera. */
   pagosActivos: boolean;
   enListaEspera: boolean;
+  /** Respuestas que ya dio a las encuestas "¿Pagarías…?". */
+  encuestas: EncuestasUsuario;
   /** Reto del día (null si no se pudo cargar), su conversación de hoy y la racha. */
   reto: InglesReto | null;
   avanceInicial: InglesRetoAvance;
   mensajesRetoIniciales: ChatMsg[];
   rachaInicial: InglesRacha;
-}
-
-interface Respuesta {
-  estado?: string;
-  reply?: string;
-  saldo?: Saldo;
-  error?: string;
-  racha?: InglesRacha;
-  avance?: InglesRetoAvance;
-}
-
-function agrupar(mensajes: InglesMensaje[]): Record<InglesModo, ChatMsg[]> {
-  const grupos = Object.fromEntries(MODOS.map((m) => [m, [] as ChatMsg[]])) as Record<InglesModo, ChatMsg[]>;
-  for (const m of mensajes) grupos[m.modo]?.push({ role: m.role, content: m.content });
-  return grupos;
-}
-
-function bienvenidaReto(reto: InglesReto): string {
-  return `¡Reto de hoy: ${reto.titulo}! Escríbeme la frase 1 en inglés: "${reto.frases[0].en}" (puedes adaptarla a tu caso). Te corrijo y seguimos con la 2 y la 3.`;
 }
 
 export function InglesChat(props: Props) {
@@ -80,7 +62,10 @@ export function InglesChat(props: Props) {
   const [mensajes, setMensajes] = useState(() => agrupar(mensajesIniciales));
   const [saldo, setSaldo] = useState<Saldo>(saldoInicial);
   const [enLista, setEnLista] = useState(props.enListaEspera);
+  const [encuestas, setEncuestas] = useState<EncuestasUsuario>(props.encuestas);
   const [limite, setLimite] = useState(saldoInicial.gratisRestantes === 0 && saldoInicial.creditos === 0);
+  // Se muestra el aviso de voz solo cuando intenta usar la voz sin intentos.
+  const [limiteVoz, setLimiteVoz] = useState(false);
   const aviso = useAvisoCompra(compra, saldoInicial.creditos, (nuevo) => {
     setSaldo(nuevo);
     setLimite(false);
@@ -96,7 +81,22 @@ export function InglesChat(props: Props) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [mensajes, mensajesReto, perfil.modo, enReto, loading, limite, avance.completado]);
+  }, [mensajes, mensajesReto, perfil.modo, enReto, loading, limite, limiteVoz, avance.completado]);
+
+  // Tarjetas de voz del chat (🔊/🎤): usan el contador de voz de hoy.
+  const voz = useMemo<ContextoVoz>(
+    () => ({
+      prueba: false,
+      nivel: perfil.nivel,
+      maxSegundos: props.pronMaxSegundos,
+      restantes: saldo.vozRestantes,
+      actualizar: ({ saldo: nuevo }) => {
+        if (nuevo) setSaldo(nuevo);
+      },
+      alLimite: () => setLimiteVoz(true),
+    }),
+    [perfil.nivel, props.pronMaxSegundos, saldo.vozRestantes],
+  );
 
   function cambiarPerfil(nuevo: InglesPerfil) {
     setPerfil(nuevo);
@@ -150,7 +150,7 @@ export function InglesChat(props: Props) {
       }
       if (!res.ok || !data.reply) throw new Error(data.error ?? "Error al consultar a la tutora");
 
-      agregar({ role: "assistant", content: data.reply });
+      agregar({ id: data.mensajeId ?? undefined, role: "assistant", content: data.reply });
       if (data.avance) setAvance(data.avance);
     } catch (err) {
       deshacer();
@@ -173,6 +173,8 @@ export function InglesChat(props: Props) {
 
   const pron = !enReto && perfil.modo === "pronunciacion";
   const actuales = enReto ? mensajesReto : mensajes[perfil.modo];
+  const guardarEncuesta = (tipo: keyof EncuestasUsuario, r: NonNullable<EncuestasUsuario["voz"]>) =>
+    setEncuestas((prev) => ({ ...prev, [tipo]: r }));
 
   return (
     <div
@@ -231,49 +233,41 @@ export function InglesChat(props: Props) {
         {pron ? (
           <InglesPronunciacion
             nivel={perfil.nivel}
-            costo={props.costoPronunciacion}
             maxSegundos={props.pronMaxSegundos}
             saldo={saldo}
-            paquetes={paquetes}
             fraseInicial={props.fraseInicial}
             progresoInicial={props.progresoInicial}
             onSaldo={setSaldo}
-            pagosActivos={props.pagosActivos}
-            enLista={enLista}
-            onApuntado={() => setEnLista(true)}
+            encuestaVoz={encuestas.voz}
+            onEncuestaVoz={(r) => guardarEncuesta("voz", r)}
           />
         ) : (
-          <InglesMensajes
-            mensajes={actuales}
-            bienvenida={enReto && reto ? bienvenidaReto(reto) : BIENVENIDA[perfil.modo]}
-            escribiendo={loading}
-            sugerencias={limite || enReto ? undefined : SUGERENCIAS[perfil.modo as keyof typeof SUGERENCIAS]}
-            onSugerencia={(t) => void enviar(t)}
-          />
+          <VozContext.Provider value={voz}>
+            <InglesMensajes
+              mensajes={actuales}
+              bienvenida={enReto && reto ? bienvenidaReto(reto) : BIENVENIDA[perfil.modo]}
+              escribiendo={loading}
+              sugerencias={limite || enReto ? undefined : SUGERENCIAS[perfil.modo as keyof typeof SUGERENCIAS]}
+              onSugerencia={(t) => void enviar(t)}
+            />
+          </VozContext.Provider>
         )}
 
         {enReto && avance.completado && !loading && <InglesRetoLogro racha={racha} />}
 
-        {!pron && error && (
-          <div
-            className="px-4 py-3 rounded-2xl text-sm"
-            style={{
-              background: "rgba(248,113,113,0.1)",
-              border: "1px solid rgba(248,113,113,0.3)",
-              color: "var(--color-destructive)",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {!pron && limite && (
-          <InglesAvisoLimite
+        {!pron && (
+          <InglesChatAvisos
+            error={error}
+            limite={limite}
+            limiteVoz={limiteVoz && saldo.vozRestantes <= 0}
+            mensajesRestantes={saldo.gratisRestantes}
             pagosActivos={props.pagosActivos}
             paquetes={paquetes}
             gratisDiarios={saldo.gratisDiarios}
             enLista={enLista}
             onApuntado={() => setEnLista(true)}
+            encuestas={encuestas}
+            onEncuesta={guardarEncuesta}
           />
         )}
       </div>

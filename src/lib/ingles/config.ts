@@ -23,8 +23,15 @@ export function inglesConfig() {
     maxCaracteres: entero("ENGLISH_MAX_CHARS", 1000),
     /** Mensajes previos que se mandan al modelo (no todo el historial). */
     historial: entero("ENGLISH_HISTORY_LIMIT", 12),
-    /** Mensajes que cuesta cada intento de pronunciación. */
-    costoPronunciacion: entero("ENGLISH_PRONUNCIATION_COST", 3),
+    /**
+     * Intentos de voz gratis por día (tarjetas del chat y modo Pronunciación),
+     * aparte de los mensajes escritos. Solo cuentan los que Azure evaluó.
+     */
+    vozGratisDiarios: entero("ENGLISH_VOICE_FREE_DAILY", 10),
+    /** Prueba sin cuenta: intentos de voz por visitante. */
+    pruebaVoz: entero("ENGLISH_TRIAL_VOICE", 1),
+    /** Prueba sin cuenta: tope de intentos de voz de todo el sitio por día (costo de Azure). */
+    pruebaVozGlobalDiaria: entero("ENGLISH_TRIAL_VOICE_GLOBAL_DAILY", 100),
     /** Duración máxima de la grabación (también se valida en el servidor). */
     pronMaxSegundos: entero("ENGLISH_PRON_MAX_SECONDS", 15),
     /** Tope de frases nuevas generadas por usuario por día (costo de Anthropic). */

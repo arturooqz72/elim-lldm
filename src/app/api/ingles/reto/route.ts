@@ -3,9 +3,10 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { esNivel, inglesConfig, inglesPaquetes } from "@/lib/ingles/config";
 import { promptReto } from "@/lib/ingles/prompts";
 import { conversar } from "@/lib/ingles/anthropic.server";
-import { hoyPacifico } from "@/lib/ingles/saldo.server";
+import { limpiarRespuesta } from "@/lib/ingles/frases-chat";
+import { hoyPacifico, saldoTrasMensaje } from "@/lib/ingles/saldo.server";
 import { completarReto, leerRacha, leerReto, mensajesRetoHoy } from "@/lib/ingles/retos.server";
-import type { InglesRetoAvance, InglesSaldo } from "@/types";
+import type { InglesRetoAvance } from "@/types";
 
 interface Consumo {
   origen: "gratis" | "credito" | "limite_alcanzado";
@@ -47,11 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo verificar tu saldo" }, { status: 500 });
   }
   const consumo = consumoData as Consumo;
-  const saldo: InglesSaldo = {
-    gratisRestantes: consumo.gratis_restantes,
-    gratisDiarios: cfg.gratisDiarios,
-    creditos: consumo.creditos,
-  };
+  const saldo = await saldoTrasMensaje(admin, user.id, consumo);
   if (consumo.origen === "limite_alcanzado") {
     return NextResponse.json({ estado: "limite_alcanzado", saldo, paquetes: inglesPaquetes() });
   }
@@ -59,26 +56,34 @@ export async function POST(request: Request) {
   // 2) Solo la conversación del reto de HOY.
   const historial = await mensajesRetoHoy(admin, user.id, hoy);
   const previos = historial.filter((m) => m.role === "user").length;
-  const contexto = historial.slice(-cfg.historial);
+  // Al modelo solo van rol y texto (el id es para las tarjetas de voz).
+  const contexto = historial.slice(-cfg.historial).map(({ role, content }) => ({ role, content }));
   while (contexto.length && contexto[0].role !== "user") contexto.shift();
 
   // 3) Llamar al modelo; si falla, se devuelve el mensaje descontado.
-  const reply = await conversar(
+  const respuesta = await conversar(
     promptReto(nivel, reto, cfg.retoMensajes),
     [...contexto, { role: "user", content: message }],
     cfg.maxTokens,
   );
-  if (!reply) {
+  if (!respuesta) {
     await admin.rpc("english_devolver_mensaje", { p_user: user.id, p_origen: consumo.origen });
     return NextResponse.json({ error: "Error al consultar a la tutora. Tu mensaje no se cobró." }, { status: 502 });
   }
 
+  // Como mucho 2 frases marcadas para practicar con la voz (ver frases-chat.ts).
+  const reply = limpiarRespuesta(respuesta);
+
   const ahora = Date.now();
-  const { error: insertError } = await admin.from("english_mensajes").insert([
-    { user_id: user.id, modo: "reto", role: "user", content: message, created_at: new Date(ahora).toISOString() },
-    { user_id: user.id, modo: "reto", role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
-  ]);
+  const { data: guardados, error: insertError } = await admin
+    .from("english_mensajes")
+    .insert([
+      { user_id: user.id, modo: "reto", role: "user", content: message, created_at: new Date(ahora).toISOString() },
+      { user_id: user.id, modo: "reto", role: "assistant", content: reply, created_at: new Date(ahora + 1).toISOString() },
+    ])
+    .select("id, role");
   if (insertError) console.error("Elim English — no se guardó el reto:", insertError.message);
+  const mensajeId = (guardados as { id: string; role: string }[] | null)?.find((m) => m.role === "assistant")?.id ?? null;
 
   // 4) ¿Ya completó el reto? (true solo la primera vez, para felicitar una vez)
   const mensajes = previos + 1;
@@ -92,5 +97,5 @@ export async function POST(request: Request) {
   const avance: InglesRetoAvance = { completado: Boolean(yaCompletado), mensajes, requeridos: cfg.retoMensajes };
   const racha = await leerRacha(admin, user.id, hoy);
 
-  return NextResponse.json({ estado: "ok", reply, saldo, avance, racha, retoCompletado });
+  return NextResponse.json({ estado: "ok", reply, mensajeId, saldo, avance, racha, retoCompletado });
 }

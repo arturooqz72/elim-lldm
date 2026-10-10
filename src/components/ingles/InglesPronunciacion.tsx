@@ -2,42 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RotateCcw, Volume2 } from "lucide-react";
-import { InglesAvisoLimite } from "./InglesAvisoLimite";
+import { InglesLimiteVoz } from "./InglesLimiteVoz";
 import { PronunciacionGrabadora } from "./PronunciacionGrabadora";
 import { PronunciacionProgreso } from "./PronunciacionProgreso";
 import { PronunciacionResultado } from "./PronunciacionResultado";
-import type { InglesNivel, InglesPaquete, InglesSaldo, PronFrase, PronProgreso, PronResultado } from "@/types";
+import { escuchar } from "./useEscuchar";
+import type { EncuestaRespuesta, InglesNivel, InglesSaldo, PronFrase, PronProgreso, PronResultado } from "@/types";
 
 const GOLD = "#f5c842";
 
 interface Props {
   nivel: InglesNivel;
-  costo: number;
   maxSegundos: number;
   saldo: InglesSaldo;
-  paquetes: InglesPaquete[];
   fraseInicial: PronFrase | null;
   progresoInicial: PronProgreso;
   onSaldo: (saldo: InglesSaldo) => void;
-  pagosActivos: boolean;
-  enLista: boolean;
-  onApuntado: () => void;
-}
-
-/** Lee la frase en inglés con la voz del navegador. */
-function escuchar(texto: string) {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const voz = new SpeechSynthesisUtterance(texto);
-  voz.lang = "en-US";
-  voz.rate = 0.85;
-  const ingles = window.speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith("en-US"));
-  if (ingles) voz.voice = ingles;
-  window.speechSynthesis.speak(voz);
+  /** Encuesta "¿Pagarías por práctica de voz ilimitada?" (al llegar al límite de voz). */
+  encuestaVoz?: EncuestaRespuesta;
+  onEncuestaVoz: (respuesta: EncuestaRespuesta) => void;
 }
 
 export function InglesPronunciacion(props: Props) {
-  const { nivel, costo, maxSegundos, saldo, paquetes, fraseInicial, progresoInicial, onSaldo } = props;
+  const { nivel, maxSegundos, saldo, fraseInicial, progresoInicial, onSaldo } = props;
   const [frase, setFrase] = useState<PronFrase | null>(fraseInicial);
   const [cargandoFrase, setCargandoFrase] = useState(false);
   const [evaluando, setEvaluando] = useState(false);
@@ -46,8 +33,8 @@ export function InglesPronunciacion(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const nivelFrase = useRef<InglesNivel | null>(fraseInicial ? nivel : null);
 
-  // Solo para la pantalla: el servidor vuelve a validar el saldo en cada intento.
-  const sinSaldo = saldo.gratisRestantes + saldo.creditos < costo;
+  // Solo para la pantalla: el servidor vuelve a validar los intentos de voz.
+  const sinVoz = saldo.vozRestantes <= 0;
 
   const siguiente = useCallback(async (paraNivel: InglesNivel) => {
     setCargandoFrase(true);
@@ -92,9 +79,9 @@ export function InglesPronunciacion(props: Props) {
         progreso?: PronProgreso;
         error?: string;
       };
-      // Con "limite_alcanzado" el saldo actualizado ya muestra el aviso de compra.
+      // Con "limite_voz" el saldo actualizado (0 de voz) ya muestra el aviso y la encuesta.
       if (data.saldo) onSaldo(data.saldo);
-      if (data.estado === "limite_alcanzado") return;
+      if (data.estado === "limite_voz") return;
       if (!res.ok || !data.resultado) throw new Error(data.error ?? "No se pudo evaluar tu pronunciación");
       setResultado(data.resultado);
       if (data.progreso) setProgreso(data.progreso);
@@ -120,7 +107,7 @@ export function InglesPronunciacion(props: Props) {
           </p>
         ) : (
           <>
-            <p className="text-xl font-semibold leading-snug" style={{ color: "var(--color-text)" }}>
+            <p className="text-xl font-semibold leading-snug" style={{ color: "var(--color-text)" }} lang="en">
               {frase.texto}
             </p>
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
@@ -139,7 +126,7 @@ export function InglesPronunciacion(props: Props) {
         )}
       </div>
 
-      {!resultado && !evaluando && frase && !sinSaldo && (
+      {!resultado && !evaluando && frase && !sinVoz && (
         <PronunciacionGrabadora maxSegundos={maxSegundos} deshabilitado={cargandoFrase} onGrabado={evaluar} />
       )}
 
@@ -165,19 +152,17 @@ export function InglesPronunciacion(props: Props) {
         </div>
       )}
 
-      {sinSaldo && (
-        <InglesAvisoLimite
-          pagosActivos={props.pagosActivos}
-          paquetes={paquetes}
-          gratisDiarios={saldo.gratisDiarios}
-          enLista={props.enLista}
-          onApuntado={props.onApuntado}
+      {sinVoz && (
+        <InglesLimiteVoz
+          encuesta={props.encuestaVoz}
+          onEncuesta={props.onEncuestaVoz}
+          mensajesRestantes={saldo.gratisRestantes}
         />
       )}
 
       {frase && !evaluando && (
         <div className="flex gap-2 justify-center">
-          {resultado && (
+          {resultado && !sinVoz && (
             <button
               type="button"
               onClick={() => setResultado(null)}
@@ -202,7 +187,8 @@ export function InglesPronunciacion(props: Props) {
       )}
 
       <p className="text-[11px] text-center" style={{ color: "var(--color-text-muted)" }}>
-        Cada intento cuesta {costo} mensajes. Si no se escucha tu voz o falla la evaluación, no se cobra.
+        Te quedan {saldo.vozRestantes} de {saldo.vozDiarios} intentos de voz hoy (aparte de tus mensajes). Si no se
+        escucha tu voz o falla la evaluación, el intento no se cuenta.
       </p>
     </div>
   );

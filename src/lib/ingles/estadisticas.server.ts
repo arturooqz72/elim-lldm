@@ -111,7 +111,7 @@ export interface EstadisticasIngles {
 }
 
 /** "YYYY-MM-DD" de un instante en hora del Pacífico. */
-function diaPacifico(fecha: Date | string): string {
+export function diaPacifico(fecha: Date | string): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: HISTORIAL_TZ,
     year: "numeric",
@@ -121,7 +121,7 @@ function diaPacifico(fecha: Date | string): string {
 }
 
 /** Supabase devuelve máximo 1000 filas por consulta: se pide por páginas. */
-async function todas<T>(consulta: (desde: number, hasta: number) => PromiseLike<{ data: unknown }>): Promise<T[]> {
+export async function todas<T>(consulta: (desde: number, hasta: number) => PromiseLike<{ data: unknown }>): Promise<T[]> {
   const filas: T[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     const { data } = await consulta(desde, desde + PAGINA - 1);
@@ -150,7 +150,7 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   const excluir = new Set(((admins ?? []) as { id: string }[]).map((a) => a.id));
   const valido = (id: string | null) => !id || !excluir.has(id);
 
-  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba, aperturas, retosHechos] =
+  const [visitas, uso, mensajes, intentos, lista, visitantesPrueba, mensajesPrueba, aperturas, retosHechos, vozDias, vozPrueba] =
     await Promise.all([
     todas<{ created_at: string; profile_id: string | null; visitante_id: string | null }>((a, b) =>
       supabase
@@ -223,6 +223,19 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     todas<{ dia: string; user_id: string }>((a, b) =>
       supabase.from("english_retos_completados").select("dia, user_id").order("dia").range(a, b),
     ),
+    // Todo el historial: practicar solo con la voz también cuenta como usar la tutora.
+    todas<{ dia: string; user_id: string }>((a, b) =>
+      supabase.from("english_voz_diario").select("dia, user_id").gt("usados", 0).order("dia").range(a, b),
+    ),
+    // Intentos de voz de la prueba sin cuenta (solo para el costo de Azure).
+    todas<{ created_at: string; duracion_seg: number | null }>((a, b) =>
+      supabase
+        .from("english_prueba_voz_intentos")
+        .select("created_at, duracion_seg")
+        .gte("created_at", desdeIso)
+        .order("created_at")
+        .range(a, b),
+    ),
   ]);
 
   const { gratisDiarios, azureUsdPorHora, rachaMensajesDia } = inglesConfig();
@@ -266,27 +279,37 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     if (!antes || dia < antes) primerDia.set(id, dia);
   };
   for (const u of uso) marcarPrimero(u.user_id, u.dia);
+  for (const v of vozDias) marcarPrimero(v.user_id, v.dia);
   for (const p of visitantesPrueba) if (p.user_id) marcarPrimero(p.user_id, diaPacifico(p.created_at));
 
+  // Días de uso por persona: escribió mensajes o practicó con la voz (desde
+  // 0077 la voz tiene su propio contador y ya no aparece en english_uso_diario).
+  const usoDelDia = new Map(uso.map((u) => [`${u.user_id}|${u.dia}`, u]));
+  const diasDeUso = new Map<string, { user_id: string; dia: string }>();
+  for (const x of [...uso, ...vozDias]) diasDeUso.set(`${x.user_id}|${x.dia}`, { user_id: x.user_id, dia: x.dia });
+
   const porPersona = new Map<string, { diasAlLimite: number; diasActivos: number; mensajes: number; ultimo: string }>();
-  for (const u of uso) {
-    const d = porDia.get(u.dia);
-    if (!d || !valido(u.user_id)) continue;
-    d._activos.add(u.user_id);
-    activosRango.add(u.user_id);
-    if ((primerDia.get(u.user_id) ?? u.dia) < u.dia) {
+  for (const [clave, { user_id, dia }] of diasDeUso) {
+    const d = porDia.get(dia);
+    if (!d || !valido(user_id)) continue;
+    d._activos.add(user_id);
+    activosRango.add(user_id);
+    if ((primerDia.get(user_id) ?? dia) < dia) {
       d.regresaron++;
-      regresaronRango.add(u.user_id);
+      regresaronRango.add(user_id);
     }
-    const per = porPersona.get(u.user_id) ?? { diasAlLimite: 0, diasActivos: 0, mensajes: 0, ultimo: "" };
+    const per = porPersona.get(user_id) ?? { diasAlLimite: 0, diasActivos: 0, mensajes: 0, ultimo: "" };
     per.diasActivos++;
-    per.mensajes += u.usados;
-    if (u.usados >= gratisDiarios) {
-      d.llegaronAlLimite++;
-      per.diasAlLimite++;
-      if (u.dia > per.ultimo) per.ultimo = u.dia;
+    const u = usoDelDia.get(clave);
+    if (u) {
+      per.mensajes += u.usados;
+      if (u.usados >= gratisDiarios) {
+        d.llegaronAlLimite++;
+        per.diasAlLimite++;
+        if (dia > per.ultimo) per.ultimo = dia;
+      }
     }
-    porPersona.set(u.user_id, per);
+    porPersona.set(user_id, per);
   }
 
   let mensajesDePrueba = 0;
@@ -309,6 +332,9 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
     if (!d || !valido(i.user_id)) continue;
     d.intentosPronunciacion++;
     segundosAzure += Number(i.duracion_seg ?? SEGUNDOS_POR_INTENTO_SIN_DATO);
+  }
+  for (const i of vozPrueba) {
+    if (porDia.has(diaPacifico(i.created_at))) segundosAzure += Number(i.duracion_seg ?? SEGUNDOS_POR_INTENTO_SIN_DATO);
   }
   for (const l of lista) {
     const d = porDia.get(diaPacifico(l.created_at));
@@ -442,7 +468,9 @@ export async function leerEstadisticas(supabase: SupabaseClient, numDias: number
   }));
 
   const suma = (k: keyof Omit<DiaIngles, "dia">) => dias.reduce((s, d) => s + d[k], 0);
-  const llamadas = suma("mensajes") + suma("intentosPronunciacion") + mensajesDePrueba;
+  // Cada intento de voz también pide la explicación de la tutora (una llamada).
+  const vozPruebaRango = vozPrueba.filter((i) => porDia.has(diaPacifico(i.created_at))).length;
+  const llamadas = suma("mensajes") + suma("intentosPronunciacion") + mensajesDePrueba + vozPruebaRango;
 
   // Prueba sin cuenta: visitantes cuya prueba empezó en el rango. "Creó
   // cuenta" = la cuenta que recibió la conversación es más nueva que la prueba.

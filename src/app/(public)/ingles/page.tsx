@@ -8,7 +8,7 @@ import { avanceReto, leerRacha, leerReto, mensajesRetoHoy } from "@/lib/ingles/r
 import { InglesChat } from "@/components/ingles/InglesChat";
 import { InglesPrueba } from "@/components/ingles/InglesPrueba";
 import { InglesNombre } from "@/components/ingles/InglesNombre";
-import type { InglesMensaje, InglesPerfil, Profile } from "@/types";
+import type { EncuestaRespuesta, EncuestaTipo, EncuestasUsuario, InglesMensaje, InglesPerfil, Profile } from "@/types";
 
 export const metadata = { title: "Elim English — Elim LLDM" };
 
@@ -30,6 +30,9 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
         <InglesPrueba
           mensajesIniciales={prueba.mensajes}
           restantesIniciales={prueba.restantes}
+          vozRestantesIniciales={prueba.vozRestantes}
+          vozDiarios={cfg.vozGratisDiarios}
+          pronMaxSegundos={cfg.pronMaxSegundos}
           totalPrueba={cfg.pruebaMensajes}
           gratisDiarios={cfg.gratisDiarios}
           maxCaracteres={cfg.maxCaracteres}
@@ -66,10 +69,10 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
     .maybeSingle();
   const perfil = (perfilData as InglesPerfil | null) ?? PERFIL_INICIAL;
 
-  const [{ data: mensajesData }, saldo, frase, progreso, { data: espera }, avance, mensajesReto, racha] = await Promise.all([
+  const [{ data: mensajesData }, saldo, frase, progreso, { data: espera }, avance, mensajesReto, racha, { data: encuestasData }] = await Promise.all([
     supabase
       .from("english_mensajes")
-      .select("modo, role, content")
+      .select("id, modo, role, content")
       .eq("user_id", profile.id)
       .neq("modo", "reto") // la conversación del reto se carga aparte (solo la de hoy)
       .order("created_at", { ascending: false })
@@ -81,7 +84,12 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
     avanceReto(admin, profile.id),
     mensajesRetoHoy(admin, profile.id),
     leerRacha(admin, profile.id),
+    admin.from("english_encuestas").select("tipo, respuesta").eq("user_id", profile.id),
   ]);
+
+  const encuestas: EncuestasUsuario = Object.fromEntries(
+    ((encuestasData ?? []) as { tipo: EncuestaTipo; respuesta: EncuestaRespuesta }[]).map((e) => [e.tipo, e.respuesta]),
+  );
 
   const mensajes = ((mensajesData ?? []) as InglesMensaje[]).reverse();
 
@@ -95,7 +103,7 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
         paquetes={inglesPaquetes()}
         maxCaracteres={cfg.maxCaracteres}
         compra={compra === "ok" ? "ok" : compra === "cancelada" ? "cancelada" : null}
-        costoPronunciacion={cfg.costoPronunciacion}
+        encuestas={encuestas}
         pronMaxSegundos={cfg.pronMaxSegundos}
         fraseInicial={frase}
         progresoInicial={progreso}
