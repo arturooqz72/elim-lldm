@@ -60,7 +60,13 @@ export function EntrarConCodigo({
       email,
       // data solo se aplica si la cuenta es nueva: nombre_pendiente hace que
       // se le pida su nombre al entrar (aquí o en /ingles).
-      options: { shouldCreateUser: true, data: { full_name: email.split("@")[0], nombre_pendiente: true } },
+      // emailRedirectTo: si toca el enlace del correo en vez de escribir el
+      // código, vuelve a donde estaba (p. ej. /ingles) y no a la página de inicio.
+      options: {
+        shouldCreateUser: true,
+        data: { full_name: email.split("@")[0], nombre_pendiente: true },
+        emailRedirectTo: `${window.location.origin}/callback?returnUrl=${encodeURIComponent(returnUrl)}`,
+      },
     });
     setCargando(false);
     if (e) setError(mensajeError(e.message));
