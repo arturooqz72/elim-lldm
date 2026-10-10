@@ -45,7 +45,13 @@ export function PublicHeader({
         // cliente (lock de auth) y todas sus consultas posteriores se quedan
         // colgadas — ver docs de onAuthStateChange.
         setTimeout(async () => {
-          const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+          // Solo las columnas públicas: desde 0076 el navegador no puede leer
+          // el resto de profiles (ni siquiera de su propia fila).
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, display_name, avatar_url, role")
+            .eq("id", userId)
+            .single();
           if (data) setProfile(data as Profile);
         }, 0);
       }

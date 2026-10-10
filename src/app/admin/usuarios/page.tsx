@@ -77,7 +77,7 @@ export default async function UsuariosPage({
 
   let query = supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, verified_lldm, created_at")
+    .select("id, display_name, avatar_url, role, verified_lldm, created_at, iglesia")
     .order("created_at", { ascending: false });
 
   if (q) query = query.ilike("display_name", `%${q}%`);
@@ -166,6 +166,7 @@ export default async function UsuariosPage({
             role: string;
             verified_lldm: boolean;
             created_at: string;
+            iglesia: string | null;
           }>).map((user, idx) => (
             <div
               key={user.id}
@@ -199,6 +200,7 @@ export default async function UsuariosPage({
                   </p>
                   <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                     {formatDate(user.created_at).split(",")[0]}
+                    {user.iglesia?.trim() ? ` · ${user.iglesia.trim()}` : ""}
                   </p>
                 </div>
               </div>

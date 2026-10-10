@@ -18,7 +18,7 @@ export default async function AdminDashboard() {
     { data: recentPlatikas },
     { data: recentGames },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("platikas").select("*", { count: "exact", head: true }).eq("status", "live"),
     supabase.from("platikas").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
     supabase.from("games").select("*", { count: "exact", head: true }).in("status", ["lobby", "in_progress"]),

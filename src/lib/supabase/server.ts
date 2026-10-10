@@ -59,7 +59,11 @@ export async function getProfile() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  // Con service role: desde 0076 la sesión del usuario solo puede leer
+  // id, display_name, avatar_url y role de profiles. El perfil completo
+  // (bio, iglesia, verified_lldm, fechas) solo lo lee el servidor.
+  const service = await createServiceClient();
+  const { data: profile } = await service
     .from("profiles")
     .select("*")
     .eq("id", user.id)
