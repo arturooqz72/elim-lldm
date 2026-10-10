@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { CodigoConfirmacion } from "@/components/auth/CodigoConfirmacion";
+import { EntrarConCodigo } from "@/components/auth/EntrarConCodigo";
 
 type SocialProvider = "google" | "facebook";
 
@@ -41,10 +41,12 @@ function LoginForm() {
       .catch(() => {});
   }, []);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  // Cuenta sin confirmar: se confirma escribiendo el código del correo (ver CodigoConfirmacion).
+  // Cuenta sin confirmar: se confirma escribiendo el código del correo (ver EntrarConCodigo).
   const [codigoPara, setCodigoPara] = useState<{ email: string; enviado: boolean } | null>(null);
   // ?codigo=1 (p. ej. desde el correo a quienes no confirmaron): entrar solo con código, sin contraseña.
   const [modoCodigo, setModoCodigo] = useState(searchParams.get("codigo") === "1");
+  // Ya entró con el código y falta su nombre: solo se muestra ese paso.
+  const [pidiendoNombre, setPidiendoNombre] = useState(false);
 
   function switchMode(next: "login" | "register") {
     setMode(next);
@@ -233,13 +235,32 @@ function LoginForm() {
               {message.text}
             </div>
           )}
-          {codigoPara && <CodigoConfirmacion key={codigoPara.email} {...codigoPara} returnUrl={returnUrl} />}
-          {modoCodigo && mode === "login" && (
-            <CodigoConfirmacion email={email} enviado={false} returnUrl={returnUrl} pedirCorreo />
+          {(codigoPara || (modoCodigo && mode === "login")) && (
+            <div
+              className="px-4 py-4 rounded-xl"
+              style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
+            >
+              {codigoPara ? (
+                <EntrarConCodigo
+                  key={codigoPara.email}
+                  correoInicial={codigoPara.email}
+                  enviado={codigoPara.enviado}
+                  returnUrl={returnUrl}
+                  onPidiendoNombre={() => setPidiendoNombre(true)}
+                />
+              ) : (
+                <EntrarConCodigo
+                  correoInicial={email}
+                  returnUrl={returnUrl}
+                  pedirCorreo
+                  onPidiendoNombre={() => setPidiendoNombre(true)}
+                />
+              )}
+            </div>
           )}
 
           {/* Google / Facebook: sirven igual para entrar que para crear cuenta */}
-          {(["google", ...(facebookActivo ? ["facebook" as const] : [])] as SocialProvider[]).map((provider) => (
+          {!pidiendoNombre && (["google", ...(facebookActivo ? ["facebook" as const] : [])] as SocialProvider[]).map((provider) => (
             <button
               key={provider}
               onClick={() => handleSocialLogin(provider)}
@@ -259,7 +280,7 @@ function LoginForm() {
             </button>
           ))}
 
-          {!(modoCodigo && mode === "login") && (
+          {!(modoCodigo && mode === "login") && !pidiendoNombre && (
           <div className="flex items-center gap-3">
             <div className="h-px flex-1" style={{ background: "var(--color-border)" }} />
             <span className="text-xs font-medium tracking-wide" style={{ color: "var(--color-text-muted)" }}>
@@ -270,7 +291,7 @@ function LoginForm() {
           )}
 
           {/* Email / password form */}
-          {!(modoCodigo && mode === "login") && (
+          {!(modoCodigo && mode === "login") && !pidiendoNombre && (
           <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
             <input
               type="email"
@@ -341,7 +362,7 @@ function LoginForm() {
           )}
 
           {/* Entrar solo con código o con contraseña */}
-          {mode === "login" && (
+          {mode === "login" && !pidiendoNombre && (
             <div className="text-center">
               <button
                 type="button"
@@ -359,7 +380,7 @@ function LoginForm() {
           )}
 
           {/* Forgot password */}
-          {mode === "login" && !modoCodigo && (
+          {mode === "login" && !modoCodigo && !pidiendoNombre && (
             <div className="text-center">
               <button
                 type="button"
@@ -375,6 +396,7 @@ function LoginForm() {
         </div>
 
         {/* Toggle mode */}
+        {!pidiendoNombre && (
         <div className="text-center">
           <button
             type="button"
@@ -387,6 +409,7 @@ function LoginForm() {
               : "¿No tienes cuenta? Regístrate"}
           </button>
         </div>
+        )}
       </div>
     </div>
   );
