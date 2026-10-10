@@ -43,8 +43,12 @@ function LoginForm() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   // Cuenta sin confirmar: se confirma escribiendo el código del correo (ver EntrarConCodigo).
   const [codigoPara, setCodigoPara] = useState<{ email: string; enviado: boolean } | null>(null);
-  // ?codigo=1 (p. ej. desde el correo a quienes no confirmaron): entrar solo con código, sin contraseña.
-  const [modoCodigo, setModoCodigo] = useState(searchParams.get("codigo") === "1");
+  // Con código por correo, sin contraseña: así se crean las cuentas nuevas
+  // (Crear cuenta) y así entra ?codigo=1 (p. ej. desde el correo a quienes no
+  // confirmaron). La contraseña queda como otra opción.
+  const [modoCodigo, setModoCodigo] = useState(
+    searchParams.get("codigo") === "1" || searchParams.get("modo") === "registro",
+  );
   // Ya entró con el código y falta su nombre: solo se muestra ese paso.
   const [pidiendoNombre, setPidiendoNombre] = useState(false);
 
@@ -52,7 +56,7 @@ function LoginForm() {
     setMode(next);
     setMessage(null);
     setCodigoPara(null);
-    setModoCodigo(false);
+    setModoCodigo(next === "register");
     setPassword("");
     setConfirmPassword("");
   }
@@ -178,13 +182,14 @@ function LoginForm() {
         }}
       />
 
+      {/* Si llegó desde otra página (p. ej. la tutora), la flecha regresa ahí. */}
       <Link
-        href="/"
+        href={returnUrl.startsWith("/") && !returnUrl.startsWith("//") ? returnUrl : "/"}
         className="absolute top-6 left-6 flex items-center gap-1.5 text-sm transition-opacity hover:opacity-80"
         style={{ color: "var(--color-text-muted)" }}
       >
         <ArrowLeft size={14} />
-        Inicio
+        {returnUrl !== "/" ? "Volver" : "Inicio"}
       </Link>
 
       <div className="relative z-10 w-full max-w-sm flex flex-col gap-5">
@@ -235,7 +240,7 @@ function LoginForm() {
               {message.text}
             </div>
           )}
-          {(codigoPara || (modoCodigo && mode === "login")) && (
+          {(codigoPara || modoCodigo) && (
             <div
               className="px-4 py-4 rounded-xl"
               style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
@@ -253,6 +258,7 @@ function LoginForm() {
                   correoInicial={email}
                   returnUrl={returnUrl}
                   pedirCorreo
+                  crear={mode === "register"}
                   onPidiendoNombre={() => setPidiendoNombre(true)}
                 />
               )}
@@ -280,7 +286,7 @@ function LoginForm() {
             </button>
           ))}
 
-          {!(modoCodigo && mode === "login") && !pidiendoNombre && (
+          {!modoCodigo && !pidiendoNombre && (
           <div className="flex items-center gap-3">
             <div className="h-px flex-1" style={{ background: "var(--color-border)" }} />
             <span className="text-xs font-medium tracking-wide" style={{ color: "var(--color-text-muted)" }}>
@@ -291,7 +297,7 @@ function LoginForm() {
           )}
 
           {/* Email / password form */}
-          {!(modoCodigo && mode === "login") && !pidiendoNombre && (
+          {!modoCodigo && !pidiendoNombre && (
           <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
             <input
               type="email"
@@ -362,7 +368,7 @@ function LoginForm() {
           )}
 
           {/* Entrar solo con código o con contraseña */}
-          {mode === "login" && !pidiendoNombre && (
+          {!pidiendoNombre && (
             <div className="text-center">
               <button
                 type="button"
@@ -374,7 +380,13 @@ function LoginForm() {
                 className="text-xs font-semibold transition-opacity hover:opacity-75"
                 style={{ color: "var(--color-primary)" }}
               >
-                {modoCodigo ? "Entrar con contraseña" : "Entrar con un código (sin contraseña)"}
+                {mode === "register"
+                  ? modoCodigo
+                    ? "Prefiero crearla con contraseña"
+                    : "Crear con un código (sin contraseña)"
+                  : modoCodigo
+                    ? "Entrar con contraseña"
+                    : "Entrar con un código (sin contraseña)"}
               </button>
             </div>
           )}

@@ -16,6 +16,8 @@ interface Props {
   pedirCorreo?: boolean;
   /** Aviso cuando ya entró y se le está pidiendo el nombre (para ocultar lo demás). */
   onPidiendoNombre?: () => void;
+  /** Viene de "Crear cuenta": los textos hablan de crear la cuenta. */
+  crear?: boolean;
 }
 
 /** Mensajes de Supabase Auth → español. */
@@ -41,6 +43,7 @@ export function EntrarConCodigo({
   enviado: enviadoInicial = false,
   pedirCorreo,
   onPidiendoNombre,
+  crear,
 }: Props) {
   const [correo, setCorreo] = useState(correoInicial);
   const [codigo, setCodigo] = useState("");
@@ -116,7 +119,9 @@ export function EntrarConCodigo({
         <>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             {pedirCorreo
-              ? "Escribe tu correo y te mandamos un código para entrar. No necesitas contraseña."
+              ? crear
+                ? "Escribe tu correo y te mandamos un código para crear tu cuenta. No necesitas contraseña."
+                : "Escribe tu correo y te mandamos un código para entrar. No necesitas contraseña."
               : <>Pide un código a <strong style={{ color: "var(--color-text)" }}>{correo}</strong>: al escribirlo, tu correo queda confirmado y entras de una vez.</>}
           </p>
           {pedirCorreo && (
