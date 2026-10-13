@@ -548,6 +548,50 @@ export interface PalabraFilaRankingIglesia {
   jugadores: number;
 }
 
+/** Fila del panel "Ver puntos": solo nombre y foto públicos, nunca el user_id. */
+export interface PalabraPuntosPersona {
+  posicion: number;
+  nombre: string;
+  avatar: string | null;
+  esYo: boolean;
+}
+
+export interface PalabraPuntosHoyFila extends PalabraPuntosPersona {
+  intentos: number;
+  pista: boolean;
+  puntos: number;
+}
+
+export interface PalabraPuntosSemanaFila extends PalabraPuntosPersona {
+  puntos: number;
+  dias: number;
+  racha: number;
+}
+
+export interface PalabraPuntosRachaFila extends PalabraPuntosPersona {
+  actual: number;
+  maxima: number;
+}
+
+/** Lo que devuelve /api/juegos/palabra/puntos. "yo" = su lugar si quedó fuera de la lista. */
+export interface PalabraPanelPuntos {
+  hoy: string;
+  desde: string;
+  dia: { filas: PalabraPuntosHoyFila[]; yo: PalabraPuntosHoyFila | null; total: number };
+  semana: { filas: PalabraPuntosSemanaFila[]; yo: PalabraPuntosSemanaFila | null; total: number };
+  rachas: PalabraPuntosRachaFila[];
+  iglesias: PalabraFilaRankingIglesia[];
+}
+
+/** Tarjeta vertical para TikTok (/admin/palabra/tiktok). */
+export interface PalabraTarjetaTikTok {
+  fecha: string;
+  palabra: PalabraRevelada | null;
+  top3: PalabraPuntosHoyFila[];
+  top5Semana: PalabraPuntosSemanaFila[];
+  jugadores: number;
+}
+
 // ── Elim English (tutor de inglés con IA, /ingles) ─────────────────────────────
 
 export type InglesNivel = "principiante" | "intermedio" | "avanzado";

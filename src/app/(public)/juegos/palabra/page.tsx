@@ -3,10 +3,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { getProfile } from "@/lib/supabase/server";
-import { numeroDelDia, sumarDias } from "@/lib/palabra/logica";
-import { fechaDeHoy, getEstadoJugador, getRankings, hayPalabraHoy } from "@/lib/palabra/servidor";
+import { numeroDelDia } from "@/lib/palabra/logica";
+import { fechaDeHoy, getEstadoJugador, hayPalabraHoy } from "@/lib/palabra/servidor";
 import { PalabraGame } from "@/components/juegos/palabra/PalabraGame";
-import { PalabraRanking } from "@/components/juegos/palabra/PalabraRanking";
 
 export const metadata: Metadata = {
   title: "Palabra del Día — Elim LLDM",
@@ -33,15 +32,10 @@ export default async function PalabraDelDiaPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login?returnUrl=/juegos/palabra");
 
-  const [hayPalabra, estado, rankings] = await Promise.all([
+  const [hayPalabra, estado] = await Promise.all([
     hayPalabraHoy(hoy),
     profile ? getEstadoJugador(profile.id, hoy) : Promise.resolve(null),
-    getRankings(hoy),
   ]);
-
-  const etiquetaSemana = `${etiquetaFecha(rankings.inicioSemana)} – ${etiquetaFecha(
-    sumarDias(rankings.inicioSemana, 6)
-  )}`;
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -79,18 +73,8 @@ export default async function PalabraDelDiaPage() {
           hayPalabra={hayPalabra}
           conSesion={Boolean(profile)}
           estadoInicial={estado}
-        />
-
-        <PalabraRanking
-          semanal={rankings.semanal}
-          rachas={rankings.rachas}
-          iglesias={rankings.iglesias}
-          etiquetaSemana={etiquetaSemana}
-          usuario={
-            profile
-              ? { id: profile.id as string, iglesia: (profile.iglesia as string | null | undefined) ?? null }
-              : null
-          }
+          usuario={profile ? { iglesia: (profile.iglesia as string | null | undefined) ?? null } : null}
+          tiktokPermiso={profile?.tiktok_permiso === true}
         />
       </div>
     </div>

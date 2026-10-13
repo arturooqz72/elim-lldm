@@ -1,141 +1,135 @@
 // src/components/juegos/palabra/PalabraRanking.tsx
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Flame, LogIn, Trophy } from "lucide-react";
-import type {
-  PalabraFilaRankingIglesia,
-  PalabraFilaRankingRacha,
-  PalabraFilaRankingSemanal,
-} from "@/types";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import type { PalabraPanelPuntos } from "@/types";
 import { RankingLista } from "./RankingLista";
 import { PreguntaIglesia } from "./PreguntaIglesia";
+import { ListaHoy, ListaRachas, ListaSemana } from "./PuntosListas";
 
-type Pestana = "semana" | "rachas" | "iglesias";
+type Pestana = "hoy" | "semana" | "rachas" | "iglesias";
 
-interface PalabraRankingProps {
-  semanal: PalabraFilaRankingSemanal[];
-  rachas: PalabraFilaRankingRacha[];
-  iglesias: PalabraFilaRankingIglesia[];
-  /** Texto "lun 29 sep – dom 5 oct". */
-  etiquetaSemana: string;
-  /** null = sin sesión. */
-  usuario: { id: string; iglesia: string | null } | null;
+const PESTANAS: ReadonlyArray<readonly [Pestana, string]> = [
+  ["hoy", "Hoy"],
+  ["semana", "Últimos 7 días"],
+  ["rachas", "Rachas"],
+  ["iglesias", "Iglesias"],
+];
+
+function etiquetaFecha(fecha: string): string {
+  return new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Date(`${fecha}T12:00:00Z`)
+  );
 }
 
-export function PalabraRanking({ semanal, rachas, iglesias, etiquetaSemana, usuario }: PalabraRankingProps) {
-  const [pestana, setPestana] = useState<Pestana>("semana");
-  // NULL en la base = nunca se le preguntó → se le pregunta una sola vez
-  // antes de ver el ranking. '' = prefirió no decirlo.
+interface PalabraRankingProps {
+  /** null = sin sesión. iglesia null = nunca se le preguntó. */
+  usuario: { iglesia: string | null } | null;
+}
+
+/**
+ * Panel "Ver puntos" (el único ranking de la Palabra del Día). Se carga al
+ * abrirlo, así después de resolver ya sale en su lugar.
+ */
+export function PalabraRanking({ usuario }: PalabraRankingProps) {
+  const [pestana, setPestana] = useState<Pestana>("hoy");
+  const [datos, setDatos] = useState<PalabraPanelPuntos | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [iglesia, setIglesia] = useState<string | null>(usuario?.iglesia ?? null);
   const [editando, setEditando] = useState(false);
-  const debePreguntar = usuario !== null && (iglesia === null || editando);
+
+  useEffect(() => {
+    let vivo = true;
+    fetch("/api/juegos/palabra/puntos", { cache: "no-store" })
+      .then(async (res) => {
+        const data = (await res.json()) as PalabraPanelPuntos & { error?: string };
+        if (!res.ok) throw new Error(data.error ?? "No se pudieron cargar los puntos.");
+        if (vivo) setDatos(data);
+      })
+      .catch((e: unknown) => {
+        if (vivo) setError(e instanceof Error ? e.message : "No se pudieron cargar los puntos.");
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const preguntarIglesia = pestana === "iglesias" && usuario !== null && (iglesia === null || editando);
+  const nota = (texto: string) => (
+    <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
+      {texto}
+    </p>
+  );
+  const rango = datos ? `${etiquetaFecha(datos.desde)} – ${etiquetaFecha(datos.hoy)}` : "";
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <div
-        className="px-4 py-3 flex items-center gap-2"
-        style={{ borderBottom: "1px solid var(--color-border)" }}
-      >
-        <Trophy size={14} style={{ color: "var(--color-primary)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-          Ranking — Palabra del Día
-        </span>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-4 gap-1 p-1 rounded-xl" role="tablist" style={{ background: "var(--color-surface-elevated)" }}>
+        {PESTANAS.map(([valor, etiqueta]) => (
+          <button
+            key={valor}
+            type="button"
+            role="tab"
+            aria-selected={pestana === valor}
+            onClick={() => setPestana(valor)}
+            className="min-h-9 px-1 py-1.5 rounded-lg text-[11px] leading-tight font-semibold"
+            style={{
+              background: pestana === valor ? "rgba(212,160,23,0.16)" : "transparent",
+              color: pestana === valor ? "var(--color-primary)" : "var(--color-text-muted)",
+            }}
+          >
+            {etiqueta}
+          </button>
+        ))}
       </div>
 
-      {debePreguntar ? (
-        <PreguntaIglesia
-          valorInicial={iglesia ?? ""}
-          onGuardado={(valor) => {
-            setIglesia(valor);
-            setEditando(false);
-          }}
-          onCancelar={editando ? () => setEditando(false) : undefined}
-        />
+      {error ? (
+        <p className="text-sm text-center py-6" style={{ color: "var(--color-destructive)" }}>
+          {error}
+        </p>
+      ) : !datos ? (
+        <p className="flex items-center justify-center gap-2 text-sm py-8" style={{ color: "var(--color-text-muted)" }}>
+          <Loader2 size={16} className="animate-spin" /> Cargando puntos…
+        </p>
       ) : (
-        <>
-          <div className="flex gap-1 p-2" role="tablist">
-            {(
-              [
-                ["semana", "Esta semana"],
-                ["rachas", "Rachas"],
-                ["iglesias", "Iglesias"],
-              ] as const
-            ).map(([valor, etiqueta]) => (
-              <button
-                key={valor}
-                type="button"
-                role="tab"
-                aria-selected={pestana === valor}
-                onClick={() => setPestana(valor)}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold"
-                style={{
-                  background: pestana === valor ? "rgba(212,160,23,0.12)" : "transparent",
-                  color: pestana === valor ? "var(--color-primary)" : "var(--color-text-muted)",
+        <div>
+          {pestana === "hoy" && (
+            <>
+              {nota("Quién resolvió la palabra de hoy · 7 puntos menos los intentos usados · en empate gana quien la resolvió primero")}
+              <ListaHoy filas={datos.dia.filas} yo={datos.dia.yo} />
+            </>
+          )}
+          {pestana === "semana" && (
+            <>
+              {nota(`${rango} · suma de puntos de los últimos 7 días`)}
+              <ListaSemana filas={datos.semana.filas} yo={datos.semana.yo} />
+            </>
+          )}
+          {pestana === "rachas" && (
+            <>
+              {nota("Rachas activas más largas de días seguidos jugados")}
+              <ListaRachas filas={datos.rachas} />
+            </>
+          )}
+          {pestana === "iglesias" &&
+            (preguntarIglesia ? (
+              <PreguntaIglesia
+                valorInicial={iglesia ?? ""}
+                onGuardado={(valor) => {
+                  setIglesia(valor);
+                  setEditando(false);
                 }}
-              >
-                {etiqueta}
-              </button>
-            ))}
-          </div>
-
-          <div className="px-3 pb-3">
-            {pestana === "semana" && (
+                onCancelar={editando ? () => setEditando(false) : undefined}
+              />
+            ) : (
               <>
-                <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
-                  {etiquetaSemana} · 7 puntos menos los intentos usados por día resuelto
-                </p>
+                {nota(`${rango} · puntos sumados por iglesia o ciudad`)}
                 <RankingLista
-                  vacio="Nadie ha sumado puntos esta semana. ¡Sé el primero!"
-                  filas={semanal.map((f) => ({
-                    clave: f.user_id,
-                    esYo: f.user_id === usuario?.id,
-                    nombre: f.nombre,
-                    avatar: f.avatar_url,
-                    detalle: f.iglesia,
-                    valor: `${f.puntos} pts`,
-                    subvalor: `${f.partidas} ${f.partidas === 1 ? "día" : "días"}`,
-                  }))}
-                />
-              </>
-            )}
-            {pestana === "rachas" && (
-              <>
-                <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
-                  Rachas activas más largas de días seguidos jugados
-                </p>
-                <RankingLista
-                  vacio="Todavía no hay rachas activas."
-                  filas={rachas.map((f) => ({
-                    clave: f.user_id,
-                    esYo: f.user_id === usuario?.id,
-                    nombre: f.nombre,
-                    avatar: f.avatar_url,
-                    detalle: f.iglesia,
-                    valor: (
-                      <span className="inline-flex items-center gap-1">
-                        <Flame size={12} /> {f.actual}
-                      </span>
-                    ),
-                    subvalor: `máx. ${f.maxima}`,
-                  }))}
-                />
-              </>
-            )}
-            {pestana === "iglesias" && (
-              <>
-                <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
-                  {etiquetaSemana} · puntos sumados por iglesia o ciudad
-                </p>
-                <RankingLista
-                  vacio="Aún no hay puntos por iglesia esta semana."
-                  filas={iglesias.map((f) => ({
+                  vacio="Aún no hay puntos por iglesia en los últimos 7 días."
+                  filas={datos.iglesias.map((f) => ({
                     clave: f.iglesia,
-                    esYo: false,
+                    esYo: Boolean(iglesia) && f.iglesia.toLowerCase() === iglesia?.trim().toLowerCase(),
                     nombre: f.iglesia,
                     avatar: null,
                     icono: true,
@@ -144,35 +138,18 @@ export function PalabraRanking({ semanal, rachas, iglesias, etiquetaSemana, usua
                     subvalor: `${f.jugadores} ${f.jugadores === 1 ? "jugador" : "jugadores"}`,
                   }))}
                 />
+                {usuario && (
+                  <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
+                    Tu iglesia o ciudad: <strong>{iglesia || "sin especificar"}</strong> ·{" "}
+                    <button type="button" onClick={() => setEditando(true)} className="underline" style={{ color: "var(--color-primary)" }}>
+                      cambiar
+                    </button>
+                  </p>
+                )}
               </>
-            )}
-
-            {usuario ? (
-              <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
-                Tu iglesia o ciudad: <strong>{iglesia || "sin especificar"}</strong> ·{" "}
-                <button
-                  type="button"
-                  onClick={() => setEditando(true)}
-                  className="underline"
-                  style={{ color: "var(--color-primary)" }}
-                >
-                  cambiar
-                </button>
-              </p>
-            ) : (
-              <Link
-                href="/login?returnUrl=/juegos/palabra"
-                className="mt-3 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold"
-                style={{ background: "rgba(212,160,23,0.1)", color: "var(--color-primary)" }}
-              >
-                <LogIn size={14} />
-                Inicia sesión para aparecer en el ranking
-              </Link>
-            )}
-          </div>
-        </>
+            ))}
+        </div>
       )}
     </div>
   );
 }
-

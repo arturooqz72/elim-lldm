@@ -3,17 +3,28 @@ import type { PalabraEstadoJugador, PalabraPartidaEstado } from "@/types";
 import { PalabraModal } from "./PalabraModal";
 import { PalabraAyuda } from "./PalabraAyuda";
 import { PalabraEstadisticas } from "./PalabraEstadisticas";
+import { PalabraRanking } from "./PalabraRanking";
 
 interface PalabraModalesProps {
-  modal: "ayuda" | "estadisticas" | null;
+  modal: "ayuda" | "estadisticas" | "puntos" | null;
   estado: PalabraEstadoJugador | null;
   partida: PalabraPartidaEstado;
   conSesion: boolean;
+  /** Para el panel de puntos (pestaña Iglesias). null = sin sesión. */
+  usuario: { iglesia: string | null } | null;
   onCerrar: () => void;
 }
 
-/** "Cómo jugar" y "Estadísticas" del juego (uno a la vez). */
-export function PalabraModales({ modal, estado, partida, conSesion, onCerrar }: PalabraModalesProps) {
+/** "Cómo jugar", "Estadísticas" y "Puntos" del juego (uno a la vez). */
+export function PalabraModales({ modal, estado, partida, conSesion, usuario, onCerrar }: PalabraModalesProps) {
+  if (modal === "puntos") {
+    return (
+      <PalabraModal titulo="🏆 Puntos" onCerrar={onCerrar}>
+        <PalabraRanking usuario={usuario} />
+      </PalabraModal>
+    );
+  }
+
   if (modal === "ayuda") {
     return (
       <PalabraModal titulo="Cómo jugar" onCerrar={onCerrar}>

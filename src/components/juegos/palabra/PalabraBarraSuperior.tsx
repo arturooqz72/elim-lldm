@@ -1,5 +1,5 @@
 // src/components/juegos/palabra/PalabraBarraSuperior.tsx
-import { BarChart3, HelpCircle, Shield } from "lucide-react";
+import { BarChart3, HelpCircle, Shield, Trophy } from "lucide-react";
 
 interface PalabraBarraSuperiorProps {
   numero: number;
@@ -8,6 +8,7 @@ interface PalabraBarraSuperiorProps {
   estadisticasDisponibles: boolean;
   onAyuda: () => void;
   onEstadisticas: () => void;
+  onPuntos: () => void;
 }
 
 const estiloBoton = {
@@ -23,6 +24,7 @@ export function PalabraBarraSuperior({
   estadisticasDisponibles,
   onAyuda,
   onEstadisticas,
+  onPuntos,
 }: PalabraBarraSuperiorProps) {
   return (
     <>
@@ -36,7 +38,7 @@ export function PalabraBarraSuperior({
         >
           <HelpCircle size={18} />
         </button>
-        <div className="text-center">
+        <div className="text-center min-w-0">
           <h1 className="sm:hidden text-base font-bold leading-tight" style={{ color: "var(--color-text)" }}>
             Palabra del Día
           </h1>
@@ -47,6 +49,21 @@ export function PalabraBarraSuperior({
             🔥 Racha: {racha}
           </p>
         </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Arriba del tablero: visible antes y después de jugar. */}
+          <button
+            type="button"
+            onClick={onPuntos}
+            className="h-10 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-bold whitespace-nowrap"
+            style={{
+              background: "rgba(212,160,23,0.14)",
+              border: "1px solid rgba(212,160,23,0.45)",
+              color: "var(--color-primary)",
+            }}
+          >
+            <Trophy size={15} />
+            Ver puntos
+          </button>
         <button
           type="button"
           onClick={onEstadisticas}
@@ -57,6 +74,7 @@ export function PalabraBarraSuperior({
         >
           <BarChart3 size={18} />
         </button>
+        </div>
       </div>
 
       {comodinesUsados > 0 && (

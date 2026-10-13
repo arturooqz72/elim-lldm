@@ -2,13 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Copy, MessageCircle, Share2 } from "lucide-react";
+import { BookOpen, Copy, MessageCircle, Share2, Trophy } from "lucide-react";
 import { PALABRA_MAX_INTENTOS } from "@/lib/palabra/config";
 import { textoParaCompartir } from "@/lib/palabra/logica";
 import type { PalabraEstadoJugador, PalabraPartidaEstado, PalabraRevelada } from "@/types";
 import { CuentaRegresiva } from "./CuentaRegresiva";
 import { PalabraEstadisticas } from "./PalabraEstadisticas";
 import { InvitacionSesion } from "./InvitacionSesion";
+import { PermisoTikTok } from "./PermisoTikTok";
 
 const WHATSAPP_GREEN = "#25D366";
 
@@ -18,10 +19,21 @@ interface PalabraResultadoProps {
   revelado: PalabraRevelada | null;
   estado: PalabraEstadoJugador;
   conSesion: boolean;
+  tiktokPermiso: boolean;
   onAviso: (mensaje: string) => void;
+  onPuntos: () => void;
 }
 
-export function PalabraResultado({ fecha, partida, revelado, estado, conSesion, onAviso }: PalabraResultadoProps) {
+export function PalabraResultado({
+  fecha,
+  partida,
+  revelado,
+  estado,
+  conSesion,
+  tiktokPermiso,
+  onAviso,
+  onPuntos,
+}: PalabraResultadoProps) {
   // navigator.share solo existe en el cliente: se detecta después de
   // montar para que el HTML del servidor y la hidratación coincidan.
   const [puedeCompartir, setPuedeCompartir] = useState(false);
@@ -88,7 +100,27 @@ export function PalabraResultado({ fecha, partida, revelado, estado, conSesion, 
             </p>
           </>
         )}
+        {/* Junto al resultado: en qué lugar quedó. */}
+        <button
+          type="button"
+          onClick={onPuntos}
+          className="self-center mt-1 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold"
+          style={{
+            background: "rgba(212,160,23,0.14)",
+            border: "1px solid rgba(212,160,23,0.45)",
+            color: "var(--color-primary)",
+          }}
+        >
+          <Trophy size={16} />
+          Ver puntos
+        </button>
       </div>
+
+      {conSesion && partida.resuelta && (
+        <div className="px-3 py-3 rounded-xl" style={{ background: "var(--color-surface-elevated)" }}>
+          <PermisoTikTok inicial={tiktokPermiso} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-2">

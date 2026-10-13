@@ -34,6 +34,10 @@ interface PalabraGameProps {
   conSesion: boolean;
   /** Estado desde Supabase si hay sesión; null si se juega sin sesión (se lee de localStorage). */
   estadoInicial: PalabraEstadoJugador | null;
+  /** Para el panel de puntos (pestaña Iglesias). null = sin sesión. */
+  usuario: { iglesia: string | null } | null;
+  /** Si ya aceptó salir en los videos de TikTok (0078). */
+  tiktokPermiso: boolean;
 }
 
 interface RespuestaIntento {
@@ -48,14 +52,22 @@ interface RespuestaIntento {
   mensaje?: string;
 }
 
-export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicial }: PalabraGameProps) {
+export function PalabraGame({
+  fecha,
+  numero,
+  hayPalabra,
+  conSesion,
+  estadoInicial,
+  usuario,
+  tiktokPermiso,
+}: PalabraGameProps) {
   const [estado, setEstado] = useState<PalabraEstadoJugador | null>(estadoInicial);
   const [actual, setActual] = useState("");
   const [revelandoFila, setRevelandoFila] = useState<number | null>(null);
   const [sacudir, setSacudir] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [modal, setModal] = useState<"ayuda" | "estadisticas" | null>(null);
+  const [modal, setModal] = useState<"ayuda" | "estadisticas" | "puntos" | null>(null);
   const resultadoRef = useRef<HTMLDivElement>(null);
   const temporizadorAviso = useRef<number | undefined>(undefined);
 
@@ -215,6 +227,7 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
         estadisticasDisponibles={Boolean(estado)}
         onAyuda={() => setModal("ayuda")}
         onEstadisticas={() => setModal("estadisticas")}
+        onPuntos={() => setModal("puntos")}
       />
 
       {hayPalabra && estado && (
@@ -270,14 +283,23 @@ export function PalabraGame({ fecha, numero, hayPalabra, conSesion, estadoInicia
             revelado={estado.revelado}
             estado={estado}
             conSesion={conSesion}
+            tiktokPermiso={tiktokPermiso}
             onAviso={mostrarAviso}
+            onPuntos={() => setModal("puntos")}
           />
         </div>
       )}
 
       {!conSesion && !partida.terminada && <InvitacionSesion />}
 
-      <PalabraModales modal={modal} estado={estado} partida={partida} conSesion={conSesion} onCerrar={cerrarModal} />
+      <PalabraModales
+        modal={modal}
+        estado={estado}
+        partida={partida}
+        conSesion={conSesion}
+        usuario={usuario}
+        onCerrar={cerrarModal}
+      />
     </div>
   );
 }

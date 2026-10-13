@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getProfile, createClient, createServiceClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/perfil/ProfileForm";
+import { PermisoTikTok } from "@/components/juegos/palabra/PermisoTikTok";
 import { formatDate } from "@/lib/utils";
 import {
   ShieldCheck,
@@ -61,6 +62,7 @@ export default async function PerfilPage({ searchParams }: Props) {
     verified_lldm: boolean;
     bio: string | null;
     created_at: string;
+    tiktok_permiso?: boolean;
   };
 
   // Stats via service client — game_players / platikas_requests lack public SELECT policies
@@ -269,6 +271,17 @@ export default async function PerfilPage({ searchParams }: Props) {
             defaultBio={p.bio ?? ""}
             updateAction={updateProfile}
           />
+        </div>
+
+        {/* ── TIKTOK ─────────────────────────────────────────────── */}
+        <div
+          className="rounded-2xl p-5 flex flex-col gap-3"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            Videos de TikTok
+          </h2>
+          <PermisoTikTok inicial={p.tiktok_permiso === true} />
         </div>
 
         {/* ── ACCOUNT INFO ─────────────────────────────────────────── */}
