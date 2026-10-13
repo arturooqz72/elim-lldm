@@ -577,6 +577,8 @@ export interface PalabraPuntosRachaFila extends PalabraPuntosPersona {
 export interface PalabraPanelPuntos {
   hoy: string;
   desde: string;
+  /** Las cuentas admin juegan pero no compiten (no salen en ninguna lista). */
+  soyAdmin: boolean;
   dia: { filas: PalabraPuntosHoyFila[]; yo: PalabraPuntosHoyFila | null; total: number };
   semana: { filas: PalabraPuntosSemanaFila[]; yo: PalabraPuntosSemanaFila | null; total: number };
   rachas: PalabraPuntosRachaFila[];
@@ -587,8 +589,16 @@ export interface PalabraPanelPuntos {
 export interface PalabraTarjetaTikTok {
   fecha: string;
   palabra: PalabraRevelada | null;
+  /** Siempre arriba; "Hermano/a participante" sin foto si no dio permiso. */
+  ganador: PalabraPuntosHoyFila | null;
+  /** 2.º y 3.º lugar, solo los que dieron permiso. */
   top3: PalabraPuntosHoyFila[];
+  /** Los que la resolvieron y no salen con nombre: "y N hermanos más". */
+  otrosDia: number;
+  /** Top 5 de 7 días, solo los que dieron permiso. */
   top5Semana: PalabraPuntosSemanaFila[];
+  otrosSemana: number;
+  /** Personas (sin admins) que jugaron ese día. */
   jugadores: number;
 }
 

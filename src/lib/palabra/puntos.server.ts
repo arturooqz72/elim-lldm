@@ -6,6 +6,10 @@
 // rankings SQL), así que nadie puede inflar sus puntos desde el navegador.
 // De cada perfil solo salen nombre y foto (regla de 0076); nunca el
 // user_id, el correo, la palabra ni las letras de los intentos.
+//
+// Las cuentas admin juegan pero no compiten: no salen en ninguna pestaña,
+// no pueden ser ganador ni líder y no suman a su iglesia. Por eso Rachas e
+// Iglesias se calculan aquí y no con las funciones SQL de 0054/0066.
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { rachaEfectiva, sumarDias } from "./logica";
@@ -37,6 +41,8 @@ interface Partida {
 interface Perfil {
   nombre: string;
   avatar: string | null;
+  iglesia: string | null;
+  admin: boolean;
   tiktok: boolean;
 }
 
@@ -52,27 +58,21 @@ async function partidasEntre(service: ServiceClient, desde: string, hasta: strin
   return (data ?? []) as Partida[];
 }
 
-/**
- * Nombre, foto y permiso de TikTok. Si la columna tiktok_permiso todavía no
- * existe (migración 0078 sin aplicar), nadie cuenta como con permiso.
- */
+/** Perfiles de los jugadores (solo en el servidor; al cliente salen nombre y foto). */
 async function perfiles(service: ServiceClient, ids: string[]): Promise<Map<string, Perfil>> {
   const mapa = new Map<string, Perfil>();
   if (ids.length === 0) return mapa;
-  const conPermiso = await service
+  const { data, error } = await service
     .from("profiles")
-    .select("id, display_name, avatar_url, tiktok_permiso")
+    .select("id, display_name, avatar_url, iglesia, role, tiktok_permiso")
     .in("id", ids);
-  let filas = conPermiso.data as Array<Record<string, unknown>> | null;
-  if (conPermiso.error) {
-    const sinPermiso = await service.from("profiles").select("id, display_name, avatar_url").in("id", ids);
-    if (sinPermiso.error) throw new Error(sinPermiso.error.message);
-    filas = sinPermiso.data as Array<Record<string, unknown>>;
-  }
-  for (const p of filas ?? []) {
+  if (error) throw new Error(error.message);
+  for (const p of (data ?? []) as Array<Record<string, unknown>>) {
     mapa.set(p.id as string, {
       nombre: ((p.display_name as string | null) ?? "").trim() || "Jugador",
       avatar: (p.avatar_url as string | null) ?? null,
+      iglesia: ((p.iglesia as string | null) ?? "").trim() || null,
+      admin: p.role === "admin",
       tiktok: p.tiktok_permiso === true,
     });
   }
@@ -83,7 +83,10 @@ async function perfiles(service: ServiceClient, ids: string[]): Promise<Map<stri
 function ordenarDia(partidas: Partida[], fecha: string) {
   return partidas
     .filter((p) => p.fecha === fecha && p.resuelta)
-    .sort((a, b) => puntosDe(b.num_intentos, true) - puntosDe(a.num_intentos, true) || a.updated_at.localeCompare(b.updated_at));
+    .sort(
+      (a, b) =>
+        puntosDe(b.num_intentos, true) - puntosDe(a.num_intentos, true) || a.updated_at.localeCompare(b.updated_at)
+    );
 }
 
 interface Suma {
@@ -108,26 +111,36 @@ function sumarSemana(partidas: Partida[]): Suma[] {
     .sort((a, b) => b.puntos - a.puntos || b.dias - a.dias || a.ultima.localeCompare(b.ultima));
 }
 
-async function rachasDe(service: ServiceClient, ids: string[], hoy: string): Promise<Map<string, number>> {
-  const mapa = new Map<string, number>();
-  if (ids.length === 0) return mapa;
-  const { data } = await service
+interface Racha {
+  user_id: string;
+  actual: number;
+  maxima: number;
+}
+
+/**
+ * Rachas vigentes hoy. Con 2 comodines como máximo, una racha sigue viva
+ * hasta 3 días después de la última partida: lo de antes ni se lee.
+ */
+async function rachasVigentes(service: ServiceClient, hoy: string): Promise<Racha[]> {
+  const { data, error } = await service
     .from("palabra_rachas")
     .select("user_id, actual, maxima, comodines, ultima_fecha")
-    .in("user_id", ids);
-  for (const r of (data ?? []) as Array<Record<string, unknown>>) {
-    const { racha } = rachaEfectiva(
-      {
-        actual: r.actual as number,
-        maxima: r.maxima as number,
-        comodines: r.comodines as number,
-        ultimaFecha: (r.ultima_fecha as string | null) ?? null,
-      },
-      hoy
-    );
-    mapa.set(r.user_id as string, racha.actual);
-  }
-  return mapa;
+    .gte("ultima_fecha", sumarDias(hoy, -3));
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .map((r) => {
+      const { racha } = rachaEfectiva(
+        {
+          actual: r.actual as number,
+          maxima: r.maxima as number,
+          comodines: r.comodines as number,
+          ultimaFecha: (r.ultima_fecha as string | null) ?? null,
+        },
+        hoy
+      );
+      return { user_id: r.user_id as string, actual: racha.actual, maxima: racha.maxima };
+    })
+    .filter((r) => r.actual > 0);
 }
 
 /** Corta la lista y deja aparte el lugar de quien mira si quedó fuera. */
@@ -140,24 +153,20 @@ function cortar<T extends { esYo: boolean }>(filas: T[]): { filas: T[]; yo: T | 
 export async function getPanelPuntos(hoy: string, userId: string | null): Promise<PalabraPanelPuntos> {
   const service = await createServiceClient();
   const desde = sumarDias(hoy, -6);
-  const partidas = await partidasEntre(service, desde, hoy);
-
-  const dia = ordenarDia(partidas, hoy);
-  const semana = sumarSemana(partidas);
-  const ids = [...new Set([...dia.map((p) => p.user_id), ...semana.map((s) => s.user_id)])];
-
-  const [mapaPerfiles, rachas, rachasTop, iglesias] = await Promise.all([
-    perfiles(service, ids),
-    rachasDe(service, semana.map((s) => s.user_id), hoy),
-    service.rpc("palabra_ranking_rachas", { p_hoy: hoy, p_limite: LIMITE }),
-    // Misma ventana de 7 días que la pestaña de puntos (la función suma p_inicio … p_inicio + 6).
-    service.rpc("palabra_ranking_iglesias", { p_inicio: desde, p_limite: LIMITE }),
+  const [partidas, rachas] = await Promise.all([partidasEntre(service, desde, hoy), rachasVigentes(service, hoy)]);
+  const mapa = await perfiles(service, [
+    ...new Set([...partidas.map((p) => p.user_id), ...rachas.map((r) => r.user_id), ...(userId ? [userId] : [])]),
   ]);
-  if (rachasTop.error) console.error("[palabra] rachas:", rachasTop.error.message);
-  if (iglesias.error) console.error("[palabra] iglesias:", iglesias.error.message);
+
+  // Fuera los admin antes de ordenar: así nunca ocupan un lugar.
+  const compite = (id: string) => mapa.has(id) && !mapa.get(id)!.admin;
+  const enJuego = partidas.filter((p) => compite(p.user_id));
+  const dia = ordenarDia(enJuego, hoy);
+  const semana = sumarSemana(enJuego);
+  const rachaDe = new Map(rachas.map((r) => [r.user_id, r.actual]));
 
   const persona = (id: string, posicion: number) => {
-    const p = mapaPerfiles.get(id);
+    const p = mapa.get(id);
     return { posicion, nombre: p?.nombre ?? "Jugador", avatar: p?.avatar ?? null, esYo: id === userId };
   };
 
@@ -171,61 +180,98 @@ export async function getPanelPuntos(hoy: string, userId: string | null): Promis
     ...persona(s.user_id, i + 1),
     puntos: s.puntos,
     dias: s.dias,
-    racha: rachas.get(s.user_id) ?? 0,
+    racha: rachaDe.get(s.user_id) ?? 0,
   }));
-  const filasRachas: PalabraPuntosRachaFila[] = (
-    (rachasTop.data ?? []) as Array<{ user_id: string; nombre: string; avatar_url: string | null; actual: number; maxima: number }>
-  ).map((r, i) => ({
-    posicion: i + 1,
-    nombre: (r.nombre ?? "").trim() || "Jugador",
-    avatar: r.avatar_url,
-    esYo: r.user_id === userId,
-    actual: r.actual,
-    maxima: r.maxima,
-  }));
+  const filasRachas: PalabraPuntosRachaFila[] = rachas
+    .filter((r) => compite(r.user_id))
+    .sort(
+      (a, b) =>
+        b.actual - a.actual ||
+        b.maxima - a.maxima ||
+        (mapa.get(a.user_id)?.nombre ?? "").localeCompare(mapa.get(b.user_id)?.nombre ?? "")
+    )
+    .slice(0, LIMITE)
+    .map((r, i) => ({ ...persona(r.user_id, i + 1), actual: r.actual, maxima: r.maxima }));
+
+  // Iglesias: mismos 7 días y mismas reglas, agrupadas sin importar mayúsculas.
+  const iglesias = new Map<string, PalabraFilaRankingIglesia & { ids: Set<string> }>();
+  for (const s of semana) {
+    const nombre = mapa.get(s.user_id)?.iglesia;
+    if (!nombre) continue;
+    const clave = nombre.toLowerCase();
+    const g = iglesias.get(clave) ?? { iglesia: nombre, puntos: 0, jugadores: 0, ids: new Set<string>() };
+    g.puntos += s.puntos;
+    g.ids.add(s.user_id);
+    g.jugadores = g.ids.size;
+    iglesias.set(clave, g);
+  }
 
   return {
     hoy,
     desde,
+    soyAdmin: userId ? mapa.get(userId)?.admin === true : false,
     dia: cortar(filasDia),
     semana: cortar(filasSemana),
     rachas: filasRachas,
-    iglesias: (iglesias.data ?? []) as PalabraFilaRankingIglesia[],
+    iglesias: [...iglesias.values()]
+      .sort((a, b) => b.puntos - a.puntos || b.jugadores - a.jugadores || a.iglesia.localeCompare(b.iglesia))
+      .slice(0, LIMITE)
+      .map(({ iglesia, puntos, jugadores }) => ({ iglesia, puntos, jugadores })),
   };
 }
 
 /**
  * Tarjeta de TikTok de un día YA TERMINADO (fecha < hoy; quien llama lo
- * valida). Sin permiso: "Hermano/a participante", sin foto. Nunca iglesia.
+ * valida). Sin admins. Con nombre y foto solo quien dio permiso; los demás
+ * se resumen en "y N hermanos más". El ganador siempre va arriba, como
+ * "Hermano/a participante" si no dio permiso. Nunca iglesia.
  */
 export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTikTok> {
   const service = await createServiceClient();
   const desde = sumarDias(fecha, -6);
-  const [partidas, palabra] = await Promise.all([partidasEntre(service, desde, fecha), getPalabraPorFecha(fecha, service)]);
+  const [partidas, palabra] = await Promise.all([
+    partidasEntre(service, desde, fecha),
+    getPalabraPorFecha(fecha, service),
+  ]);
+  const mapa = await perfiles(service, [...new Set(partidas.map((p) => p.user_id))]);
+  const enJuego = partidas.filter((p) => mapa.has(p.user_id) && !mapa.get(p.user_id)!.admin);
 
-  const dia = ordenarDia(partidas, fecha);
-  const semana = sumarSemana(partidas);
-  const top3 = dia.slice(0, 3);
-  const top5 = semana.slice(0, 5);
-  const mapa = await perfiles(service, [...new Set([...top3.map((p) => p.user_id), ...top5.map((s) => s.user_id)])]);
-
+  const dia = ordenarDia(enJuego, fecha);
+  const semana = sumarSemana(enJuego);
+  const conNombre = (id: string) => mapa.get(id)?.tiktok === true;
   const persona = (id: string, posicion: number) => {
     const p = mapa.get(id);
     return p?.tiktok
       ? { posicion, nombre: p.nombre, avatar: p.avatar, esYo: false }
       : { posicion, nombre: NOMBRE_SIN_PERMISO, avatar: null, esYo: false };
   };
+  const filaDia = (p: Partida, i: number): PalabraPuntosHoyFila => ({
+    ...persona(p.user_id, i + 1),
+    intentos: p.num_intentos,
+    pista: vioPista(p.fecha, p.num_intentos, p.resuelta, p.pista_usada),
+    puntos: puntosDe(p.num_intentos, true),
+  });
+
+  // Top 3 y top 5: solo renglones con permiso (el ganador ya va arriba).
+  const top3 = dia
+    .slice(0, 3)
+    .map(filaDia)
+    .filter((f, i) => i > 0 && conNombre(dia[i].user_id));
+  const top5 = semana
+    .slice(0, 5)
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => conNombre(s.user_id))
+    .map(({ s, i }) => ({ ...persona(s.user_id, i + 1), puntos: s.puntos, dias: s.dias, racha: 0 }));
 
   return {
     fecha,
     palabra: palabra ? revelar(palabra) : null,
-    top3: top3.map((p, i) => ({
-      ...persona(p.user_id, i + 1),
-      intentos: p.num_intentos,
-      pista: vioPista(p.fecha, p.num_intentos, p.resuelta, p.pista_usada),
-      puntos: puntosDe(p.num_intentos, true),
-    })),
-    top5Semana: top5.map((s, i) => ({ ...persona(s.user_id, i + 1), puntos: s.puntos, dias: s.dias, racha: 0 })),
-    jugadores: partidas.filter((p) => p.fecha === fecha).length,
+    ganador: dia[0] ? filaDia(dia[0], 0) : null,
+    top3,
+    // Quienes la resolvieron y no salen con nombre (ni como ganador).
+    otrosDia: Math.max(dia.length - 1 - top3.length, 0),
+    top5Semana: top5,
+    otrosSemana: semana.length - top5.length,
+    jugadores: new Set(enJuego.filter((p) => p.fecha === fecha).map((p) => p.user_id)).size,
   };
 }

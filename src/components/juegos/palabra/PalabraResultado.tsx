@@ -41,6 +41,23 @@ export function PalabraResultado({
     setPuedeCompartir(typeof navigator !== "undefined" && typeof navigator.share === "function");
   }, []);
 
+  // Si al resolver quedó en primer lugar del día, se le pide el permiso de
+  // TikTok de forma destacada (el ganador sale en el video de mañana).
+  const [vaGanando, setVaGanando] = useState(false);
+  useEffect(() => {
+    if (!conSesion || !partida.resuelta) return;
+    let vivo = true;
+    fetch("/api/juegos/palabra/puntos", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { dia?: { filas?: Array<{ esYo: boolean }> } } | null) => {
+        if (vivo) setVaGanando(d?.dia?.filas?.[0]?.esYo === true);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [conSesion, partida.resuelta]);
+
   const texto = textoParaCompartir({
     fecha,
     intentos: partida.intentos,
@@ -117,7 +134,19 @@ export function PalabraResultado({
       </div>
 
       {conSesion && partida.resuelta && (
-        <div className="px-3 py-3 rounded-xl" style={{ background: "var(--color-surface-elevated)" }}>
+        <div
+          className="px-3 py-3 rounded-xl flex flex-col gap-2"
+          style={
+            vaGanando
+              ? { background: "rgba(212,160,23,0.12)", border: "1px solid rgba(212,160,23,0.55)" }
+              : { background: "var(--color-surface-elevated)" }
+          }
+        >
+          {vaGanando && (
+            <p className="text-sm font-bold" style={{ color: "var(--color-primary)" }}>
+              🏆 ¡Vas ganando hoy! ¿Quieres aparecer en el video de TikTok de mañana?
+            </p>
+          )}
           <PermisoTikTok inicial={tiktokPermiso} />
         </div>
       )}

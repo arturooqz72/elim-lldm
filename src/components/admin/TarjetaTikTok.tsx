@@ -1,8 +1,9 @@
 // src/components/admin/TarjetaTikTok.tsx
 // Tarjeta vertical 9:16 de la Palabra del Día para capturar y subir a
 // TikTok. Todo se mide en cqw (ancho de la tarjeta), así se ve igual en
-// cualquier tamaño de pantalla. Quien no dio permiso ya viene como
-// "Hermano/a participante" sin foto (getTarjetaTikTok); nunca hay iglesia.
+// cualquier tamaño de pantalla. Con nombre solo quien dio permiso; los
+// demás se resumen en "y N hermanos más". El ganador siempre va arriba
+// (como "Hermano/a participante" sin foto si no dio permiso). Sin iglesia.
 import type { PalabraTarjetaTikTok, PalabraPuntosPersona } from "@/types";
 
 const ORO = "#D4A017";
@@ -69,8 +70,19 @@ function Renglon({ izq, p, der }: { izq: string; p: PalabraPuntosPersona; der: s
   );
 }
 
+/** "y N hermanos más"; si no hay nadie con nombre antes, `sinNombres`. */
+function YMas({ n, sinNombres }: { n: number; sinNombres?: string }) {
+  if (n <= 0) return null;
+  const hermanos = `${n} ${n === 1 ? "hermano" : "hermanos"}`;
+  return (
+    <p style={{ textAlign: "center", fontSize: "3.6cqw", color: "#C9C4B5", padding: "0.6cqw 0" }}>
+      {sinNombres ? `${hermanos} ${sinNombres}` : `y ${hermanos} más`}
+    </p>
+  );
+}
+
 export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
-  const [ganador] = t.top3;
+  const { ganador } = t;
   return (
     <div
       id="tarjeta-tiktok"
@@ -97,6 +109,8 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
         </span>
       </div>
 
+      {/* Lo de en medio queda centrado aunque haya pocos renglones. */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "3cqw" }}>
       <div style={{ textAlign: "center" }}>
         <Titulo>Palabra del Día</Titulo>
         <p style={{ fontSize: "3.4cqw", color: "#9090A8" }}>{etiquetaFecha(t.fecha)}</p>
@@ -104,6 +118,9 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
           {t.palabra?.palabra ?? "—"}
         </p>
         {t.palabra && <p style={{ fontSize: "3.4cqw", color: "#9090A8" }}>{t.palabra.referencia}</p>}
+        <p style={{ fontSize: "3.8cqw", fontWeight: 700, marginTop: "1.2cqw" }}>
+          🙌 {t.jugadores} {t.jugadores === 1 ? "hermano jugó" : "hermanos jugaron"} hoy
+        </p>
       </div>
 
       <div
@@ -133,25 +150,29 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
         )}
       </div>
 
-      {t.top3.length > 0 && (
+      {(t.top3.length > 0 || t.otrosDia > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.1cqw" }}>
           <Titulo>Top 3 del día</Titulo>
-          {t.top3.map((p, i) => (
-            <Renglon key={p.posicion} izq={MEDALLAS[i] ?? String(p.posicion)} p={p} der={`${p.puntos} pts`} />
+          {t.top3.map((p) => (
+            <Renglon key={p.posicion} izq={MEDALLAS[p.posicion - 1] ?? String(p.posicion)} p={p} der={`${p.puntos} pts`} />
           ))}
+          <YMas n={t.otrosDia} />
         </div>
       )}
 
-      {t.top5Semana.length > 0 && (
+      {(t.top5Semana.length > 0 || t.otrosSemana > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.1cqw" }}>
           <Titulo>Top 5 · últimos 7 días</Titulo>
           {t.top5Semana.map((p) => (
             <Renglon key={p.posicion} izq={String(p.posicion)} p={p} der={`${p.puntos} pts`} />
           ))}
+          <YMas n={t.otrosSemana} sinNombres={t.top5Semana.length === 0 ? (t.otrosSemana === 1 ? "sumó puntos" : "sumaron puntos") : undefined} />
         </div>
       )}
 
-      <p style={{ marginTop: "auto", textAlign: "center", fontSize: "3.6cqw", color: "#9090A8" }}>
+      </div>
+
+      <p style={{ textAlign: "center", fontSize: "3.6cqw", color: "#9090A8" }}>
         Juega gratis cada día en <strong style={{ color: ORO }}>elimlldm.net/juegos/palabra</strong>
       </p>
     </div>

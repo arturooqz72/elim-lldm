@@ -94,6 +94,14 @@ export function PalabraRanking({ usuario }: PalabraRankingProps) {
         </p>
       ) : (
         <div>
+          {datos.soyAdmin && (
+            <p
+              className="text-[11px] px-3 py-2 mb-2 rounded-lg"
+              style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.3)", color: "var(--color-text)" }}
+            >
+              Tu cuenta es de admin: puedes jugar, pero no compites (no sales en estas listas).
+            </p>
+          )}
           {pestana === "hoy" && (
             <>
               {nota("Quién resolvió la palabra de hoy · 7 puntos menos los intentos usados · en empate gana quien la resolvió primero")}
