@@ -8,6 +8,8 @@ import type { PalabraTarjetaTikTok, PalabraPuntosPersona } from "@/types";
 
 const ORO = "#D4A017";
 const MEDALLAS = ["🥇", "🥈", "🥉"];
+/** "X hermanos jugaron" solo se muestra a partir de este número. */
+const MIN_JUGADORES_VISIBLE = 5;
 
 function etiquetaFecha(fecha: string): string {
   const texto = new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
@@ -118,9 +120,12 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
           {t.palabra?.palabra ?? "—"}
         </p>
         {t.palabra && <p style={{ fontSize: "3.4cqw", color: "#9090A8" }}>{t.palabra.referencia}</p>}
-        <p style={{ fontSize: "3.8cqw", fontWeight: 700, marginTop: "1.2cqw" }}>
-          🙌 {t.jugadores} {t.jugadores === 1 ? "hermano jugó" : "hermanos jugaron"} hoy
-        </p>
+        {/* Solo con 5 o más (sin admins): con menos no luce en el video. */}
+        {t.jugadores >= MIN_JUGADORES_VISIBLE && (
+          <p style={{ fontSize: "3.8cqw", fontWeight: 700, marginTop: "1.2cqw" }}>
+            🙌 {t.jugadores} hermanos jugaron
+          </p>
+        )}
       </div>
 
       <div
