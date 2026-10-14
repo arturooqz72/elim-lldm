@@ -8,6 +8,7 @@ import {
   MIN_JUGADORES_PARA_INICIAR,
 } from "./config";
 import { prepararPreguntaDelBanco } from "@/lib/trivia/salas-banco.server";
+import { sumarPuntosSala } from "./puntos.server";
 
 async function broadcast(salaId: string, event: string, payload: object) {
   const supabase = await createClient();
@@ -28,6 +29,10 @@ async function terminarSala(
   deadline: string | null
 ): Promise<{ applied: boolean; error?: string }> {
   const service = await createServiceClient();
+  // Puntos finales antes de cerrar: así la pantalla de resultados y la
+  // tabla de posiciones ya los ven completos.
+  const suma = await sumarPuntosSala(salaId);
+  if (suma.error) console.error("[arena-publica/advance] no se pudieron sumar los puntos al terminar", suma.error);
   const { data: updated, error: updateError } = await service
     .from("arena_publica_salas")
     .update({ status: "finished" })
@@ -252,6 +257,10 @@ async function applyTransition(
     if (updateError) return { applied: false, error: updateError.message };
 
     if (updated && updated.length > 0) {
+      // Solo quien ganó la transición suma: los puntos de esta pregunta
+      // aparecen al revelar, no cuando cada quien respondió.
+      const suma = await sumarPuntosSala(salaId);
+      if (suma.error) console.error("[arena-publica/advance] no se pudieron sumar los puntos al revelar", suma.error);
       await broadcast(salaId, "REVEAL_START", {
         pregunta_id: preguntaActual.id,
         respuesta_correcta: respuesta.respuesta_correcta,
@@ -423,6 +432,10 @@ export async function forfeitMatch(
 
   if (updateError) return { applied: false, error: updateError.message };
   if (!updated || updated.length === 0) return { applied: false };
+
+  // Lo que los demás contestaron hasta aquí cuenta; quien se sale queda en 0.
+  const suma = await sumarPuntosSala(salaId);
+  if (suma.error) console.error("[arena-publica/forfeit] no se pudieron sumar los puntos", suma.error);
 
   const { error: jugadorUpdateError } = await service
     .from("arena_publica_jugadores")

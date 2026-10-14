@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ROUND_SECONDS } from "@/lib/arena-publica/config";
 import { registrarRespuesta } from "@/lib/trivia/banco.server";
+import { puntosDeRespuesta } from "@/lib/arena-publica/puntos.server";
 import type { AnswerOption } from "@/types";
 
 const ANSWER_OPTIONS: AnswerOption[] = ["a", "b", "c", "d"];
@@ -89,9 +90,8 @@ export async function POST(request: Request) {
 
   const esCorrecta = respuesta === respuestaCorrecta?.respuesta_correcta;
   const tiempoClamped = Math.max(0, Math.min(tiempo_ms, ROUND_MS));
-  const puntos = esCorrecta
-    ? Math.max(100, Math.round(1000 * (1 - tiempoClamped / ROUND_MS)))
-    : 0;
+  // Solo para la respuesta a quien respondió; en la sala se suman al revelar.
+  const puntos = puntosDeRespuesta(esCorrecta, tiempoClamped);
 
   const { error: insertError } = await supabase.from("arena_publica_respuestas").insert({
     sala_id: sala.id,
@@ -108,18 +108,12 @@ export async function POST(request: Request) {
 
   if (pregunta.question_id) await registrarRespuesta(pregunta.question_id, esCorrecta);
 
-  const { data: jugador } = await supabase
-    .from("arena_publica_jugadores")
-    .select("puntos")
-    .eq("id", jugador_id)
-    .single();
-
+  // Los puntos NO se suman aquí: el cambio viajaría por Realtime y delataría
+  // quién acertó antes de tiempo. Se suman al revelar (sumarPuntosSala en
+  // advance.server.ts). Aquí solo queda la hora, para el ✓ de "ya respondió".
   await supabase
     .from("arena_publica_jugadores")
-    .update({
-      puntos: (jugador?.puntos ?? 0) + puntos,
-      ultimo_respondido_at: new Date().toISOString(),
-    })
+    .update({ ultimo_respondido_at: new Date().toISOString() })
     .eq("id", jugador_id);
 
   return NextResponse.json({ es_correcta: esCorrecta, puntos_obtenidos: puntos });
