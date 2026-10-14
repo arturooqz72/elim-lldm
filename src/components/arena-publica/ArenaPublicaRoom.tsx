@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trophy, Clock, Sparkles, Loader2, LogOut, Share2 } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -10,6 +10,9 @@ import { Leaderboard } from "@/components/arena/Leaderboard";
 import { CountdownCircle } from "@/components/arena/CountdownCircle";
 import { EntrarForm } from "./EntrarForm";
 import { ArenaPublicaVoiceChat } from "./ArenaPublicaVoiceChat";
+import { SalaJugadores } from "./SalaJugadores";
+import { BarraJugadores } from "./BarraJugadores";
+import { useJugadoresEnVivo } from "./useJugadoresEnVivo";
 import {
   COUNTDOWN_SECONDS,
   ROUND_SECONDS,
@@ -98,6 +101,42 @@ export function ArenaPublicaRoom({
   const [forceStarting, setForceStarting] = useState(false);
   const [forceStartError, setForceStartError] = useState<string | null>(null);
   const answerSentRef = useRef(false);
+
+  // Fotos y quién sigue conectado (Presence).
+  const { avatarDe, conectado } = useJugadoresEnVivo(salaId, jugadorId, jugadores);
+
+  // Puntos de la barra: el servidor suma al instante al responder, pero
+  // mostrarlo así delataría quién acertó antes de tiempo. Se actualizan
+  // cuando la pregunta termina (al revelar), no mientras sigue abierta.
+  const [puntosVisibles, setPuntosVisibles] = useState<Record<string, number>>(() =>
+    Object.fromEntries(jugadoresIniciales.map((j) => [j.id, j.puntos]))
+  );
+  useEffect(() => {
+    if (phase === "playing") return;
+    setPuntosVisibles(Object.fromEntries(jugadores.map((j) => [j.id, j.puntos])));
+  }, [phase, jugadores]);
+
+  // ✓ / … : si su última respuesta es de esta pregunta. Ambas horas vienen
+  // del servidor (pregunta_termina_en y ultimo_respondido_at), así que la
+  // hora del teléfono no influye.
+  const respondio = useMemo(() => {
+    if (!currentQuestion || (phase !== "playing" && phase !== "reveal")) return null;
+    const inicio = currentQuestion.endsAt - ROUND_SECONDS * 1000 - 1000;
+    return (j: ArenaJugador) => j.ultimo_respondido_at !== null && Date.parse(j.ultimo_respondido_at) >= inicio;
+  }, [currentQuestion, phase]);
+
+  const enPartida = Boolean(jugadorId) && (phase === "counting" || phase === "playing" || phase === "reveal");
+  const barra = (variante: "fila" | "columna") => (
+    <BarraJugadores
+      jugadores={jugadores}
+      meId={jugadorId}
+      puntos={puntosVisibles}
+      respondio={respondio}
+      avatarDe={avatarDe}
+      conectado={conectado}
+      variante={variante}
+    />
+  );
 
   // Restaurar identidad del jugador (sin cuenta) desde localStorage
   useEffect(() => {
@@ -331,7 +370,8 @@ export function ArenaPublicaRoom({
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--color-bg)" }}>
-      <div className="w-full max-w-[430px] mx-auto flex-1 flex flex-col px-4 py-5 gap-4">
+      <div className="w-full max-w-[430px] lg:max-w-[740px] mx-auto flex-1 flex gap-6 px-4 py-5">
+      <div className="w-full max-w-[430px] mx-auto flex-1 flex flex-col gap-4 min-w-0">
         <header className="flex items-center justify-between">
           <span
             className="text-lg font-bold"
@@ -372,6 +412,13 @@ export function ArenaPublicaRoom({
           <ArenaPublicaVoiceChat salaId={salaId} jugadorId={jugadorId} />
         )}
 
+        {/* Debajo del encabezado del sitio (sticky, h-16 + borde = 65px). */}
+        {enPartida && (
+          <div className="lg:hidden sticky top-[65px] z-20 -my-1 py-1" style={{ background: "var(--color-bg)" }}>
+            {barra("fila")}
+          </div>
+        )}
+
         {!jugadorId ? (
           <EntrarForm onEntrado={handleEntrado} />
         ) : phase === "finished" ? (
@@ -385,6 +432,7 @@ export function ArenaPublicaRoom({
             <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
               {jugadores.length} de {jugadoresDeseados} {jugadoresDeseados === 1 ? "jugador" : "jugadores"}
             </p>
+            <SalaJugadores jugadores={jugadores} meId={jugadorId} avatarDe={avatarDe} conectado={conectado} />
             <button
               type="button"
               onClick={handleInvitar}
@@ -453,6 +501,16 @@ export function ArenaPublicaRoom({
             {phase === "reveal" && <Leaderboard jugadores={jugadores} meId={jugadorId} />}
           </div>
         ) : null}
+      </div>
+
+      {enPartida && (
+        <aside className="hidden lg:flex flex-col gap-3 w-[260px] shrink-0 pt-12">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+            Jugadores
+          </p>
+          {barra("columna")}
+        </aside>
+      )}
       </div>
     </div>
   );
