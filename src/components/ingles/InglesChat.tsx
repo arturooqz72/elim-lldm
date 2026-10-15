@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
 import { InglesMensajes } from "./InglesMensajes";
 import { InglesOpciones } from "./InglesOpciones";
 import { InglesChatAvisos } from "./InglesChatAvisos";
@@ -14,8 +13,13 @@ import { InglesRetoTarjeta } from "./InglesRetoTarjeta";
 import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
 import { InglesRetoLogro } from "./InglesRetoLogro";
 import { useAvisoCompra } from "./useAvisoCompra";
+import { InglesSaludo } from "./InglesSaludo";
+import { useSaludoTutora } from "./useSaludoTutora";
+import { useEnvioTutora } from "./useEnvioTutora";
+import { InglesBorrarConversacion } from "./InglesBorrarConversacion";
+import { InglesAvisoRecordatorio, InglesCampana } from "./InglesRecordatorio";
 import { VozContext, type ContextoVoz } from "./contextoVoz";
-import { agrupar, bienvenidaReto, type ChatMsg, type RespuestaChat as Respuesta } from "./chatAyudas";
+import { agrupar, bienvenidaReto, type ChatMsg } from "./chatAyudas";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type {
   EncuestasUsuario,
@@ -54,6 +58,8 @@ interface Props {
   avanceInicial: InglesRetoAvance;
   mensajesRetoIniciales: ChatMsg[];
   rachaInicial: InglesRacha;
+  /** Con lo que la tutora abre el chat (ya escrito; elegido en el servidor). */
+  saludoInicial: string;
 }
 
 export function InglesChat(props: Props) {
@@ -74,14 +80,9 @@ export function InglesChat(props: Props) {
   const [mensajesReto, setMensajesReto] = useState<ChatMsg[]>(props.mensajesRetoIniciales);
   const [avance, setAvance] = useState<InglesRetoAvance>(props.avanceInicial);
   const [racha, setRacha] = useState<InglesRacha>(props.rachaInicial);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Ya contestó la tutora en esta visita: entonces se ofrece el recordatorio.
+  const [huboRespuesta, setHuboRespuesta] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [mensajes, mensajesReto, perfil.modo, enReto, loading, limite, limiteVoz, avance.completado]);
 
   // Tarjetas de voz del chat (🔊/🎤): usan el contador de voz de hoy.
   const voz = useMemo<ContextoVoz>(
@@ -98,6 +99,50 @@ export function InglesChat(props: Props) {
     [perfil.nivel, props.pronMaxSegundos, saldo.vozRestantes],
   );
 
+  const { saludo, fijar, tocar } = useSaludoTutora({
+    inicial: props.saludoInicial,
+    agregarLocales: (nuevos, deBoton) =>
+      setMensajes((prev) => {
+        const modo = deBoton ? "conversacion" : perfil.modo;
+        return { ...prev, [modo]: [...prev[modo], ...nuevos] };
+      }),
+    abrirPronunciacion: () => cambiarPerfil({ ...perfil, modo: "pronunciacion" }),
+    abrirReto: () => {
+      setError(null);
+      setEnReto(true);
+    },
+    ponerPrincipiante: () => cambiarPerfil({ ...perfil, nivel: "principiante", modo: "conversacion" }),
+    alPlaticar: () => {
+      if (perfil.modo !== "conversacion") cambiarPerfil({ ...perfil, modo: "conversacion" });
+    },
+  });
+
+  const { input, setInput, loading, error, setError, enviar } = useEnvioTutora({
+    perfil,
+    enReto,
+    limite,
+    antes: () => fijar(),
+    agregar: (m, delReto, modo) =>
+      delReto
+        ? setMensajesReto((prev) => [...prev, m])
+        : setMensajes((prev) => ({ ...prev, [modo]: [...prev[modo], m] })),
+    quitarUltimo: (delReto, modo) =>
+      delReto
+        ? setMensajesReto((prev) => prev.slice(0, -1))
+        : setMensajes((prev) => ({ ...prev, [modo]: prev[modo].slice(0, -1) })),
+    alResponder: (data) => {
+      if (data.saldo) setSaldo(data.saldo);
+      if (data.racha) setRacha(data.racha);
+      if (data.avance) setAvance(data.avance);
+      if (data.reply) setHuboRespuesta(true);
+    },
+    alLimite: () => setLimite(true),
+  });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [mensajes, mensajesReto, perfil.modo, enReto, loading, limite, limiteVoz, avance.completado]);
+
   function cambiarPerfil(nuevo: InglesPerfil) {
     setPerfil(nuevo);
     setEnReto(false);
@@ -108,70 +153,8 @@ export function InglesChat(props: Props) {
     });
   }
 
-  /** Envía lo escrito en la caja, o el texto de un botón de sugerencia (al chat o al reto). */
-  async function enviar(directo?: string) {
-    const texto = (directo ?? input).trim();
-    if (limite) return;
-    if (!texto || loading) return;
-    const modo = perfil.modo;
-    const delReto = enReto;
-
-    const agregar = (m: ChatMsg) =>
-      delReto
-        ? setMensajesReto((prev) => [...prev, m])
-        : setMensajes((prev) => ({ ...prev, [modo]: [...prev[modo], m] }));
-
-    setInput("");
-    setError(null);
-    agregar({ role: "user", content: texto });
-    setLoading(true);
-
-    // Si el mensaje no se procesó, se quita de la pantalla y vuelve a la caja.
-    const deshacer = () => {
-      if (delReto) setMensajesReto((prev) => prev.slice(0, -1));
-      else setMensajes((prev) => ({ ...prev, [modo]: prev[modo].slice(0, -1) }));
-      setInput(texto);
-    };
-
-    try {
-      const res = await fetch(delReto ? "/api/ingles/reto" : "/api/ingles/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(delReto ? { message: texto, nivel: perfil.nivel } : { message: texto, ...perfil }),
-      });
-      const data = (await res.json()) as Respuesta;
-      if (data.saldo) setSaldo(data.saldo);
-      if (data.racha) setRacha(data.racha);
-
-      if (data.estado === "limite_alcanzado") {
-        deshacer();
-        setLimite(true);
-        return;
-      }
-      if (!res.ok || !data.reply) throw new Error(data.error ?? "Error al consultar a la tutora");
-
-      agregar({ id: data.mensajeId ?? undefined, role: "assistant", content: data.reply });
-      if (data.avance) setAvance(data.avance);
-    } catch (err) {
-      deshacer();
-      setError(err instanceof Error ? err.message : "Error al consultar a la tutora");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function borrarConversacion() {
-    if (!confirm("¿Borrar la conversación de este modo? Esto no devuelve mensajes ya usados.")) return;
-    const modo = perfil.modo;
-    await fetch("/api/ingles/clear", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ modo }),
-    });
-    setMensajes((prev) => ({ ...prev, [modo]: [] }));
-  }
-
   const pron = !enReto && perfil.modo === "pronunciacion";
+  const conSaludo = Boolean(saludo) && !pron && !enReto && !limite;
   const actuales = enReto ? mensajesReto : mensajes[perfil.modo];
   const guardarEncuesta = (tipo: keyof EncuestasUsuario, r: NonNullable<EncuestasUsuario["voz"]>) =>
     setEncuestas((prev) => ({ ...prev, [tipo]: r }));
@@ -183,16 +166,12 @@ export function InglesChat(props: Props) {
     >
       <InglesEncabezado subtitulo={`Hola, ${displayName}`} separacionAncha="gap-1">
         <InglesInstalar />
+        <InglesCampana />
         {!pron && !enReto && (
-          <button
-            onClick={borrarConversacion}
-            className="p-2 rounded-lg transition-colors shrink-0"
-            style={{ color: "var(--color-text-muted)" }}
-            title="Borrar conversación"
-            aria-label="Borrar conversación"
-          >
-            <Trash2 size={16} />
-          </button>
+          <InglesBorrarConversacion
+            modo={perfil.modo}
+            onBorrada={(modo) => setMensajes((prev) => ({ ...prev, [modo]: [] }))}
+          />
         )}
       </InglesEncabezado>
 
@@ -215,7 +194,8 @@ export function InglesChat(props: Props) {
         />
       )}
 
-      {!pron && !enReto && (
+      {/* Con el saludo a la vista, su botón 🎤 ya lleva a la voz. */}
+      {!pron && !enReto && !conSaludo && (
         <InglesPronunciacionAtajo onAbrir={() => cambiarPerfil({ ...perfil, modo: "pronunciacion" })} />
       )}
 
@@ -245,11 +225,25 @@ export function InglesChat(props: Props) {
           <VozContext.Provider value={voz}>
             <InglesMensajes
               mensajes={actuales}
-              bienvenida={enReto && reto ? bienvenidaReto(reto) : BIENVENIDA[perfil.modo]}
+              bienvenida={enReto && reto ? bienvenidaReto(reto) : conSaludo ? null : BIENVENIDA[perfil.modo]}
               escribiendo={loading}
-              sugerencias={limite || enReto ? undefined : SUGERENCIAS[perfil.modo as keyof typeof SUGERENCIAS]}
+              sugerencias={
+                limite || enReto || conSaludo ? undefined : SUGERENCIAS[perfil.modo as keyof typeof SUGERENCIAS]
+              }
               onSugerencia={(t) => void enviar(t)}
             />
+            {conSaludo && saludo && !loading && (
+              <InglesSaludo
+                texto={saludo}
+                botones={[
+                  "pronunciacion",
+                  "platicar",
+                  ...(reto && !avance.completado ? (["reto"] as const) : []),
+                  "principiante",
+                ]}
+                onBoton={tocar}
+              />
+            )}
           </VozContext.Provider>
         )}
 
@@ -270,6 +264,8 @@ export function InglesChat(props: Props) {
             onEncuesta={guardarEncuesta}
           />
         )}
+
+        {!pron && <InglesAvisoRecordatorio mostrar={huboRespuesta && !loading && !limite} />}
       </div>
 
       <InglesEntrada
@@ -283,10 +279,11 @@ export function InglesChat(props: Props) {
             ? "Llegaste al límite de hoy"
             : enReto
               ? "Escribe la frase del reto en inglés..."
-              : "Escribe en inglés (o en español si no sabes cómo decirlo)..."
+              : "Escribe en inglés..."
         }
         maxCaracteres={maxCaracteres}
         conCaja={!pron}
+        onVoz={enReto ? undefined : () => cambiarPerfil({ ...perfil, modo: "pronunciacion" })}
       />
     </div>
   );

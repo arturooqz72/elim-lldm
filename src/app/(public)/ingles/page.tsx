@@ -8,6 +8,7 @@ import { avanceReto, leerRacha, leerReto, mensajesRetoHoy } from "@/lib/ingles/r
 import { InglesChat } from "@/components/ingles/InglesChat";
 import { InglesPrueba } from "@/components/ingles/InglesPrueba";
 import { InglesNombre } from "@/components/ingles/InglesNombre";
+import { alAzar, SALUDOS_NUEVOS, saludoDeRegreso } from "@/lib/ingles/saludos";
 import type { EncuestaRespuesta, EncuestaTipo, EncuestasUsuario, InglesMensaje, InglesPerfil, Profile } from "@/types";
 
 export const metadata = { title: "Elim English — Elim LLDM" };
@@ -38,6 +39,9 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
           maxCaracteres={cfg.maxCaracteres}
           reclamadoInicial={prueba.reclamado}
           reto={reto}
+          saludoInicial={
+            prueba.mensajes.length > 0 ? saludoDeRegreso({ racha: 0, retoPendiente: null }) : alAzar(SALUDOS_NUEVOS)
+          }
         />
       </div>
     );
@@ -92,6 +96,12 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
   );
 
   const mensajes = ((mensajesData ?? []) as InglesMensaje[]).reverse();
+  // La tutora saluda primero (texto ya escrito, sin llamar al modelo). Quien
+  // ya practicó antes ve su racha y el reto si todavía no lo hace.
+  const yaPractico = mensajes.length > 0 || racha.maxima > 0 || avance.mensajes > 0;
+  const saludo = yaPractico
+    ? saludoDeRegreso({ racha: racha.actual, retoPendiente: reto && !avance.completado ? reto.titulo : null })
+    : alAzar(SALUDOS_NUEVOS);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 h-[calc(100vh-4rem)]">
@@ -113,6 +123,7 @@ export default async function InglesPage({ searchParams }: { searchParams: Promi
         avanceInicial={avance}
         mensajesRetoIniciales={mensajesReto}
         rachaInicial={racha}
+        saludoInicial={saludo}
       />
     </div>
   );

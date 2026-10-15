@@ -36,7 +36,7 @@ function ContenidoTutora({ mensaje }: { mensaje: ChatMsg }) {
   );
 }
 
-function Avatar({ rol }: { rol: ChatMsg["role"] }) {
+export function Avatar({ rol }: { rol: ChatMsg["role"] }) {
   return (
     <div
       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -57,7 +57,8 @@ function Avatar({ rol }: { rol: ChatMsg["role"] }) {
 
 interface Props {
   mensajes: ChatMsg[];
-  bienvenida: string;
+  /** null = sin bienvenida (cuando la tutora saluda con InglesSaludo). */
+  bienvenida: string | null;
   escribiendo: boolean;
   /** Botones de inicio que se muestran con el chat vacío (se envían con un toque). */
   sugerencias?: string[];
@@ -70,7 +71,7 @@ export function InglesMensajes({ mensajes, bienvenida, escribiendo, sugerencias,
 
   return (
     <>
-      {vacio && (
+      {vacio && bienvenida && (
         <div className="flex gap-3">
           <Avatar rol="assistant" />
           <div

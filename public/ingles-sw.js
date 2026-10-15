@@ -109,3 +109,41 @@ self.addEventListener("fetch", (event) => {
 
   if (esEstatico(url)) event.respondWith(estatico(request));
 });
+
+// ── Recordatorio diario (Web Push) ──────────────────────────────────────────
+// El servidor manda { title, body, url }. Al tocarla se abre (o se enfoca)
+// la app en esa dirección: /ingles?aviso=<id> deja contar que la abrió.
+
+self.addEventListener("push", (event) => {
+  let datos = {};
+  try {
+    datos = event.data ? event.data.json() : {};
+  } catch {
+    datos = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.title || "Elim English", {
+      body: datos.body || "Tu reto de inglés de hoy te espera 📖",
+      icon: "/ingles/icons/icon-192.png",
+      badge: "/ingles/icons/icon-192.png",
+      tag: "elim-english-recordatorio",
+      data: { url: datos.url || "/ingles" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const destino = new URL(event.notification.data?.url || "/ingles", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const abiertas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const app = abiertas.find((c) => new URL(c.url).pathname.startsWith("/ingles"));
+      if (app) {
+        await app.focus();
+        return app.navigate(destino);
+      }
+      return self.clients.openWindow(destino);
+    })(),
+  );
+});

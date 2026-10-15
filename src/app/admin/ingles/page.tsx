@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { leerEstadisticas } from "@/lib/ingles/estadisticas.server";
 import { leerEstadisticasVoz } from "@/lib/ingles/estadisticas-voz.server";
 import { SeccionVoz } from "./SeccionVoz";
+import { SeccionEnganche } from "./SeccionEnganche";
+import { leerEstadisticasEnganche } from "@/lib/ingles/estadisticas-enganche.server";
 import { inglesConfig, pagosActivos } from "@/lib/ingles/config";
 
 export const metadata = { title: "Estadísticas de Elim English — Admin" };
@@ -41,9 +43,10 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
   const { dias: diasParam } = await searchParams;
   const numDias = RANGOS.find((r) => String(r) === diasParam) ?? 14;
   const supabase = await createServiceClient();
-  const [{ dias, totales, modos, alLimite, prueba, app, rachas }, voz] = await Promise.all([
+  const [{ dias, totales, modos, alLimite, prueba, app, rachas }, voz, enganche] = await Promise.all([
     leerEstadisticas(supabase, numDias),
     leerEstadisticasVoz(supabase, numDias),
+    leerEstadisticasEnganche(supabase, numDias),
   ]);
   const maxMensajes = Math.max(1, ...dias.map((d) => d.mensajes));
 
@@ -263,6 +266,8 @@ export default async function EstadisticasInglesPage({ searchParams }: { searchP
           </table>
         )}
       </div>
+
+      <SeccionEnganche datos={enganche} />
 
       <SeccionVoz datos={voz} vozDiarios={inglesConfig().vozGratisDiarios} />
 

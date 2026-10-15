@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { abiertaComoApp, iniciarInstalacion, plataforma } from "./instalacionApp";
+import { idVisitante } from "./visitante";
 
 const CLAVE_APERTURA = "elim-english-apertura";
-const CLAVE_VISITANTE = "elim-visitante-id"; // el mismo id anónimo que usa el historial de visitas
 /** Cada cuánto, como máximo, se pide al servidor que renueve las cookies de sesión. */
 const MINUTOS_RENOVAR = 10;
 let ultimaRenovacion = 0;
@@ -37,18 +37,23 @@ async function renovarSesion(forzar = false) {
   if (renovada) await renovarSesion(true);
 }
 
-/** Mismo criterio que useRegistrarVisita: si todavía no existe, se crea. */
-function idVisitante(): string | null {
-  try {
-    let id = localStorage.getItem(CLAVE_VISITANTE);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(CLAVE_VISITANTE, id);
-    }
-    return id;
-  } catch {
-    return null;
-  }
+/**
+ * Abrió tocando el recordatorio diario (/ingles?aviso=<id>): se avisa al
+ * servidor y se quita el parámetro de la dirección.
+ */
+function registrarAperturaDeAviso() {
+  const url = new URL(location.href);
+  const aviso = url.searchParams.get("aviso");
+  if (!aviso) return;
+  url.searchParams.delete("aviso");
+  history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+  if (!/^\d+$/.test(aviso)) return; // "prueba": la notificación de prueba del admin no se cuenta
+  void fetch("/api/ingles/recordatorio/abierto", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ envio: Number(aviso) }),
+    keepalive: true,
+  }).catch(() => {});
 }
 
 /**
@@ -65,6 +70,8 @@ export function InglesPwa() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/ingles-sw.js", { scope: "/ingles" }).catch(() => {});
     }
+
+    registrarAperturaDeAviso();
 
     if (!abiertaComoApp()) return;
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share, SquarePlus, X } from "lucide-react";
+import { Download } from "lucide-react";
+import { GuiaIphone } from "./GuiaIphone";
 import {
   estaInstalada,
   hayAvisoInstalacion,
@@ -61,75 +62,7 @@ export function InglesInstalar({ nombreApp = "Elim English", color: GOLD = "#f5c
         Instalar app
       </button>
 
-      {guia && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-          onClick={() => setGuia(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="guia-instalar-titulo"
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl p-5"
-            style={{ background: "var(--color-surface-elevated)", border: `1px solid ${GOLD}55` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <p id="guia-instalar-titulo" className="text-base font-bold" style={{ color: "var(--color-text)" }}>
-                Instala {nombreApp} en tu iPhone
-              </p>
-              <button
-                type="button"
-                onClick={() => setGuia(false)}
-                className="p-1 rounded-lg shrink-0"
-                style={{ color: "var(--color-text-muted)" }}
-                aria-label="Cerrar"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <ol className="flex flex-col gap-3 text-sm" style={{ color: "var(--color-text)" }}>
-              <li className="flex items-center gap-3">
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: `${GOLD}1A`, color: GOLD }}
-                >
-                  <Share size={16} />
-                </span>
-                <span>
-                  1. Toca <strong>Compartir</strong> en la barra de Safari.
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: `${GOLD}1A`, color: GOLD }}
-                >
-                  <SquarePlus size={16} />
-                </span>
-                <span>
-                  2. Luego toca <strong>Agregar a pantalla de inicio</strong>.
-                </span>
-              </li>
-            </ol>
-
-            <p className="text-xs mt-4" style={{ color: "var(--color-text-muted)" }}>
-              Si no ves la opción, desliza hacia abajo en el menú de Compartir.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setGuia(false)}
-              className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: GOLD, color: "#000" }}
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+      {guia && <GuiaIphone titulo={`Instala ${nombreApp} en tu iPhone`} color={GOLD} onCerrar={() => setGuia(false)} />}
     </>
   );
 }

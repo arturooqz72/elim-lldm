@@ -13,6 +13,9 @@ import { InglesEntradaApp } from "./InglesEntradaApp";
 import { abiertaComoApp } from "./instalacionApp";
 import { InglesPronunciacionAtajo } from "./InglesPronunciacionAtajo";
 import { VozContext, type ContextoVoz } from "./contextoVoz";
+import { InglesSaludo } from "./InglesSaludo";
+import { InglesPruebaVozFin } from "./InglesPruebaVozFin";
+import { useSaludoTutora } from "./useSaludoTutora";
 import { BIENVENIDA, SUGERENCIAS } from "@/lib/ingles/etiquetas";
 import type { InglesMensaje, InglesReto } from "@/types";
 
@@ -38,6 +41,8 @@ interface Props {
   pronMaxSegundos: number;
   /** Reto del día: sin cuenta solo se puede ver (invita a registrarse). */
   reto: InglesReto | null;
+  /** Con lo que la tutora abre el chat (ya escrito; elegido en el servidor). */
+  saludoInicial: string;
 }
 
 /**
@@ -106,9 +111,28 @@ export function InglesPrueba(props: Props) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [mensajes, loading, terminada, vozFin]);
 
+  // Pronunciación y reto son con cuenta: sin cuenta, la voz usa su intento
+  // de prueba (la tutora da una frase con tarjeta 🎤) y luego invita a crearla.
+  function irACuenta() {
+    if (esApp) setEntrada(true);
+    else window.location.href = REGISTRO;
+  }
+  function probarVoz() {
+    if (vozRestantes > 0) void enviar(PEDIR_FRASE);
+    else irACuenta();
+  }
+
+  const { saludo, fijar, tocar } = useSaludoTutora({
+    inicial: props.saludoInicial,
+    agregarLocales: (nuevos) => setMensajes((prev) => [...prev, ...nuevos]),
+    abrirPronunciacion: probarVoz,
+    abrirReto: irACuenta,
+  });
+
   async function enviar(directo?: string) {
     const texto = (directo ?? input).trim();
     if (!texto || loading || terminada) return;
+    fijar();
 
     setInput("");
     setError(null);
@@ -157,6 +181,7 @@ export function InglesPrueba(props: Props) {
     }
   }
 
+  const conSaludo = Boolean(saludo) && !terminada;
   const marco = { background: "var(--color-surface)", border: `1px solid ${GOLD}33` };
 
   if (entrada) {
@@ -198,6 +223,7 @@ export function InglesPrueba(props: Props) {
       {/* Con su intento de voz de prueba: "Probar" le pide una frase a la tutora
           (sale como tarjeta 🎤). Ya usado: invitación a crear la cuenta. */}
       {!terminada &&
+        !conSaludo &&
         (vozRestantes > 0 ? (
           <InglesPronunciacionAtajo onAbrir={() => void enviar(PEDIR_FRASE)} accion="Probar" />
         ) : esApp ? (
@@ -211,39 +237,17 @@ export function InglesPrueba(props: Props) {
         <VozContext.Provider value={voz}>
           <InglesMensajes
             mensajes={mensajes}
-            bienvenida={BIENVENIDA.conversacion}
             escribiendo={loading}
-            sugerencias={terminada ? undefined : SUGERENCIAS.conversacion}
+            bienvenida={conSaludo ? null : BIENVENIDA.conversacion}
+            sugerencias={terminada || conSaludo ? undefined : SUGERENCIAS.conversacion}
             onSugerencia={(t) => void enviar(t)}
           />
+          {conSaludo && saludo && !loading && (
+            <InglesSaludo texto={saludo} botones={["pronunciacion", "platicar", "reto", "principiante"]} onBoton={tocar} />
+          )}
         </VozContext.Provider>
 
-        {vozFin && (
-          <div
-            className="rounded-2xl p-4 flex flex-col items-start gap-3"
-            style={{ background: `${GOLD}0F`, border: `1px solid ${GOLD}55` }}
-            role="status"
-          >
-            <p className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-              🎤 Ya usaste tu práctica de voz de la prueba. Crea tu cuenta gratis para practicar con tu voz:{" "}
-              {props.vozDiarios} intentos al día, aparte de los mensajes.
-            </p>
-            {esApp ? (
-              <button
-                type="button"
-                onClick={() => setEntrada(true)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: GOLD, color: "#000" }}
-              >
-                Crear cuenta gratis
-              </button>
-            ) : (
-              <Link href={REGISTRO} className="px-4 py-2 rounded-xl text-sm font-semibold" style={{ background: GOLD, color: "#000" }}>
-                Crear cuenta gratis
-              </Link>
-            )}
-          </div>
-        )}
+        {vozFin && <InglesPruebaVozFin vozDiarios={props.vozDiarios} onCrearCuenta={esApp ? () => setEntrada(true) : undefined} href={REGISTRO} />}
 
         {error && (
           <div
@@ -268,10 +272,11 @@ export function InglesPrueba(props: Props) {
         bloqueada={terminada}
         enviando={loading}
         placeholder={
-          terminada ? "Crea tu cuenta gratis para seguir" : "Escribe en inglés (o en español si no sabes cómo decirlo)..."
+          terminada ? "Crea tu cuenta gratis para seguir" : "Escribe en inglés..."
         }
         maxCaracteres={maxCaracteres}
         textoTerminos="Términos"
+        onVoz={terminada ? undefined : probarVoz}
       />
     </div>
   );
