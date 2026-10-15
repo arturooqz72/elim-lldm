@@ -2,9 +2,9 @@
 -- Elim LLDM — Elim English: recordatorio diario (Web Push) y eventos
 -- Correr en Supabase → SQL Editor (proyecto de producción).
 --
--- Tres tablas nuevas, todas con RLS activo y SIN políticas: el navegador
--- no puede leerlas ni escribirlas; solo el servidor (service role) desde
--- las rutas /api/ingles/*. No toca push_subscriptions (los avisos de los
+-- Tres tablas nuevas, todas con RLS activo y SIN políticas, y además sin
+-- permisos para anon/authenticated (REVOKE): el navegador no puede leerlas
+-- ni escribirlas; solo el servidor (service role) desde las rutas /api/ingles/*. No toca push_subscriptions (los avisos de los
 -- juegos siguen igual) ni nada de cobros o del límite de mensajes.
 -- ============================================================
 
@@ -27,6 +27,7 @@ CREATE TABLE english_push_suscripciones (
 CREATE INDEX idx_english_push_suscripciones_user ON english_push_suscripciones (user_id);
 
 ALTER TABLE english_push_suscripciones ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON english_push_suscripciones FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON english_push_suscripciones TO service_role;
 
 -- 2) Recordatorios enviados: máximo uno por persona al día (día del Pacífico).
@@ -35,7 +36,7 @@ CREATE TABLE english_push_envios (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   dia         DATE NOT NULL,
-  tipo        TEXT NOT NULL CHECK (tipo IN ('reto', 'racha', 'prueba')),
+  tipo        TEXT NOT NULL CHECK (tipo IN ('reto', 'racha')),
   entregados  INT NOT NULL DEFAULT 0,
   abierto_at  TIMESTAMPTZ,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -45,6 +46,7 @@ CREATE TABLE english_push_envios (
 CREATE INDEX idx_english_push_envios_dia ON english_push_envios (dia);
 
 ALTER TABLE english_push_envios ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON english_push_envios FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON english_push_envios TO service_role;
 
 -- 3) Eventos para las estadísticas: botones de respuesta rápida y la
@@ -64,4 +66,5 @@ CREATE TABLE english_eventos (
 CREATE INDEX idx_english_eventos_fecha ON english_eventos (created_at);
 
 ALTER TABLE english_eventos ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON english_eventos FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON english_eventos TO service_role;
