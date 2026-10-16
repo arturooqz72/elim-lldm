@@ -24,6 +24,11 @@ const FADE_OUT = 2.4;
 /** Lo menos que dura cada escena para que su animación se alcance a ver. */
 const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, ganador: 3.8, top3: 3.2, semana: 3.4, cierre: 3 };
 
+/** Las fichas empiezan a voltearse esto antes de que la voz diga la palabra. */
+const ANTICIPO = 0.15;
+/** Lo que sigue en la escena "palabra" después de que empiezan a voltearse las fichas. */
+const TRAS_VOLTEAR = 3;
+
 const VOLUMEN = { fuerte: 0.6, conVoz: 0.17, pausa: 0.32 } as const;
 const RAMPA = 0.35;
 
@@ -36,6 +41,8 @@ export interface TramoVoz {
 
 export interface PlanSonido {
   duraciones: Partial<Record<IdEscena, number>>;
+  /** Segundo de la escena "palabra" en que se voltean las fichas (cuando la voz la dice). */
+  voltear?: number;
   tramos: TramoVoz[];
   /** Volumen de la música: [segundo, volumen], con rampas lineales entre puntos. */
   musica: Array<[number, number]>;
@@ -57,6 +64,15 @@ function marcas(ids: IdEscena[], al: PalabraVozAlineacion): Array<number | null>
     while (indice > 0 && ABREN_FRASE.includes(texto[indice - 1])) indice--;
     return al.character_start_times_seconds[indice] ?? null;
   });
+}
+
+/** Segundo de la voz en que dice la palabra del día ("…fue mateo"); null si no la dice. */
+function cuandoDice(palabra: string, al: PalabraVozAlineacion): number | null {
+  const texto = al.characters.map((c) => normalizar(c).charAt(0) || c).join("");
+  const p = normalizar(palabra);
+  const tras = texto.indexOf(`fue ${p}`);
+  const indice = tras >= 0 ? tras + 4 : texto.indexOf(p);
+  return indice >= 0 ? (al.character_start_times_seconds[indice] ?? null) : null;
 }
 
 function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]> {
@@ -91,7 +107,7 @@ function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]
  * Con voz: las escenas se ajustan a lo que va diciendo. La portada (si va)
  * dura lo de siempre y sin voz; la música ya suena desde ella.
  */
-export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz: number): PlanSonido {
+export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz: number, palabra?: string): PlanSonido {
   const duraciones: Partial<Record<IdEscena, number>> = {};
   const tramos: TramoVoz[] = [];
   let inicio = 0;
@@ -102,6 +118,9 @@ export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz:
   const ids = todas.filter((id) => id !== "portada");
   const m = marcas(ids, al);
   const finVoz = Math.min(duraVoz, (al.character_end_times_seconds.at(-1) ?? duraVoz) + 0.25);
+  // Las fichas empiezan a voltearse un poquito antes de que suene la palabra.
+  const dice = palabra && ids[0] === "palabra" ? cuandoDice(palabra, al) : null;
+  const voltear = dice === null ? undefined : Math.max(INTRO + dice - ANTICIPO, 0.6);
 
   ids.forEach((id, i) => {
     const desde = m[i];
@@ -114,11 +133,13 @@ export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz:
     if (desde !== null && largo > 0) tramos.push({ enVideo, desde, hasta });
 
     const conVoz = (primera ? INTRO : 0) + largo;
-    duraciones[id] = ultima ? Math.max(conVoz + OUTRO, MINIMO[id]) : Math.max(conVoz, MINIMO[id]);
+    // Después de voltearse, que alcance a verse la cita y la explicación.
+    const minimo = id === "palabra" && voltear !== undefined ? Math.max(MINIMO.palabra, voltear + TRAS_VOLTEAR) : MINIMO[id];
+    duraciones[id] = ultima ? Math.max(conVoz + OUTRO, minimo) : Math.max(conVoz, minimo);
     inicio += duraciones[id]!;
   });
 
-  return { duraciones, tramos, musica: volumenMusica(tramos, inicio), dura: inicio };
+  return { duraciones, voltear, tramos, musica: volumenMusica(tramos, inicio), dura: inicio };
 }
 
 /** Sin voz todavía: las escenas de siempre, con la música fuerte y fade out al final. */

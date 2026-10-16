@@ -37,6 +37,8 @@ export interface Escena {
   nombre: string;
   inicio: number;
   dura: number;
+  /** Solo "palabra": segundo de la escena en que se voltean las fichas (con voz). */
+  voltear?: number;
 }
 
 const FUNDIDO = 0.3;
@@ -48,7 +50,7 @@ const MIN_JUGADORES_VISIBLE = 5;
  * Escenas del día; las listas se saltan si no hay nadie que mostrar.
  * `duraciones` (de sincronia.ts) las alarga para que vayan con la voz.
  */
-export function lineaDeTiempo(r: Recursos, duraciones: Partial<Record<IdEscena, number>> = {}): Escena[] {
+export function lineaDeTiempo(r: Recursos, duraciones: Partial<Record<IdEscena, number>> = {}, voltear?: number): Escena[] {
   const { t } = r;
   const piezas: Array<[IdEscena, string, number, boolean]> = [
     // El primer cuadro es la portada: TikTok la toma de ahí.
@@ -64,7 +66,7 @@ export function lineaDeTiempo(r: Recursos, duraciones: Partial<Record<IdEscena, 
   return piezas
     .filter(([, , , va]) => va)
     .map(([id, nombre, porDefecto]) => {
-      const e = { id, nombre, inicio, dura: duraciones[id] ?? porDefecto };
+      const e: Escena = { id, nombre, inicio, dura: duraciones[id] ?? porDefecto, ...(id === "palabra" && { voltear }) };
       inicio += e.dura;
       return e;
     });
@@ -144,8 +146,10 @@ function fichas(ctx: Ctx, r: Recursos, u: number, letras: string[], y: number, l
   });
 }
 
-function escenaPalabra(ctx: Ctx, r: Recursos, u: number): void {
+function escenaPalabra(ctx: Ctx, r: Recursos, u: number, voltear = 0.6): void {
   const { t } = r;
+  // Lo de abajo de las fichas aparece cuando ya se voltearon.
+  const d = voltear - 0.6;
   titulo(ctx, r, u, "PALABRA DEL DÍA");
   const alfa = ctx.globalAlpha;
   const aparece = (desde: number) => {
@@ -159,16 +163,16 @@ function escenaPalabra(ctx: Ctx, r: Recursos, u: number): void {
     texto(ctx, "Sin palabra este día", CENTRO_X, 700, { f: r.f, peso: 700, tam: 60, color: COLOR.texto });
     return;
   }
-  fichas(ctx, r, u, [...t.palabra.palabra], 680, 160, 0.6);
+  fichas(ctx, r, u, [...t.palabra.palabra], 680, 160, voltear);
 
-  aparece(1.9);
+  aparece(1.9 + d);
   texto(ctx, `📖 ${t.palabra.referencia}`, CENTRO_X, 860, { f: r.f, peso: 700, tam: 52, color: COLOR.oro });
-  aparece(2.3);
+  aparece(2.3 + d);
   ctx.font = fuente(r.f, 400, 42);
   const lineas = renglones(ctx, t.palabra.explicacion, 880, 4);
   lineas.forEach((l, i) => texto(ctx, l, CENTRO_X, 950 + i * 60, { f: r.f, peso: 400, tam: 42, color: COLOR.suave, max: 900 }));
   if (t.jugadores >= MIN_JUGADORES_VISIBLE) {
-    aparece(2.8);
+    aparece(2.8 + d);
     texto(ctx, `🙌 ${t.jugadores} hermanos jugaron`, CENTRO_X, 950 + lineas.length * 60 + 70, {
       f: r.f,
       peso: 700,
@@ -291,7 +295,7 @@ export function dibujarCuadro(ctx: Ctx, r: Recursos, escenas: Escena[], t: numbe
     // Las escenas se dibujan un poco más abajo del encabezado: así quedan
     // centradas en la parte que TikTok no tapa.
     ctx.translate(0, DESPLAZAR);
-    if (e.id === "palabra") escenaPalabra(ctx, r, u);
+    if (e.id === "palabra") escenaPalabra(ctx, r, u, e.voltear);
     else if (e.id === "ganador") escenaGanador(ctx, r, u, t);
     else if (e.id === "top3") escenaTopDia(ctx, r, u);
     else if (e.id === "semana") escenaSemana(ctx, r, u, rangoSemana(r.t.desde, r.t.fecha));

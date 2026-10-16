@@ -60,8 +60,8 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
     if (!recursos) return { escenas: [], plan: planSinVoz([]) };
     const base = lineaDeTiempo(recursos);
     if (!audio.voz || !audio.sonido.voz) return { escenas: base, plan: planSinVoz(base) };
-    const p = planConVoz(base.map((e) => e.id), audio.voz.alineacion, audio.sonido.voz.duration);
-    return { escenas: lineaDeTiempo(recursos, p.duraciones), plan: p };
+    const p = planConVoz(base.map((e) => e.id), audio.voz.alineacion, audio.sonido.voz.duration, recursos.t.palabra?.palabra);
+    return { escenas: lineaDeTiempo(recursos, p.duraciones, p.voltear), plan: p };
   }, [recursos, audio.voz, audio.sonido.voz]);
   const dura = plan.dura;
 
