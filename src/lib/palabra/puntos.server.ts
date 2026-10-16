@@ -275,5 +275,7 @@ export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTik
     top3Semana,
     otrosSemana: semana.length - top3Semana.length,
     jugadores: new Set(enJuego.filter((p) => p.fecha === fecha).map((p) => p.user_id)).size,
+    // Solo para el aviso del admin: por qué sale (o no) con su nombre.
+    ganadorConPermiso: dia[0] ? conNombre(dia[0].user_id) : null,
   };
 }

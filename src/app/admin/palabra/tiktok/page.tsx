@@ -68,6 +68,25 @@ export default async function VideoTikTokPage({ searchParams }: Props) {
         como “Hermano/a participante”, sin foto; los demás, con su nombre corto (“Arturo O.”).
       </p>
 
+      {t.ganador && (
+        <div
+          className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl text-sm max-w-xl"
+          style={
+            t.ganadorConPermiso
+              ? { background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.35)", color: "var(--color-text)" }
+              : { background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.45)", color: "var(--color-text)" }
+          }
+        >
+          <span aria-hidden>{t.ganadorConPermiso ? "✅" : "⚠️"}</span>
+          <p>
+            <strong>Ganador del día: {t.ganadorConPermiso ? "dio permiso de TikTok" : "no ha dado permiso de TikTok"}.</strong>{" "}
+            {t.ganadorConPermiso
+              ? `Sale con su nombre (“${t.ganador.nombre}”) y su foto.`
+              : "Por eso sale como “Hermano/a participante”, sin foto. Se le pregunta al resolver la palabra; puede marcarlo también en su perfil."}
+          </p>
+        </div>
+      )}
+
       <TarjetaTikTok t={t} />
     </div>
   );

@@ -585,6 +585,16 @@ export interface PalabraPanelPuntos {
   iglesias: PalabraFilaRankingIglesia[];
 }
 
+/** Permiso de TikTok de quien juega (pantalla de resultado de la Palabra del Día). */
+export interface PalabraTikTokUsuario {
+  /** Si ya aceptó salir en los videos (0078). */
+  permiso: boolean;
+  /** Si se le muestra la tarjeta "¿Quieres aparecer…?" (sin permiso y sin "No" en 7 días). */
+  preguntar: boolean;
+  /** Cómo aparecería en el video: "Arturo O.". */
+  nombre: string;
+}
+
 /**
  * Video vertical para TikTok (/admin/palabra/tiktok). Los nombres ya
  * vienen cortos ("Arturo O."): el nombre completo nunca sale del servidor.
@@ -605,6 +615,8 @@ export interface PalabraTarjetaTikTok {
   otrosSemana: number;
   /** Personas (sin admins) que jugaron ese día. */
   jugadores: number;
+  /** Si el ganador dio permiso de TikTok; null si nadie la resolvió. */
+  ganadorConPermiso: boolean | null;
 }
 
 // ── Elim English (tutor de inglés con IA, /ingles) ─────────────────────────────

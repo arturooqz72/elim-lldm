@@ -36,3 +36,19 @@ export function nombreCorto(nombre: string): string {
   const inicial = apellido ? [...apellido][0]?.toLocaleUpperCase("es") : null;
   return inicial ? `${partes[0]} ${inicial}.` : partes[0];
 }
+
+/** Días que se deja de preguntar por TikTok después de un "No, gracias". */
+export const TIKTOK_PAUSA_DIAS = 7;
+
+/**
+ * Si se le muestra la tarjeta "¿Quieres aparecer en nuestro TikTok?". No
+ * hace falta columna nueva: tiktok_permiso_at (0078) guarda cuándo
+ * contestó por última vez, y si sigue sin permiso es que dijo que no (con
+ * la tarjeta o desmarcando la casilla).
+ */
+export function debePreguntarTikTok(permiso: boolean, contestoEn: string | null, ahora = Date.now()): boolean {
+  if (permiso) return false;
+  if (!contestoEn) return true;
+  const contesto = Date.parse(contestoEn);
+  return Number.isNaN(contesto) || ahora - contesto >= TIKTOK_PAUSA_DIAS * 24 * 60 * 60 * 1000;
+}

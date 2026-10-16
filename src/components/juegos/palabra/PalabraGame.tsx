@@ -11,6 +11,7 @@ import type {
   PalabraIntento,
   PalabraPartidaEstado,
   PalabraRevelada,
+  PalabraTikTokUsuario,
 } from "@/types";
 import { ayudaYaVista, estadoLocal, guardarPartidaLocal, marcarAyudaVista } from "./almacenamiento";
 import { useRecargaAlCambiarDia, useSincronizacionLocal, useTecladoFisico } from "./hooks";
@@ -36,8 +37,8 @@ interface PalabraGameProps {
   estadoInicial: PalabraEstadoJugador | null;
   /** Para el panel de puntos (pestaña Iglesias). null = sin sesión. */
   usuario: { iglesia: string | null } | null;
-  /** Si ya aceptó salir en los videos de TikTok (0078). */
-  tiktokPermiso: boolean;
+  /** Permiso de TikTok (0078); null = sin sesión. */
+  tiktok: PalabraTikTokUsuario | null;
 }
 
 interface RespuestaIntento {
@@ -59,7 +60,7 @@ export function PalabraGame({
   conSesion,
   estadoInicial,
   usuario,
-  tiktokPermiso,
+  tiktok,
 }: PalabraGameProps) {
   const [estado, setEstado] = useState<PalabraEstadoJugador | null>(estadoInicial);
   const [actual, setActual] = useState("");
@@ -283,7 +284,7 @@ export function PalabraGame({
             revelado={estado.revelado}
             estado={estado}
             conSesion={conSesion}
-            tiktokPermiso={tiktokPermiso}
+            tiktok={tiktok}
             onAviso={mostrarAviso}
             onPuntos={() => setModal("puntos")}
           />

@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { BookOpen, Copy, MessageCircle, Share2, Trophy } from "lucide-react";
 import { PALABRA_MAX_INTENTOS } from "@/lib/palabra/config";
 import { textoParaCompartir } from "@/lib/palabra/logica";
-import type { PalabraEstadoJugador, PalabraPartidaEstado, PalabraRevelada } from "@/types";
+import type { PalabraEstadoJugador, PalabraPartidaEstado, PalabraRevelada, PalabraTikTokUsuario } from "@/types";
 import { CuentaRegresiva } from "./CuentaRegresiva";
 import { PalabraEstadisticas } from "./PalabraEstadisticas";
 import { InvitacionSesion } from "./InvitacionSesion";
 import { PermisoTikTok } from "./PermisoTikTok";
+import { PreguntaTikTok } from "./PreguntaTikTok";
 
 const WHATSAPP_GREEN = "#25D366";
 
@@ -19,7 +20,8 @@ interface PalabraResultadoProps {
   revelado: PalabraRevelada | null;
   estado: PalabraEstadoJugador;
   conSesion: boolean;
-  tiktokPermiso: boolean;
+  /** null = sin sesión. */
+  tiktok: PalabraTikTokUsuario | null;
   onAviso: (mensaje: string) => void;
   onPuntos: () => void;
 }
@@ -30,7 +32,7 @@ export function PalabraResultado({
   revelado,
   estado,
   conSesion,
-  tiktokPermiso,
+  tiktok,
   onAviso,
   onPuntos,
 }: PalabraResultadoProps) {
@@ -133,7 +135,9 @@ export function PalabraResultado({
         </button>
       </div>
 
-      {conSesion && partida.resuelta && (
+      {tiktok && partida.resuelta && tiktok.preguntar && <PreguntaTikTok nombre={tiktok.nombre} vaGanando={vaGanando} />}
+
+      {tiktok && partida.resuelta && !tiktok.preguntar && (
         <div
           className="px-3 py-3 rounded-xl flex flex-col gap-2"
           style={
@@ -147,7 +151,7 @@ export function PalabraResultado({
               🏆 ¡Vas ganando hoy! ¿Quieres aparecer en el video de TikTok de mañana?
             </p>
           )}
-          <PermisoTikTok inicial={tiktokPermiso} />
+          <PermisoTikTok inicial={tiktok.permiso} />
         </div>
       )}
 
