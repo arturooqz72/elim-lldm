@@ -1,7 +1,7 @@
 // src/lib/ruleta/advance.server.ts
 import "server-only";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { TURN_SECONDS, MIN_PLAYERS } from "./wheel";
+import { TURN_SECONDS, MIN_PLAYERS, STALE_GRACE_MS, SALA_ABANDONADA_MS } from "./wheel";
 import { buildBoardShape } from "./game.server";
 import { pickPuzzle } from "./puzzles.server";
 import { nextJugadorId } from "./game.server";
@@ -331,11 +331,34 @@ export async function forfeitMatch(
   return { applied: true };
 }
 
-// Cuánto tiempo, más allá del deadline, se espera antes de considerar una
-// sala "abandonada" y sanarla sin que haya cliente conectado — suficiente
-// margen para que el cliente legítimo (el que perdió la carrera) dispare su
-// propia petición por la vía normal antes de que esto interfiera.
-const STALE_GRACE_MS = 15_000;
+/**
+ * Cierra una sala 'playing' | 'ronda_fin' cuyo deadline venció hace más de
+ * SALA_ABANDONADA_MS — nadie la ha tocado en minutos, así que no queda
+ * nadie jugando. Misma guarda optimista que el resto: si otra petición ya
+ * la movió (el deadline cambió), no hace nada.
+ */
+async function cerrarSalaAbandonada(
+  salaId: string,
+  statusEsperado: "playing" | "ronda_fin",
+  campoDeadline: "turno_termina_en" | "ronda_fin_termina_en",
+  deadline: string
+): Promise<{ applied: boolean; error?: string }> {
+  const service = await createServiceClient();
+
+  const { data: updated, error: updateError } = await service
+    .from("ruleta_salas")
+    .update({ status: "finished" })
+    .eq("id", salaId)
+    .eq("status", statusEsperado)
+    .eq(campoDeadline, deadline)
+    .select("id, codigo");
+
+  if (updateError) return { applied: false, error: updateError.message };
+  if (!updated || updated.length === 0) return { applied: false };
+
+  await broadcast(updated[0].codigo, "GAME_FINISHED", {});
+  return { applied: true };
+}
 
 /**
  * Red de seguridad para salas abandonadas — mismo espíritu que
@@ -348,6 +371,12 @@ const STALE_GRACE_MS = 15_000;
  *    tras MAX_TURNOS_SALTADOS_SEGUIDOS saltos seguidos sin que nadie
  *    reaparezca, la sala se da por abandonada y se cierra.
  *  - 'ronda_fin' cuyo ronda_fin_termina_en venció hace rato → tryAdvanceRound.
+ *  - En ambos casos, si el deadline venció hace más de SALA_ABANDONADA_MS
+ *    la sala se cierra directo (cerrarSalaAbandonada).
+ *
+ * STALE_GRACE_MS (wheel.ts) es el margen para que el cliente legítimo (el
+ * que perdió la carrera) dispare su propia petición por la vía normal antes
+ * de que esto interfiera.
  */
 export async function healStaleRuletaRooms(): Promise<void> {
   const service = await createServiceClient();
@@ -374,16 +403,24 @@ export async function healStaleRuletaRooms(): Promise<void> {
 
       if (sala.status === "playing") {
         if (!sala.turno_termina_en) continue;
-        if (now - new Date(sala.turno_termina_en).getTime() < STALE_GRACE_MS) continue;
-        const { error: turnoError } = await tryAdvanceTurn(sala.id, true, true);
+        const vencidaHaceMs = now - new Date(sala.turno_termina_en).getTime();
+        if (vencidaHaceMs < STALE_GRACE_MS) continue;
+        const { error: turnoError } =
+          vencidaHaceMs > SALA_ABANDONADA_MS
+            ? await cerrarSalaAbandonada(sala.id, "playing", "turno_termina_en", sala.turno_termina_en)
+            : await tryAdvanceTurn(sala.id, true, true);
         if (turnoError) console.error(`[ruleta/heal] Error al sanar turno de sala ${sala.id}:`, turnoError);
         continue;
       }
 
       if (sala.status === "ronda_fin") {
         if (!sala.ronda_fin_termina_en) continue;
-        if (now - new Date(sala.ronda_fin_termina_en).getTime() < STALE_GRACE_MS) continue;
-        const { error: rondaError } = await tryAdvanceRound(sala.id);
+        const vencidaHaceMs = now - new Date(sala.ronda_fin_termina_en).getTime();
+        if (vencidaHaceMs < STALE_GRACE_MS) continue;
+        const { error: rondaError } =
+          vencidaHaceMs > SALA_ABANDONADA_MS
+            ? await cerrarSalaAbandonada(sala.id, "ronda_fin", "ronda_fin_termina_en", sala.ronda_fin_termina_en)
+            : await tryAdvanceRound(sala.id);
         if (rondaError) console.error(`[ruleta/heal] Error al sanar ronda de sala ${sala.id}:`, rondaError);
       }
     } catch (err) {

@@ -45,6 +45,12 @@ export const RESOLVE_BONUS = 500;
 export const RONDA_FIN_SECONDS = 8; // cuánto se muestra la frase/ganador antes de pasar solo a la siguiente ronda
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
+// Margen tras turno_termina_en / ronda_fin_termina_en antes de tratar la
+// sala como atascada (nadie conectado reportó el vencimiento).
+export const STALE_GRACE_MS = 15_000;
+// Si el deadline venció hace más que esto, ya no queda nadie jugando: la
+// auto-sanación la cierra de una vez en vez de saltar turnos.
+export const SALA_ABANDONADA_MS = 2 * 60_000;
 export const ROUNDS_MIN = 1;
 export const ROUNDS_MAX = 15;
 export const ROUNDS_DEFAULT = 5;
