@@ -6,6 +6,8 @@ import {
   ROUND_SECONDS,
   REVEAL_SECONDS,
   MIN_JUGADORES_PARA_INICIAR,
+  STALE_GRACE_MS,
+  SALA_ABANDONADA_MS,
 } from "./config";
 import { prepararPreguntaDelBanco } from "@/lib/trivia/salas-banco.server";
 import { sumarPuntosSala } from "./puntos.server";
@@ -342,11 +344,14 @@ async function applyTransition(
  * /advance, que siempre lo pide un cliente real con la pestaña abierta.
  * Cada transición aplicada por esta vía suma al contador; cualquier otra
  * (un /advance real) lo reinicia a 0. Al llegar al tope, en vez de aplicar
- * otra transición, la sala se cierra directo.
+ * otra transición, la sala se cierra directo. abandonada=true (el deadline
+ * venció hace más de SALA_ABANDONADA_MS) la cierra directo sin esperar al
+ * tope.
  */
 export async function advanceRoomOnce(
   salaId: string,
-  fromHeal = false
+  fromHeal = false,
+  abandonada = false
 ): Promise<{ applied: boolean; error?: string }> {
   const service = await createServiceClient();
 
@@ -361,7 +366,11 @@ export async function advanceRoomOnce(
 
   const enPartida = ["counting", "playing", "reveal"].includes(sala.status);
 
-  if (fromHeal && enPartida && sala.avances_automaticos_seguidos + 1 >= MAX_AVANCES_AUTOMATICOS_SEGUIDOS) {
+  if (
+    fromHeal &&
+    enPartida &&
+    (abandonada || sala.avances_automaticos_seguidos + 1 >= MAX_AVANCES_AUTOMATICOS_SEGUIDOS)
+  ) {
     const { data: updated, error: updateError } = await service
       .from("arena_publica_salas")
       .update({ status: "finished" })
@@ -448,12 +457,6 @@ export async function forfeitMatch(
   return { applied: true };
 }
 
-// Cuánto tiempo, más allá del deadline, se espera antes de considerar una
-// sala "abandonada" y sanarla sin que haya cliente conectado — suficiente
-// margen para que el cliente legítimo (el que perdió la carrera) dispare su
-// propio /advance por la vía normal antes de que esto interfiera.
-const STALE_GRACE_MS = 15_000;
-
 /**
  * Red de seguridad para salas 'counting' | 'playing' | 'reveal' cuyo
  * deadline ya venció hace rato y que nadie ha hecho avanzar — esto pasa
@@ -466,7 +469,12 @@ const STALE_GRACE_MS = 15_000;
  * función nunca hace más de una transición por sala por llamada. Tras
  * MAX_AVANCES_AUTOMATICOS_SEGUIDOS avances seguidos sin que ningún cliente
  * real reaparezca, advanceRoomOnce() da la sala por abandonada y la cierra
- * directo en vez de seguir empujándola pregunta por pregunta.
+ * directo en vez de seguir empujándola pregunta por pregunta. Si el deadline
+ * venció hace más de SALA_ABANDONADA_MS se cierra en la primera visita.
+ *
+ * STALE_GRACE_MS (config.ts) es el margen para que el cliente legítimo (el
+ * que perdió la carrera) dispare su propio /advance por la vía normal antes
+ * de que esto interfiera.
  */
 export async function healStaleRooms(): Promise<void> {
   const service = await createServiceClient();
@@ -493,9 +501,10 @@ export async function healStaleRooms(): Promise<void> {
           : sala.reveal_termina_en;
 
     if (!deadline) continue;
-    if (now - new Date(deadline).getTime() < STALE_GRACE_MS) continue;
+    const vencidaHaceMs = now - new Date(deadline).getTime();
+    if (vencidaHaceMs < STALE_GRACE_MS) continue;
 
-    const { error: advanceError } = await advanceRoomOnce(sala.id, true);
+    const { error: advanceError } = await advanceRoomOnce(sala.id, true, vencidaHaceMs > SALA_ABANDONADA_MS);
     if (advanceError) {
       console.error(`[arena-publica/heal] Error al sanar sala ${sala.id}:`, advanceError);
     }

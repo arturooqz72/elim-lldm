@@ -1,6 +1,7 @@
 // src/lib/arena-publica/estado-puerta.server.ts
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { STALE_GRACE_MS } from "./config";
 
 export interface EstadoPuerta {
   disponible: boolean;
@@ -14,21 +15,29 @@ export interface EstadoPuerta {
  * una tarjeta, no debe crear una sala nueva solo porque alguien pasó por
  * /juegos sin intención de entrar.
  *
- * Tradeoff conocido: al no llamar a healStaleRooms() (a diferencia de
- * getOrCreateOpenRoom() en room.server.ts), una sala atascada en
- * playing/reveal tras su deadline seguirá mostrando "Ocupado" aquí hasta
- * que alguien visite /arena-abierta y dispare la sanación ahí.
+ * Como tampoco llama a healStaleRooms(), una sala en playing/reveal cuyo
+ * deadline venció hace más de STALE_GRACE_MS sin que nadie la avanzara se
+ * trata como abandonada y no cuenta como "jugándose" — la sanación real la
+ * cierra en la siguiente visita a /arena-abierta.
  */
 export async function getEstadoPuertaArenaAbierta(): Promise<EstadoPuerta> {
   const supabase = await createClient();
 
   const { data: salas } = await supabase
     .from("arena_publica_salas")
-    .select("id, status")
+    .select("id, status, pregunta_termina_en, reveal_termina_en")
     .in("status", ["lobby", "counting", "playing", "reveal"]);
 
+  const now = Date.now();
+  const sigueViva = (deadline: string | null) =>
+    !deadline || now - new Date(deadline).getTime() < STALE_GRACE_MS;
+
   const hayUnaAbierta = (salas ?? []).some((s) => s.status === "lobby" || s.status === "counting");
-  const jugandoAhora = (salas ?? []).filter((s) => s.status === "playing" || s.status === "reveal").length;
+  const jugandoAhora = (salas ?? []).filter(
+    (s) =>
+      (s.status === "playing" && sigueViva(s.pregunta_termina_en)) ||
+      (s.status === "reveal" && sigueViva(s.reveal_termina_en))
+  ).length;
 
   // Jugadores sentados en el lobby actual esperando más gente — para
   // mostrar "N esperando" en la puerta (ver GameNotifyBell.tsx). Si hay

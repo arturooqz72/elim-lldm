@@ -7,3 +7,9 @@ export const MIN_JUGADORES_PARA_INICIAR = 2;
 export const MAX_JUGADORES_POR_SALA = 6;
 export const PREGUNTAS_POR_PARTIDA = 10;
 export const MIN_PREGUNTAS_DISPONIBLES = 5; // si el banco público tiene menos que esto, no se puede armar una partida
+// Margen tras el deadline de una fase antes de tratar la sala como atascada
+// (nadie conectado llamó a /advance).
+export const STALE_GRACE_MS = 15_000;
+// Si el deadline venció hace más que esto, ya no queda nadie jugando: la
+// auto-sanación la cierra de una vez en vez de avanzarla fase por fase.
+export const SALA_ABANDONADA_MS = 2 * 60_000;
