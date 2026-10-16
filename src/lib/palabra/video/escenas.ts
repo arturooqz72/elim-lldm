@@ -1,6 +1,7 @@
 // src/lib/palabra/video/escenas.ts
 //
-// Línea de tiempo del video de TikTok (15–19 s) y escenas de la palabra,
+// Línea de tiempo del video de TikTok (15–19 s sin voz; con voz, lo que
+// dure, ver sincronia.ts) y escenas de la palabra,
 // el ganador y el cierre. `dibujarCuadro(ctx, r, t)` pinta el cuadro del
 // segundo t; la misma función sirve para la vista previa y para grabar,
 // así lo que se ve es exactamente lo que se descarga.
@@ -28,7 +29,7 @@ import { escenaSemana, escenaTopDia, titulo, type Recursos } from "./listas";
 
 export type { Recursos } from "./listas";
 
-type IdEscena = "palabra" | "ganador" | "top3" | "semana" | "cierre";
+export type IdEscena = "palabra" | "ganador" | "top3" | "semana" | "cierre";
 
 export interface Escena {
   id: IdEscena;
@@ -42,8 +43,11 @@ const DESPLAZAR = 110;
 /** "X hermanos jugaron" solo se muestra a partir de este número. */
 const MIN_JUGADORES_VISIBLE = 5;
 
-/** Escenas del día; las listas se saltan si no hay nadie que mostrar. */
-export function lineaDeTiempo(r: Recursos): Escena[] {
+/**
+ * Escenas del día; las listas se saltan si no hay nadie que mostrar.
+ * `duraciones` (de sincronia.ts) las alarga para que vayan con la voz.
+ */
+export function lineaDeTiempo(r: Recursos, duraciones: Partial<Record<IdEscena, number>> = {}): Escena[] {
   const { t } = r;
   const piezas: Array<[IdEscena, string, number, boolean]> = [
     ["palabra", "Palabra", 4.2, true],
@@ -56,9 +60,9 @@ export function lineaDeTiempo(r: Recursos): Escena[] {
   let inicio = 0;
   return piezas
     .filter(([, , , va]) => va)
-    .map(([id, nombre, dura]) => {
-      const e = { id, nombre, inicio, dura };
-      inicio += dura;
+    .map(([id, nombre, porDefecto]) => {
+      const e = { id, nombre, inicio, dura: duraciones[id] ?? porDefecto };
+      inicio += e.dura;
       return e;
     });
 }

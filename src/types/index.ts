@@ -619,6 +619,24 @@ export interface PalabraTarjetaTikTok {
   ganadorConPermiso: boolean | null;
 }
 
+/** Momento en que ElevenLabs dice cada carácter del guion (segundos). */
+export interface PalabraVozAlineacion {
+  characters: string[];
+  character_start_times_seconds: number[];
+  character_end_times_seconds: number[];
+}
+
+/** Voz del video de TikTok de un día, guardada en Backblaze B2. */
+export interface PalabraVozTikTok {
+  fecha: string;
+  guion: string;
+  /** Caracteres que cobró ElevenLabs por esta voz. */
+  caracteres: number;
+  /** ISO; sirve también para no usar un MP3 viejo de la caché. */
+  creada: string;
+  alineacion: PalabraVozAlineacion;
+}
+
 // ── Elim English (tutor de inglés con IA, /ingles) ─────────────────────────────
 
 export type InglesNivel = "principiante" | "intermedio" | "avanzado";
