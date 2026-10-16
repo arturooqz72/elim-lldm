@@ -60,7 +60,7 @@ export default async function PalabraAdminPage({ searchParams }: Props) {
           className="ml-auto px-3 py-1.5 rounded-lg text-xs font-bold"
           style={{ background: "rgba(212,160,23,0.14)", border: "1px solid rgba(212,160,23,0.45)", color: "var(--color-primary)" }}
         >
-          🎬 Tarjeta para TikTok
+          🎬 Video para TikTok
         </a>
       </div>
 

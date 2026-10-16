@@ -1,7 +1,7 @@
 // src/app/admin/palabra/tiktok/page.tsx
-// Tarjeta de TikTok de la Palabra del Día (solo admin, lo revisa
-// admin/layout.tsx). Solo días ya terminados: nunca muestra la palabra del
-// día en curso aunque pidan esa fecha en la URL.
+// Video de TikTok de la Palabra del Día (solo admin, lo revisa
+// admin/layout.tsx). Solo días ya terminados (por defecto ayer): nunca
+// muestra la palabra del día en curso aunque pidan esa fecha en la URL.
 import Link from "next/link";
 import { ArrowLeft, Clapperboard } from "lucide-react";
 import { esFechaIso, sumarDias } from "@/lib/palabra/logica";
@@ -10,14 +10,14 @@ import { fechaDeHoy } from "@/lib/palabra/servidor";
 import { getTarjetaTikTok } from "@/lib/palabra/puntos.server";
 import { TarjetaTikTok } from "@/components/admin/TarjetaTikTok";
 
-export const metadata = { title: "Tarjeta TikTok — Palabra del Día" };
+export const metadata = { title: "Video TikTok — Palabra del Día" };
 export const dynamic = "force-dynamic";
 
 interface Props {
   searchParams: Promise<{ fecha?: string }>;
 }
 
-export default async function TarjetaTikTokPage({ searchParams }: Props) {
+export default async function VideoTikTokPage({ searchParams }: Props) {
   const { fecha: pedida } = await searchParams;
   const ayer = sumarDias(fechaDeHoy(), -1);
   const valida = esFechaIso(pedida) && pedida <= ayer && pedida >= PALABRA_EPOCH;
@@ -29,7 +29,7 @@ export default async function TarjetaTikTokPage({ searchParams }: Props) {
       <div className="flex items-center gap-3">
         <Clapperboard size={22} style={{ color: "var(--color-primary)" }} />
         <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-          Tarjeta para TikTok
+          Video para TikTok
         </h1>
       </div>
 
@@ -62,10 +62,10 @@ export default async function TarjetaTikTokPage({ searchParams }: Props) {
         </p>
       )}
 
-      <p className="text-xs max-w-md" style={{ color: "var(--color-text-muted)" }}>
-        {t.jugadores} {t.jugadores === 1 ? "persona jugó" : "personas jugaron"} este día. Quien no aceptó salir en TikTok
-        aparece como “Hermano/a participante”, sin foto. Para capturar: en el teléfono, abre esta página y toma una
-        captura de la tarjeta; en la computadora, recórtala de la captura de pantalla.
+      <p className="text-xs max-w-xl" style={{ color: "var(--color-text-muted)" }}>
+        {t.jugadores} {t.jugadores === 1 ? "persona jugó" : "personas jugaron"} este día. Gana quien la resolvió en menos
+        intentos; en empate, quien la resolvió primero (día en hora del Pacífico). Quien no aceptó salir en TikTok aparece
+        como “Hermano/a participante”, sin foto; los demás, con su nombre corto (“Arturo O.”).
       </p>
 
       <TarjetaTikTok t={t} />

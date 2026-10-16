@@ -20,3 +20,19 @@ export function vioPista(fecha: string, numIntentos: number, resuelta: boolean, 
 
 /** Nombre en la tarjeta de TikTok de quien no dio permiso. */
 export const NOMBRE_SIN_PERMISO = "Hermano/a participante";
+
+/** Partículas que no cuentan como apellido: "María de la Luz Pérez" → "María P.". */
+const PARTICULAS = new Set(["de", "del", "la", "las", "los", "y", "da", "do", "dos", "van", "von"]);
+
+/**
+ * Nombre para TikTok: primer nombre + inicial del apellido ("Arturo O.").
+ * El nombre para mostrar muchas veces es el nombre completo que viene de
+ * Google; en un video público solo va esta forma corta.
+ */
+export function nombreCorto(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "Jugador";
+  const apellido = partes.slice(1).find((p) => !PARTICULAS.has(p.toLowerCase()));
+  const inicial = apellido ? [...apellido][0]?.toLocaleUpperCase("es") : null;
+  return inicial ? `${partes[0]} ${inicial}.` : partes[0];
+}

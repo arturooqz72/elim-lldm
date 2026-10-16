@@ -156,6 +156,9 @@ export function PalabraRanking({ usuario }: PalabraRankingProps) {
                 )}
               </>
             ))}
+          <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
+            🎬 Los ganadores aparecen en nuestro TikTok
+          </p>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 // src/lib/palabra/puntos.server.ts
 //
-// Panel "Ver puntos" de la Palabra del Día y tarjeta de TikTok. Todo se
+// Panel "Ver puntos" de la Palabra del Día y video de TikTok. Todo se
 // calcula aquí, con service role, desde palabra_partidas: solo cuentan las
 // partidas que evaluó el servidor (origen 'servidor', igual que los
 // rankings SQL), así que nadie puede inflar sus puntos desde el navegador.
@@ -13,7 +13,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { rachaEfectiva, sumarDias } from "./logica";
-import { NOMBRE_SIN_PERMISO, puntosDe, vioPista } from "./puntos";
+import { NOMBRE_SIN_PERMISO, nombreCorto, puntosDe, vioPista } from "./puntos";
 import { getPalabraPorFecha, revelar } from "./servidor";
 import type {
   PalabraFilaRankingIglesia,
@@ -221,10 +221,11 @@ export async function getPanelPuntos(hoy: string, userId: string | null): Promis
 }
 
 /**
- * Tarjeta de TikTok de un día YA TERMINADO (fecha < hoy; quien llama lo
- * valida). Sin admins. Con nombre y foto solo quien dio permiso; los demás
- * se resumen en "y N hermanos más". El ganador siempre va arriba, como
- * "Hermano/a participante" si no dio permiso. Nunca iglesia.
+ * Video de TikTok de un día YA TERMINADO (fecha < hoy; quien llama lo
+ * valida). Sin admins. Con nombre y foto solo quien dio permiso, y el
+ * nombre en forma corta ("Arturo O."); los demás se resumen en "y N
+ * hermanos más". El ganador siempre va arriba, como "Hermano/a
+ * participante" si no dio permiso. Nunca iglesia ni correo.
  */
 export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTikTok> {
   const service = await createServiceClient();
@@ -242,7 +243,7 @@ export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTik
   const persona = (id: string, posicion: number) => {
     const p = mapa.get(id);
     return p?.tiktok
-      ? { posicion, nombre: p.nombre, avatar: p.avatar, esYo: false }
+      ? { posicion, nombre: nombreCorto(p.nombre), avatar: p.avatar, esYo: false }
       : { posicion, nombre: NOMBRE_SIN_PERMISO, avatar: null, esYo: false };
   };
   const filaDia = (p: Partida, i: number): PalabraPuntosHoyFila => ({
@@ -252,26 +253,27 @@ export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTik
     puntos: puntosDe(p.num_intentos, true),
   });
 
-  // Top 3 y top 5: solo renglones con permiso (el ganador ya va arriba).
+  // 2.º y 3.º del día y top 3 de la semana: solo renglones con permiso.
   const top3 = dia
     .slice(0, 3)
     .map(filaDia)
     .filter((f, i) => i > 0 && conNombre(dia[i].user_id));
-  const top5 = semana
-    .slice(0, 5)
+  const top3Semana = semana
+    .slice(0, 3)
     .map((s, i) => ({ s, i }))
     .filter(({ s }) => conNombre(s.user_id))
     .map(({ s, i }) => ({ ...persona(s.user_id, i + 1), puntos: s.puntos, dias: s.dias, racha: 0 }));
 
   return {
     fecha,
+    desde,
     palabra: palabra ? revelar(palabra) : null,
     ganador: dia[0] ? filaDia(dia[0], 0) : null,
     top3,
     // Quienes la resolvieron y no salen con nombre (ni como ganador).
     otrosDia: Math.max(dia.length - 1 - top3.length, 0),
-    top5Semana: top5,
-    otrosSemana: semana.length - top5.length,
+    top3Semana,
+    otrosSemana: semana.length - top3Semana.length,
     jugadores: new Set(enJuego.filter((p) => p.fecha === fecha).map((p) => p.user_id)).size,
   };
 }

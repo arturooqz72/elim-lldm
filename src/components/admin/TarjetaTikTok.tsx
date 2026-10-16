@@ -1,185 +1,200 @@
 // src/components/admin/TarjetaTikTok.tsx
-// Tarjeta vertical 9:16 de la Palabra del Día para capturar y subir a
-// TikTok. Todo se mide en cqw (ancho de la tarjeta), así se ve igual en
-// cualquier tamaño de pantalla. Con nombre solo quien dio permiso; los
-// demás se resumen en "y N hermanos más". El ganador siempre va arriba
-// (como "Hermano/a participante" sin foto si no dio permiso). Sin iglesia.
-import type { PalabraTarjetaTikTok, PalabraPuntosPersona } from "@/types";
+//
+// Video vertical 9:16 (1080×1920) de la Palabra del Día para TikTok. La
+// vista previa y el archivo que se descarga salen del mismo dibujo
+// (src/lib/palabra/video), así lo que se ve es lo que se sube. Con nombre
+// solo quien dio permiso, en forma corta ("Arturo O."); los demás se
+// resumen en "y N hermanos más". Sin iglesia ni correos.
+"use client";
 
-const ORO = "#D4A017";
-const MEDALLAS = ["🥇", "🥈", "🥉"];
-/** "X hermanos jugaron" solo se muestra a partir de este número. */
-const MIN_JUGADORES_VISIBLE = 5;
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download, Loader2, Pause, Play } from "lucide-react";
+import type { PalabraTarjetaTikTok } from "@/types";
+import { ALTO, ANCHO } from "@/lib/palabra/video/lienzo";
+import { dibujarCuadro, duracion, lineaDeTiempo, type Recursos } from "@/lib/palabra/video/escenas";
+import { cargarRecursos } from "@/lib/palabra/video/recursos";
+import { formatoDisponible, grabarLienzo, type Formato } from "@/lib/palabra/video/grabar";
+import { descripcionTikTok } from "@/lib/palabra/video/descripcion";
+import { TextoTikTok } from "./TextoTikTok";
 
-function etiquetaFecha(fecha: string): string {
-  const texto = new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
-    new Date(`${fecha}T12:00:00Z`)
-  );
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
-}
-
-function Foto({ p, tam }: { p: PalabraPuntosPersona; tam: number }) {
-  const estilo = { width: `${tam}cqw`, height: `${tam}cqw`, borderRadius: "9999px", flexShrink: 0 } as const;
-  return p.avatar ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={p.avatar} alt="" referrerPolicy="no-referrer" style={{ ...estilo, objectFit: "cover", border: `0.6cqw solid ${ORO}` }} />
-  ) : (
-    <span
-      style={{
-        ...estilo,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(212,160,23,0.15)",
-        color: ORO,
-        fontSize: `${tam * 0.45}cqw`,
-      }}
-    >
-      🙏
-    </span>
-  );
-}
-
-function Titulo({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ color: ORO, fontSize: "3.6cqw", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-      {children}
-    </p>
-  );
-}
-
-function Renglon({ izq, p, der }: { izq: string; p: PalabraPuntosPersona; der: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "2.5cqw",
-        padding: "1.1cqw 2.5cqw",
-        borderRadius: "2.5cqw",
-        background: "rgba(255,255,255,0.05)",
-      }}
-    >
-      <span style={{ width: "6cqw", textAlign: "center", fontSize: "3.9cqw", fontWeight: 800, color: ORO }}>{izq}</span>
-      <Foto p={p} tam={7} />
-      <span
-        style={{ flex: 1, minWidth: 0, fontSize: "3.9cqw", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
-        {p.nombre}
-      </span>
-      <span style={{ fontSize: "3.9cqw", fontWeight: 800, color: ORO, fontVariantNumeric: "tabular-nums" }}>{der}</span>
-    </div>
-  );
-}
-
-/** "y N hermanos más"; si no hay nadie con nombre antes, `sinNombres`. */
-function YMas({ n, sinNombres }: { n: number; sinNombres?: string }) {
-  if (n <= 0) return null;
-  const hermanos = `${n} ${n === 1 ? "hermano" : "hermanos"}`;
-  return (
-    <p style={{ textAlign: "center", fontSize: "3.6cqw", color: "#C9C4B5", padding: "0.6cqw 0" }}>
-      {sinNombres ? `${hermanos} ${sinNombres}` : `y ${hermanos} más`}
-    </p>
-  );
-}
+type Estado = { tipo: "cargando" } | { tipo: "listo" } | { tipo: "grabando"; avance: number } | { tipo: "error"; mensaje: string };
 
 export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
-  const { ganador } = t;
+  const lienzo = useRef<HTMLCanvasElement>(null);
+  const [recursos, setRecursos] = useState<Recursos | null>(null);
+  const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
+  const [tocando, setTocando] = useState(true);
+  const [segundo, setSegundo] = useState(0);
+  // Tiempo de la vista previa: se guarda aparte para poder pausar y saltar de escena.
+  const reloj = useRef({ t: 0, ultimo: 0 });
+
+  const escenas = useMemo(() => (recursos ? lineaDeTiempo(recursos) : []), [recursos]);
+  const dura = duracion(escenas);
+  // undefined = todavía no se revisa (en el servidor no hay MediaRecorder).
+  const [formato, setFormato] = useState<Formato | null | undefined>(undefined);
+  const texto = useMemo(() => descripcionTikTok(t), [t]);
+
+  useEffect(() => setFormato(formatoDisponible()), []);
+
+  useEffect(() => {
+    let vivo = true;
+    setEstado({ tipo: "cargando" });
+    cargarRecursos(t)
+      .then((r) => {
+        if (!vivo) return;
+        setRecursos(r);
+        setEstado({ tipo: "listo" });
+      })
+      .catch(() => vivo && setEstado({ tipo: "error", mensaje: "No se pudo preparar el video." }));
+    return () => {
+      vivo = false;
+    };
+  }, [t]);
+
+  const pintar = useCallback(
+    (seg: number) => {
+      const ctx = lienzo.current?.getContext("2d");
+      if (ctx && recursos) dibujarCuadro(ctx, recursos, escenas, seg);
+    },
+    [recursos, escenas]
+  );
+
+  // Vista previa en bucle (se detiene mientras se graba: la grabación pinta sola).
+  useEffect(() => {
+    if (!recursos || estado.tipo === "grabando") return;
+    let id = 0;
+    reloj.current.ultimo = performance.now();
+    const cuadro = (ahora: number) => {
+      const r = reloj.current;
+      if (tocando) r.t = (r.t + (ahora - r.ultimo) / 1000) % (dura + 1.2);
+      r.ultimo = ahora;
+      pintar(Math.min(r.t, dura - 0.001));
+      setSegundo(Math.floor(Math.min(r.t, dura)));
+      id = requestAnimationFrame(cuadro);
+    };
+    id = requestAnimationFrame(cuadro);
+    return () => cancelAnimationFrame(id);
+  }, [recursos, estado.tipo, tocando, dura, pintar]);
+
+  const verEscena = (inicio: number, largo: number) => {
+    // Casi al final de la escena, cuando ya se armó completa.
+    reloj.current.t = inicio + largo - 0.5;
+    setTocando(false);
+  };
+
+  const descargar = async () => {
+    if (!lienzo.current || !formato || !recursos) return;
+    setEstado({ tipo: "grabando", avance: 0 });
+    try {
+      const archivo = await grabarLienzo(lienzo.current, formato, dura, pintar, (avance) =>
+        setEstado({ tipo: "grabando", avance })
+      );
+      const url = URL.createObjectURL(archivo);
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = `palabra-del-dia-${t.fecha}.${formato.extension}`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      reloj.current.t = 0;
+      setTocando(true);
+      setEstado({ tipo: "listo" });
+    } catch (e) {
+      setEstado({ tipo: "error", mensaje: e instanceof Error ? e.message : "No se pudo grabar el video." });
+    }
+  };
+
+  const grabando = estado.tipo === "grabando";
+  const boton = "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold";
+  const secundario = { background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" };
+
   return (
-    <div
-      id="tarjeta-tiktok"
-      style={{
-        containerType: "inline-size",
-        width: "min(100%, 405px)",
-        aspectRatio: "9 / 16",
-        background: "radial-gradient(ellipse 90% 45% at 50% 0%, rgba(212,160,23,0.22) 0%, transparent 70%), #0A0A12",
-        color: "#F8F8FF",
-        borderRadius: "16px",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        padding: "5cqw 5.5cqw",
-        gap: "2.6cqw",
-        fontFamily: "var(--font-inter), system-ui, sans-serif",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "2.5cqw" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-192.png" alt="" style={{ width: "9cqw", height: "9cqw", borderRadius: "2cqw" }} />
-        <span style={{ fontFamily: "var(--font-cinzel), serif", fontSize: "7cqw", fontWeight: 700, color: ORO, letterSpacing: "0.08em" }}>
-          Elim LLDM
-        </span>
-      </div>
-
-      {/* Lo de en medio queda centrado aunque haya pocos renglones. */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "3cqw" }}>
-      <div style={{ textAlign: "center" }}>
-        <Titulo>Palabra del Día</Titulo>
-        <p style={{ fontSize: "3.4cqw", color: "#9090A8" }}>{etiquetaFecha(t.fecha)}</p>
-        <p style={{ fontSize: "10.5cqw", fontWeight: 800, letterSpacing: "0.18em", color: ORO, lineHeight: 1.1 }}>
-          {t.palabra?.palabra ?? "—"}
-        </p>
-        {t.palabra && <p style={{ fontSize: "3.4cqw", color: "#9090A8" }}>{t.palabra.referencia}</p>}
-        {/* Solo con 5 o más (sin admins): con menos no luce en el video. */}
-        {t.jugadores >= MIN_JUGADORES_VISIBLE && (
-          <p style={{ fontSize: "3.8cqw", fontWeight: 700, marginTop: "1.2cqw" }}>
-            🙌 {t.jugadores} hermanos jugaron
-          </p>
-        )}
-      </div>
-
-      <div
-        style={{
-          textAlign: "center",
-          padding: "2.6cqw",
-          borderRadius: "4cqw",
-          background: "rgba(212,160,23,0.1)",
-          border: `0.4cqw solid rgba(212,160,23,0.45)`,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "1.5cqw",
-        }}
-      >
-        <Titulo>🏆 Ganador del día</Titulo>
-        {ganador ? (
-          <>
-            <Foto p={ganador} tam={14} />
-            <p style={{ fontSize: "5.6cqw", fontWeight: 800, lineHeight: 1.1 }}>{ganador.nombre}</p>
-            <p style={{ fontSize: "4cqw", color: ORO, fontWeight: 700 }}>
-              {ganador.puntos} puntos · {ganador.intentos} de 6 intentos
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex flex-col gap-3 w-full max-w-[360px]">
+        <div className="relative w-full" style={{ aspectRatio: "9 / 16" }}>
+          <canvas
+            ref={lienzo}
+            width={ANCHO}
+            height={ALTO}
+            aria-label="Vista previa del video para TikTok"
+            className="absolute inset-0 w-full h-full rounded-2xl"
+            style={{ background: "#0A0A12", border: "1px solid var(--color-border)" }}
+          />
+          {estado.tipo === "cargando" && (
+            <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm" style={{ color: "var(--color-text-muted)" }}>
+              <Loader2 size={16} className="animate-spin" /> Preparando video…
             </p>
-          </>
-        ) : (
-          <p style={{ fontSize: "4cqw", color: "#9090A8" }}>Nadie la resolvió este día</p>
-        )}
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={boton}
+            style={secundario}
+            disabled={!recursos || grabando}
+            onClick={() => setTocando((v) => !v)}
+            aria-label={tocando ? "Pausar" : "Reproducir"}
+          >
+            {tocando ? <Pause size={15} /> : <Play size={15} />}
+          </button>
+          <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
+            {segundo}s / {Math.round(dura)}s
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {escenas.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              disabled={grabando}
+              onClick={() => verEscena(e.inicio, e.dura)}
+              className="px-2.5 py-1 rounded-full text-xs font-medium"
+              style={secundario}
+            >
+              {e.nombre}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {(t.top3.length > 0 || t.otrosDia > 0) && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.1cqw" }}>
-          <Titulo>Top 3 del día</Titulo>
-          {t.top3.map((p) => (
-            <Renglon key={p.posicion} izq={MEDALLAS[p.posicion - 1] ?? String(p.posicion)} p={p} der={`${p.puntos} pts`} />
-          ))}
-          <YMas n={t.otrosDia} />
+      <div className="flex flex-col gap-4 w-full max-w-md">
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={descargar}
+            disabled={!recursos || !formato || grabando}
+            className={`${boton} py-3 text-base disabled:opacity-60`}
+            style={{ background: "var(--color-primary)", color: "#000" }}
+          >
+            {grabando ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+            {grabando ? `Grabando… ${Math.round(estado.avance * 100)}%` : `Descargar video (${formato?.extension.toUpperCase() ?? "—"})`}
+          </button>
+          {grabando && (
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-surface-elevated)" }}>
+              <div className="h-full" style={{ width: `${estado.avance * 100}%`, background: "var(--color-primary)" }} />
+            </div>
+          )}
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            {formato === undefined
+              ? ""
+              : !formato
+              ? "Este navegador no puede generar video. Ábrelo en Chrome o Safari actualizados."
+              : grabando
+                ? "No cambies de pestaña ni minimices la ventana hasta que termine (unos segundos)."
+                : formato.extension === "mp4"
+                  ? `Se genera un MP4 de ${Math.round(dura)} segundos, sin sonido (la música se agrega en TikTok).`
+                  : `Este navegador solo puede generar WebM (${Math.round(dura)} s, sin sonido). Para MP4, usa Chrome actualizado o Safari.`}
+          </p>
+          {estado.tipo === "error" && (
+            <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
+              {estado.mensaje}
+            </p>
+          )}
         </div>
-      )}
-
-      {(t.top5Semana.length > 0 || t.otrosSemana > 0) && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.1cqw" }}>
-          <Titulo>Top 5 · últimos 7 días</Titulo>
-          {t.top5Semana.map((p) => (
-            <Renglon key={p.posicion} izq={String(p.posicion)} p={p} der={`${p.puntos} pts`} />
-          ))}
-          <YMas n={t.otrosSemana} sinNombres={t.top5Semana.length === 0 ? (t.otrosSemana === 1 ? "sumó puntos" : "sumaron puntos") : undefined} />
-        </div>
-      )}
-
+        <TextoTikTok texto={texto} />
       </div>
-
-      <p style={{ textAlign: "center", fontSize: "3.6cqw", color: "#9090A8" }}>
-        Juega gratis cada día en <strong style={{ color: ORO }}>elimlldm.net/juegos/palabra</strong>
-      </p>
     </div>
   );
 }

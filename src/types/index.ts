@@ -585,9 +585,14 @@ export interface PalabraPanelPuntos {
   iglesias: PalabraFilaRankingIglesia[];
 }
 
-/** Tarjeta vertical para TikTok (/admin/palabra/tiktok). */
+/**
+ * Video vertical para TikTok (/admin/palabra/tiktok). Los nombres ya
+ * vienen cortos ("Arturo O."): el nombre completo nunca sale del servidor.
+ */
 export interface PalabraTarjetaTikTok {
   fecha: string;
+  /** Primer día de los 7 que suma "Va adelante esta semana". */
+  desde: string;
   palabra: PalabraRevelada | null;
   /** Siempre arriba; "Hermano/a participante" sin foto si no dio permiso. */
   ganador: PalabraPuntosHoyFila | null;
@@ -595,8 +600,8 @@ export interface PalabraTarjetaTikTok {
   top3: PalabraPuntosHoyFila[];
   /** Los que la resolvieron y no salen con nombre: "y N hermanos más". */
   otrosDia: number;
-  /** Top 5 de 7 días, solo los que dieron permiso. */
-  top5Semana: PalabraPuntosSemanaFila[];
+  /** Top 3 de los 7 días que terminan en `fecha`, solo los que dieron permiso. */
+  top3Semana: PalabraPuntosSemanaFila[];
   otrosSemana: number;
   /** Personas (sin admins) que jugaron ese día. */
   jugadores: number;
