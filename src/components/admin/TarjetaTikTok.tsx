@@ -9,18 +9,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Loader2, Pause, Play } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import type { PalabraTarjetaTikTok } from "@/types";
 import { ALTO, ANCHO } from "@/lib/palabra/video/lienzo";
-import { dibujarCuadro, lineaDeTiempo, type Recursos } from "@/lib/palabra/video/escenas";
+import { dibujarCuadro, lineaDeTiempo, type Escena, type Recursos } from "@/lib/palabra/video/escenas";
 import { cargarRecursos } from "@/lib/palabra/video/recursos";
 import { formatoDisponible, grabarLienzo, type Formato } from "@/lib/palabra/video/grabar";
 import { descripcionTikTok } from "@/lib/palabra/video/descripcion";
 import { guionDelDia } from "@/lib/palabra/video/guion";
 import { planConVoz, planSinVoz } from "@/lib/palabra/video/sincronia";
 import { tocarSonido, type Reproduccion } from "@/lib/palabra/video/sonido";
+import { dibujarGuiasTikTok, PORTADA_DURA, portadaPng } from "@/lib/palabra/video/portada";
 import { TextoTikTok } from "./TextoTikTok";
 import { PanelVozTikTok } from "./PanelVozTikTok";
+import { ControlesVistaTikTok } from "./ControlesVistaTikTok";
 import { useSonidoTikTok } from "./useSonidoTikTok";
 
 type Estado = { tipo: "cargando" } | { tipo: "listo" } | { tipo: "grabando"; avance: number } | { tipo: "error"; mensaje: string };
@@ -92,6 +94,37 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
     [recursos, escenas]
   );
 
+  // Las guías de TikTok solo se pintan en la vista previa, nunca al grabar.
+  const [guias, setGuias] = useState(false);
+  const pintarVista = useCallback(
+    (seg: number) => {
+      pintar(seg);
+      const ctx = lienzo.current?.getContext("2d");
+      if (ctx && guias && seg < PORTADA_DURA) dibujarGuiasTikTok(ctx);
+    },
+    [pintar, guias]
+  );
+
+  const descargarArchivo = (archivo: Blob, nombre: string) => {
+    const url = URL.createObjectURL(archivo);
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = nombre;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  const descargarPortada = async () => {
+    if (!recursos) return;
+    try {
+      descargarArchivo(await portadaPng(recursos), `portada-palabra-del-dia-${t.fecha}.png`);
+    } catch (e) {
+      setEstado({ tipo: "error", mensaje: e instanceof Error ? e.message : "No se pudo generar la portada." });
+    }
+  };
+
   const callar = useCallback(() => {
     sonando.current?.detener();
     sonando.current = null;
@@ -125,7 +158,7 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
         }
       }
       r.ultimo = ahora;
-      pintar(Math.min(Math.max(r.t, 0), dura - 0.001));
+      pintarVista(Math.min(Math.max(r.t, 0), dura - 0.001));
       setSegundo(Math.floor(Math.min(Math.max(r.t, 0), dura)));
       id = requestAnimationFrame(cuadro);
     };
@@ -134,16 +167,16 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
       cancelAnimationFrame(id);
       callar();
     };
-  }, [recursos, estado.tipo, tocando, dura, pintar, plan, contexto, sonido, callar]);
+  }, [recursos, estado.tipo, tocando, dura, pintarVista, plan, contexto, sonido, callar]);
 
   const alternar = async () => {
     if (!tocando) await audio.despertar();
     setTocando((v) => !v);
   };
 
-  const verEscena = (inicio: number, largo: number) => {
-    // Casi al final de la escena, cuando ya se armó completa.
-    reloj.current.t = inicio + largo - 0.5;
+  const verEscena = (e: Escena) => {
+    // Casi al final de la escena, cuando ya se armó completa (la portada, desde el inicio).
+    reloj.current.t = e.id === "portada" ? 0 : e.inicio + e.dura - 0.5;
     setTocando(false);
   };
 
@@ -172,14 +205,7 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
             }
           : undefined
       );
-      const url = URL.createObjectURL(archivo);
-      const enlace = document.createElement("a");
-      enlace.href = url;
-      enlace.download = `palabra-del-dia-${t.fecha}.${formato.extension}`;
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      descargarArchivo(archivo, `palabra-del-dia-${t.fecha}.${formato.extension}`);
       reloj.current.t = 0;
       setEstado({ tipo: "listo" });
     } catch (e) {
@@ -192,7 +218,6 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
   const grabando = estado.tipo === "grabando";
   const generandoOCargando = audio.voz === undefined || audio.bajandoVoz || !audio.sonido.musica;
   const boton = "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold";
-  const secundario = { background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -213,35 +238,20 @@ export function TarjetaTikTok({ t }: { t: PalabraTarjetaTikTok }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className={boton}
-            style={secundario}
-            disabled={!recursos || grabando}
-            onClick={alternar}
-            aria-label={tocando ? "Pausar" : "Reproducir con sonido"}
-          >
-            {tocando ? <Pause size={15} /> : <Play size={15} />}
-          </button>
-          <span className="text-xs tabular-nums" style={{ color: "var(--color-text-muted)" }}>
-            {segundo}s / {Math.round(dura)}s{conVoz ? " · con voz" : ""}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {escenas.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              disabled={grabando}
-              onClick={() => verEscena(e.inicio, e.dura)}
-              className="px-2.5 py-1 rounded-full text-xs font-medium"
-              style={secundario}
-            >
-              {e.nombre}
-            </button>
-          ))}
-        </div>
+        <ControlesVistaTikTok
+          listo={Boolean(recursos)}
+          grabando={grabando}
+          tocando={tocando}
+          segundo={segundo}
+          dura={dura}
+          conVoz={conVoz}
+          escenas={escenas}
+          guias={guias}
+          alAlternar={alternar}
+          alVerEscena={verEscena}
+          alCambiarGuias={setGuias}
+          alDescargarPortada={descargarPortada}
+        />
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-md">

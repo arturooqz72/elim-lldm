@@ -26,10 +26,11 @@ import {
   type Ctx,
 } from "./lienzo";
 import { escenaSemana, escenaTopDia, titulo, type Recursos } from "./listas";
+import { dibujarPortada, PORTADA_DURA } from "./portada";
 
 export type { Recursos } from "./listas";
 
-export type IdEscena = "palabra" | "ganador" | "top3" | "semana" | "cierre";
+export type IdEscena = "portada" | "palabra" | "ganador" | "top3" | "semana" | "cierre";
 
 export interface Escena {
   id: IdEscena;
@@ -50,6 +51,8 @@ const MIN_JUGADORES_VISIBLE = 5;
 export function lineaDeTiempo(r: Recursos, duraciones: Partial<Record<IdEscena, number>> = {}): Escena[] {
   const { t } = r;
   const piezas: Array<[IdEscena, string, number, boolean]> = [
+    // El primer cuadro es la portada: TikTok la toma de ahí.
+    ["portada", "Portada", PORTADA_DURA, true],
     ["palabra", "Palabra", 4.2, true],
     ["ganador", "Ganador", 4.6, true],
     // Si solo la resolvió el ganador, "Top 3" lo repetiría: se salta.
@@ -269,6 +272,11 @@ function escenaCierre(ctx: Ctx, r: Recursos, u: number, t: number): void {
 
 /** Pinta el cuadro del segundo `t`. */
 export function dibujarCuadro(ctx: Ctx, r: Recursos, escenas: Escena[], t: number): void {
+  const portada = escenas[0]?.id === "portada" ? escenas[0] : null;
+  if (portada && t < portada.dura) {
+    dibujarPortada(ctx, r);
+    return;
+  }
   ctx.save();
   ctx.clearRect(0, 0, ANCHO, ALTO);
   fondo(ctx, t);

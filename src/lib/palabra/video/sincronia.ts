@@ -9,19 +9,20 @@
 //
 //   música fuerte ─┐                                     ┌─ fuerte ─╲ fade out
 //                  └── baja mientras habla la voz ───────┘
-//   |INTRO| palabra | ganador | top 3 | semana | cierre |  OUTRO   |
+//   |portada|INTRO| palabra | ganador | top 3 | semana | cierre |  OUTRO   |
 import type { PalabraVozAlineacion } from "@/types";
 import { ABREN_FRASE, MARCAS, normalizar } from "./guion";
 import type { Escena, IdEscena } from "./escenas";
+import { PORTADA_DURA } from "./portada";
 
-/** Segundos de música sola antes de que empiece a hablar. */
-export const INTRO = 1.6;
+/** Segundos de música sola antes de que empiece a hablar (después de la portada). */
+export const INTRO = 1.3;
 /** Segundos de música después de "Dios los bendiga" (el último con fade out). */
 export const OUTRO = 3.2;
 const FADE_OUT = 2.4;
 
 /** Lo menos que dura cada escena para que su animación se alcance a ver. */
-const MINIMO: Record<IdEscena, number> = { palabra: 4.2, ganador: 3.8, top3: 3.2, semana: 3.4, cierre: 3 };
+const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, ganador: 3.8, top3: 3.2, semana: 3.4, cierre: 3 };
 
 const VOLUMEN = { fuerte: 0.6, conVoz: 0.17, pausa: 0.32 } as const;
 const RAMPA = 0.35;
@@ -86,13 +87,21 @@ function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]
   return puntos;
 }
 
-/** Con voz: las escenas se ajustan a lo que va diciendo. */
-export function planConVoz(ids: IdEscena[], al: PalabraVozAlineacion, duraVoz: number): PlanSonido {
-  const m = marcas(ids, al);
-  const finVoz = Math.min(duraVoz, (al.character_end_times_seconds.at(-1) ?? duraVoz) + 0.25);
+/**
+ * Con voz: las escenas se ajustan a lo que va diciendo. La portada (si va)
+ * dura lo de siempre y sin voz; la música ya suena desde ella.
+ */
+export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz: number): PlanSonido {
   const duraciones: Partial<Record<IdEscena, number>> = {};
   const tramos: TramoVoz[] = [];
   let inicio = 0;
+  if (todas[0] === "portada") {
+    duraciones.portada = PORTADA_DURA;
+    inicio = PORTADA_DURA;
+  }
+  const ids = todas.filter((id) => id !== "portada");
+  const m = marcas(ids, al);
+  const finVoz = Math.min(duraVoz, (al.character_end_times_seconds.at(-1) ?? duraVoz) + 0.25);
 
   ids.forEach((id, i) => {
     const desde = m[i];
