@@ -7,9 +7,9 @@
 // frase de una escena es más corta que lo que la animación necesita, la
 // voz espera con la música sola; así nunca se corta ni se adelanta.
 //
-//   música fuerte ─┐                                     ┌─ fuerte ─╲ fade out
-//                  └── baja mientras habla la voz ───────┘
-//   |portada|INTRO| palabra | ganador | top 3 | semana | cierre |  OUTRO   |
+//   música fuerte ─┐                                          ┌╲ se apaga
+//                  └── baja mientras habla la voz ────────────┘
+//   |portada|INTRO| palabra | ganador | top 3 | semana | cierre (≤ 4 s) |
 import type { PalabraVozAlineacion } from "@/types";
 import { ABREN_FRASE, MARCAS, normalizar } from "./guion";
 import type { Escena, IdEscena } from "./escenas";
@@ -17,12 +17,15 @@ import { PORTADA_DURA } from "./portada";
 
 /** Segundos de música sola antes de que empiece a hablar (después de la portada). */
 export const INTRO = 1.3;
-/** Segundos de música después de "Dios los bendiga" (el último con fade out). */
-export const OUTRO = 3.2;
+/** Segundos de música después de "Dios los bendiga", mientras se apaga. */
+export const OUTRO = 1;
+const OUTRO_MINIMO = 0.4;
+/** El cierre dura esto como máximo (salvo que la voz misma tarde más en terminar). */
+const MAX_CIERRE = 4;
 const FADE_OUT = 2.4;
 
 /** Lo menos que dura cada escena para que su animación se alcance a ver. */
-const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, ganador: 3.8, top3: 3.2, semana: 3.4, cierre: 3 };
+const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, ganador: 3.8, top3: 3.2, semana: 3.4, cierre: 2.6 };
 
 /** Las fichas empiezan a voltearse esto antes de que la voz diga la palabra. */
 const ANTICIPO = 0.15;
@@ -94,9 +97,12 @@ function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]
   });
   const ultimo = tramos[tramos.length - 1];
   if (ultimo) {
+    // Cierre corto: al terminar la voz la música sube un poco y se apaga.
     const fin = ultimo.enVideo + (ultimo.hasta - ultimo.desde);
     poner(fin, VOLUMEN.conVoz);
-    poner(fin + 0.6, VOLUMEN.fuerte);
+    poner(Math.min(fin + 0.3, dura), VOLUMEN.pausa);
+    poner(dura, 0);
+    return puntos;
   }
   poner(dura - FADE_OUT, VOLUMEN.fuerte);
   poner(dura, 0);
@@ -135,7 +141,9 @@ export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz:
     const conVoz = (primera ? INTRO : 0) + largo;
     // Después de voltearse, que alcance a verse la cita y la explicación.
     const minimo = id === "palabra" && voltear !== undefined ? Math.max(MINIMO.palabra, voltear + TRAS_VOLTEAR) : MINIMO[id];
-    duraciones[id] = ultima ? Math.max(conVoz + OUTRO, minimo) : Math.max(conVoz, minimo);
+    duraciones[id] = ultima
+      ? Math.max(Math.min(conVoz + OUTRO, MAX_CIERRE), conVoz + OUTRO_MINIMO, minimo)
+      : Math.max(conVoz, minimo);
     inicio += duraciones[id]!;
   });
 

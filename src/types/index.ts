@@ -610,7 +610,7 @@ export interface PalabraTarjetaTikTok {
   top3: PalabraPuntosHoyFila[];
   /** Los que la resolvieron y no salen con nombre: "y N hermanos más". */
   otrosDia: number;
-  /** Top 3 de los 7 días que terminan en `fecha`, solo los que dieron permiso. */
+  /** Top 3 de los 7 días que terminan en `fecha`; sin permiso = "Hermano/a participante" sin foto. */
   top3Semana: PalabraPuntosSemanaFila[];
   otrosSemana: number;
   /** Personas (sin admins) que jugaron ese día. */

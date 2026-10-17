@@ -6,6 +6,7 @@
 // editar antes de generar la voz; las frases de MARCAS son las que abren
 // cada escena del video (ver sincronia.ts).
 import type { PalabraTarjetaTikTok } from "@/types";
+import { NOMBRE_SIN_PERMISO } from "../puntos";
 
 export const SIN_PERMISO_VOZ = "un hermano participante";
 /** Tope del guion editado (el de siempre ronda los 350). */
@@ -23,7 +24,7 @@ const conPunto = (s: string) => (s.endsWith(".") ? s : `${s}.`);
 /** Quien va adelante en la semana; null si nadie sumó puntos. */
 export function liderSemana(t: PalabraTarjetaTikTok): string | null {
   const primero = t.top3Semana[0];
-  if (primero?.posicion === 1) return primero.nombre;
+  if (primero?.posicion === 1 && primero.nombre !== NOMBRE_SIN_PERMISO) return primero.nombre;
   return t.top3Semana.length + t.otrosSemana > 0 ? SIN_PERMISO_VOZ : null;
 }
 
@@ -45,7 +46,8 @@ export function guionDelDia(t: PalabraTarjetaTikTok): string {
   const lider = liderSemana(t);
   if (lider) partes.push(conPunto(`Y en la semana, quien va adelante es ${lider}`), "¿Quién lo alcanzará?");
 
-  partes.push("Juega hoy en elimlldm punto net y aprende más de la Palabra de Dios.", "Dios los bendiga.");
+  // Corto: el cierre del video dura 4 s como máximo.
+  partes.push("Juega hoy en elimlldm punto net.", "Dios los bendiga.");
   return partes.join(" ");
 }
 

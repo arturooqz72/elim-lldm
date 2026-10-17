@@ -8,6 +8,12 @@
 export const ANCHO = 1080;
 export const ALTO = 1920;
 export const CENTRO_X = ANCHO / 2;
+/**
+ * Donde va todo lo importante de las escenas: TikTok tapa los últimos
+ * 400 px de abajo (descripción) y los 150 px de la derecha (botones), así
+ * que el centro de las escenas queda un poco a la izquierda del centro.
+ */
+export const SEGURO = { x: 495, ancho: 850, arriba: 340, abajo: 1500 } as const;
 
 export const COLOR = {
   fondo: "#0A0A12",

@@ -223,9 +223,10 @@ export async function getPanelPuntos(hoy: string, userId: string | null): Promis
 /**
  * Video de TikTok de un día YA TERMINADO (fecha < hoy; quien llama lo
  * valida). Sin admins. Con nombre y foto solo quien dio permiso, y el
- * nombre en forma corta ("Arturo O."); los demás se resumen en "y N
- * hermanos más". El ganador siempre va arriba, como "Hermano/a
- * participante" si no dio permiso. Nunca iglesia ni correo.
+ * nombre en forma corta ("Arturo O."). El ganador y el top 3 de la semana
+ * siempre salen, como "Hermano/a participante" sin foto si no dio
+ * permiso; el 2.º y 3.º del día sin permiso se resumen en "y N hermanos
+ * más". Nunca iglesia ni correo.
  */
 export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTikTok> {
   const service = await createServiceClient();
@@ -253,16 +254,15 @@ export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTik
     puntos: puntosDe(p.num_intentos, true),
   });
 
-  // 2.º y 3.º del día y top 3 de la semana: solo renglones con permiso.
+  // 2.º y 3.º del día: solo con permiso. Top 3 de la semana: siempre los
+  // 3 primeros; quien no dio permiso sale como "Hermano/a participante".
   const top3 = dia
     .slice(0, 3)
     .map(filaDia)
     .filter((f, i) => i > 0 && conNombre(dia[i].user_id));
   const top3Semana = semana
     .slice(0, 3)
-    .map((s, i) => ({ s, i }))
-    .filter(({ s }) => conNombre(s.user_id))
-    .map(({ s, i }) => ({ ...persona(s.user_id, i + 1), puntos: s.puntos, dias: s.dias, racha: 0 }));
+    .map((s, i) => ({ ...persona(s.user_id, i + 1), puntos: s.puntos, dias: s.dias, racha: 0 }));
 
   return {
     fecha,
