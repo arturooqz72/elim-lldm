@@ -30,7 +30,7 @@ const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, 
 /** Las fichas empiezan a voltearse esto antes de que la voz diga la palabra. */
 const ANTICIPO = 0.15;
 /** Lo que sigue en la escena "palabra" después de que empiezan a voltearse las fichas. */
-const TRAS_VOLTEAR = 3;
+const TRAS_VOLTEAR = 4.2;
 
 const VOLUMEN = { fuerte: 0.6, conVoz: 0.17, pausa: 0.32 } as const;
 const RAMPA = 0.35;
