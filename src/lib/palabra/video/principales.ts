@@ -62,7 +62,31 @@ function fichas(ctx: Ctx, r: Recursos, u: number, letras: string[], y: number, d
   });
 }
 
+/** Centro vertical de la zona segura: con explicación corta, todo baja para no dejar hueco abajo. */
+const CENTRO_ZONA = (SEGURO.arriba + SEGURO.abajo) / 2;
+const RENGLON = 84;
+
 export function escenaPalabra(ctx: Ctx, r: Recursos, u: number, fecha: string, voltear = 0.6): void {
+  const { t } = r;
+  const conJugadores = t.jugadores >= MIN_JUGADORES_VISIBLE;
+  ctx.font = fuente(r.f, 400, 63);
+  const lineas = t.palabra ? renglones(ctx, t.palabra.explicacion, SEGURO.ancho, conJugadores ? 5 : 6) : [];
+  const fin = t.palabra ? 1005 + (lineas.length - 1) * RENGLON + (conJugadores ? 115 : 0) : 900;
+  ctx.save();
+  ctx.translate(0, Math.max(CENTRO_ZONA - (400 + fin) / 2, 0));
+  dibujarPalabra(ctx, r, u, fecha, voltear, lineas, conJugadores);
+  ctx.restore();
+}
+
+function dibujarPalabra(
+  ctx: Ctx,
+  r: Recursos,
+  u: number,
+  fecha: string,
+  voltear: number,
+  lineas: string[],
+  conJugadores: boolean
+): void {
   const { t } = r;
   titulo(ctx, r, u, "PALABRA DEL DÍA", 400);
   const alfa = ctx.globalAlpha;
@@ -85,16 +109,12 @@ export function escenaPalabra(ctx: Ctx, r: Recursos, u: number, fecha: string, v
   texto(ctx, `📖 ${t.palabra.referencia}`, SEGURO.x, 905, { f: r.f, peso: 700, tam: 78, color: COLOR.oro, max: SEGURO.ancho });
 
   aparece(1.9 + d);
-  const conJugadores = t.jugadores >= MIN_JUGADORES_VISIBLE;
-  const renglon = 84;
-  ctx.font = fuente(r.f, 400, 63);
-  const lineas = renglones(ctx, t.palabra.explicacion, SEGURO.ancho, conJugadores ? 5 : 6);
   lineas.forEach((l, i) =>
-    texto(ctx, l, SEGURO.x, 1005 + i * renglon, { f: r.f, peso: 400, tam: 63, color: COLOR.suave, max: SEGURO.ancho })
+    texto(ctx, l, SEGURO.x, 1005 + i * RENGLON, { f: r.f, peso: 400, tam: 63, color: COLOR.suave, max: SEGURO.ancho })
   );
   if (conJugadores) {
     aparece(2.3 + d);
-    texto(ctx, `🙌 ${t.jugadores} hermanos jugaron`, SEGURO.x, 1005 + (lineas.length - 1) * renglon + 115, {
+    texto(ctx, `🙌 ${t.jugadores} hermanos jugaron`, SEGURO.x, 1005 + (lineas.length - 1) * RENGLON + 115, {
       f: r.f,
       peso: 700,
       tam: 62,
