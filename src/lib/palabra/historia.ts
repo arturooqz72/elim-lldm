@@ -16,7 +16,8 @@ import { ALTO, ANCHO, CENTRO_X, COLOR, fondo, rectRedondo, texto, type Ctx, type
 import { cargarFuentes } from "./video/recursos";
 
 const ZONA = { arriba: 260, abajo: 1620 } as const;
-const FICHA = 64;
+/** Fichas más grandes cuando hay pocos intentos (con 6 apenas caben). */
+const fichaPara = (renglones: number) => (renglones <= 3 ? 88 : renglones <= 4 ? 76 : 64);
 const ESPACIO = 10;
 const RENGLON_TITULO = 96;
 
@@ -49,12 +50,13 @@ function cargarLogo(): Promise<HTMLImageElement | null> {
 }
 
 function cuadricula(ctx: Ctx, colores: PalabraColor[][], arriba: number): void {
+  const FICHA = fichaPara(colores.length);
   colores.forEach((fila, r) => {
     const ancho = fila.length * FICHA + (fila.length - 1) * ESPACIO;
     fila.forEach((c, i) => {
       const x = CENTRO_X - ancho / 2 + i * (FICHA + ESPACIO);
       ctx.fillStyle = COLOR_FONDO[c];
-      rectRedondo(ctx, x, arriba + r * (FICHA + ESPACIO), FICHA, FICHA, 10);
+      rectRedondo(ctx, x, arriba + r * (FICHA + ESPACIO), FICHA, FICHA, FICHA * 0.16);
       ctx.fill();
     });
   });
@@ -76,7 +78,7 @@ function pastillaRacha(ctx: Ctx, f: Fuentes, racha: number, centroY: number): vo
 function dibujar(ctx: Ctx, f: Fuentes, logo: HTMLImageElement | null, d: DatosHistoria): void {
   fondo(ctx, 3);
   const n = d.intentos.length;
-  const altoCuadricula = n * FICHA + (n - 1) * ESPACIO;
+  const altoCuadricula = n * fichaPara(n) + (n - 1) * ESPACIO;
   // Alto de cada bloque (con su espacio de abajo), para centrar todo en la zona.
   const bloques = [110 + 22, 70 + 10, 40 + 56, RENGLON_TITULO * 3 + 20, 50 + 56, altoCuadricula + 64, 96 + 64, 44];
   let y = ZONA.arriba + Math.max((ZONA.abajo - ZONA.arriba - bloques.reduce((a, b) => a + b, 0)) / 2, 0);
