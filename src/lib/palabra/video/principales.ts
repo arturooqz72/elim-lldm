@@ -90,8 +90,8 @@ function dibujarPalabra(
   const { t } = r;
   titulo(ctx, r, u, "PALABRA DEL DÍA", 400);
   const alfa = ctx.globalAlpha;
-  const aparece = (desde: number) => {
-    ctx.globalAlpha = alfa * suave(avance(u, desde, 0.5));
+  const aparece = (desde: number, dura = 0.5) => {
+    ctx.globalAlpha = alfa * suave(avance(u, desde, dura));
   };
   aparece(0.25);
   texto(ctx, fecha, SEGURO.x, 480, { f: r.f, peso: 500, tam: 52, color: COLOR.apagado, max: SEGURO.ancho });
@@ -103,17 +103,16 @@ function dibujarPalabra(
   }
   fichas(ctx, r, u, [...t.palabra.palabra], 690, voltear);
 
-  // La cita aparece junto con la palabra, mientras se voltean las fichas.
-  const d = voltear - 0.6;
-  aparece(0.6 + d);
+  // La cita aparece rápido junto con la palabra: hay solo un segundo antes del ganador.
+  aparece(voltear, 0.25);
   texto(ctx, `📖 ${t.palabra.referencia}`, SEGURO.x, 905, { f: r.f, peso: 700, tam: 78, color: COLOR.oro, max: SEGURO.ancho });
 
-  aparece(0.8 + d);
+  aparece(voltear + 0.1, 0.25);
   lineas.forEach((l, i) =>
     texto(ctx, l, SEGURO.x, 1005 + i * RENGLON, { f: r.f, peso: 400, tam: 63, color: COLOR.suave, max: SEGURO.ancho })
   );
   if (conJugadores) {
-    aparece(1.1 + d);
+    aparece(voltear + 0.3, 0.25);
     texto(ctx, `🙌 ${t.jugadores} hermanos jugaron`, SEGURO.x, 1005 + (lineas.length - 1) * RENGLON + 115, {
       f: r.f,
       peso: 700,
