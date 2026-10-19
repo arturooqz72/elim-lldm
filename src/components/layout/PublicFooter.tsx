@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconosRedes } from "./IconosRedes";
 
 export function PublicFooter() {
   return (
@@ -20,6 +21,9 @@ export function PublicFooter() {
           <span style={{ color: "var(--color-text-muted)", fontSize: "12px" }}>
             Predicando la Fe al Mundo
           </span>
+          <div className="mt-2">
+            <IconosRedes />
+          </div>
         </div>
 
         {/* flex-wrap + justify-center: en pantallas angostas 6 links en una

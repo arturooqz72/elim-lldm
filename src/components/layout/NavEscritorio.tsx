@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { LiveBadge } from "./LiveBadge";
 import { NAV_LINKS, esActivo } from "./navLinks";
+import { RedesMenu } from "./RedesMenu";
 
 /**
  * Etiqueta de una sección en mantenimiento (Elim IA, Archivo…).
@@ -142,6 +143,12 @@ export function NavEscritorio({ pathname, enMantenimiento }: Props) {
                 </EnlaceNav>
               );
             })}
+            <RedesMenu
+              role="menuitem"
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors"
+              tamIcono={15}
+              onClick={() => setMasAbierto(false)}
+            />
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import { BookOpen, Copy, MessageCircle, Share2, Trophy } from "lucide-react";
 import { PALABRA_MAX_INTENTOS } from "@/lib/palabra/config";
 import { textoParaCompartir } from "@/lib/palabra/logica";
 import type { PalabraEstadoJugador, PalabraPartidaEstado, PalabraRevelada, PalabraTikTokUsuario } from "@/types";
+import { CompartirHistoria } from "./CompartirHistoria";
 import { CuentaRegresiva } from "./CuentaRegresiva";
 import { PalabraEstadisticas } from "./PalabraEstadisticas";
 import { InvitacionSesion } from "./InvitacionSesion";
@@ -156,6 +157,9 @@ export function PalabraResultado({
       )}
 
       <div className="flex flex-col gap-2">
+        {partida.resuelta && (
+          <CompartirHistoria fecha={fecha} intentos={partida.intentos} racha={estado.racha.actual} onAviso={onAviso} />
+        )}
         <div className="flex flex-wrap gap-2">
           {puedeCompartir && (
             <button

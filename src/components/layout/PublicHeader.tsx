@@ -11,6 +11,7 @@ import { NAV_LINKS, esActivo } from "./navLinks";
 import { usePresenciaSitio } from "./usePresenciaSitio";
 import { useRegistrarVisita } from "./useRegistrarVisita";
 import { InvitacionJuego } from "./InvitacionJuego";
+import { RedesMenu } from "./RedesMenu";
 import { whatsappHref } from "@/lib/whatsapp";
 import type { Profile } from "@/types";
 
@@ -293,6 +294,11 @@ export function PublicHeader({
               <MessageCircle size={18} />
               WhatsApp
             </a>
+            <RedesMenu
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium"
+              tamIcono={18}
+              onClick={() => setMobileOpen(false)}
+            />
 
             {profile?.role === "admin" && (
               <Link

@@ -3,6 +3,7 @@ import { getNowPlaying } from "@/lib/azuracast/api";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDuration } from "@/lib/utils";
 import { LiveBanner } from "@/components/layout/LiveBanner";
+import { AvisoRedes } from "@/components/layout/AvisoRedes";
 import {
   Radio,
   Mic,
@@ -197,6 +198,8 @@ export default async function LandingPage() {
                 <ChevronRight size={16} />
               </Link>
             </div>
+
+            <AvisoRedes />
 
             {/* Now playing strip */}
             {nowPlaying?.now_playing?.song?.title && (

@@ -17,7 +17,7 @@ function familia(variable: string, respaldo: string): string {
   return valor ? `${valor}, ${respaldo}` : respaldo;
 }
 
-async function cargarFuentes(): Promise<Fuentes> {
+export async function cargarFuentes(): Promise<Fuentes> {
   const f = {
     texto: familia("--font-inter", RESPALDO),
     titulo: familia("--font-cinzel", `Georgia, serif`),
