@@ -29,8 +29,8 @@ const MINIMO: Record<IdEscena, number> = { portada: PORTADA_DURA, palabra: 4.2, 
 
 /** Las fichas empiezan a voltearse esto antes de que la voz diga la palabra. */
 const ANTICIPO = 0.15;
-/** Lo que sigue en la escena "palabra" después de que empiezan a voltearse las fichas. */
-const TRAS_VOLTEAR = 4.2;
+/** Silencio entre "…fue <palabra>" y "Felicidades a…" (la escena "palabra" sigue mientras). */
+const PAUSA_TRAS_PALABRA = 1;
 
 const VOLUMEN = { fuerte: 0.6, conVoz: 0.17, pausa: 0.32 } as const;
 const RAMPA = 0.35;
@@ -69,13 +69,16 @@ function marcas(ids: IdEscena[], al: PalabraVozAlineacion): Array<number | null>
   });
 }
 
-/** Segundo de la voz en que dice la palabra del día ("…fue mateo"); null si no la dice. */
-function cuandoDice(palabra: string, al: PalabraVozAlineacion): number | null {
+/** Segundos de la voz en que empieza y termina la palabra del día ("…fue mateo"); null si no la dice. */
+function cuandoDice(palabra: string, al: PalabraVozAlineacion): { inicio: number; fin: number } | null {
   const texto = al.characters.map((c) => normalizar(c).charAt(0) || c).join("");
   const p = normalizar(palabra);
   const tras = texto.indexOf(`fue ${p}`);
   const indice = tras >= 0 ? tras + 4 : texto.indexOf(p);
-  return indice >= 0 ? (al.character_start_times_seconds[indice] ?? null) : null;
+  if (indice < 0) return null;
+  const inicio = al.character_start_times_seconds[indice];
+  const fin = al.character_end_times_seconds[indice + p.length - 1];
+  return inicio === undefined || fin === undefined ? null : { inicio, fin };
 }
 
 function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]> {
@@ -126,7 +129,9 @@ export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz:
   const finVoz = Math.min(duraVoz, (al.character_end_times_seconds.at(-1) ?? duraVoz) + 0.25);
   // Las fichas empiezan a voltearse un poquito antes de que suene la palabra.
   const dice = palabra && ids[0] === "palabra" ? cuandoDice(palabra, al) : null;
-  const voltear = dice === null ? undefined : Math.max(INTRO + dice - ANTICIPO, 0.6);
+  const voltear = dice === null ? undefined : Math.max(INTRO + dice.inicio - ANTICIPO, 0.6);
+  // Después de decirla, un segundo de silencio y sigue el ganador.
+  const trasPalabra = dice === null ? undefined : INTRO + dice.fin + PAUSA_TRAS_PALABRA;
 
   ids.forEach((id, i) => {
     const desde = m[i];
@@ -139,8 +144,7 @@ export function planConVoz(todas: IdEscena[], al: PalabraVozAlineacion, duraVoz:
     if (desde !== null && largo > 0) tramos.push({ enVideo, desde, hasta });
 
     const conVoz = (primera ? INTRO : 0) + largo;
-    // Después de voltearse, que alcance a verse la cita y la explicación.
-    const minimo = id === "palabra" && voltear !== undefined ? Math.max(MINIMO.palabra, voltear + TRAS_VOLTEAR) : MINIMO[id];
+    const minimo = id === "palabra" && trasPalabra !== undefined ? Math.max(MINIMO.palabra, trasPalabra) : MINIMO[id];
     duraciones[id] = ultima
       ? Math.max(Math.min(conVoz + OUTRO, MAX_CIERRE), conVoz + OUTRO_MINIMO, minimo)
       : Math.max(conVoz, minimo);

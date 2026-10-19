@@ -103,17 +103,17 @@ function dibujarPalabra(
   }
   fichas(ctx, r, u, [...t.palabra.palabra], 690, voltear);
 
-  // Lo de abajo de las fichas aparece cuando ya se voltearon.
+  // La cita aparece junto con la palabra, mientras se voltean las fichas.
   const d = voltear - 0.6;
-  aparece(1.6 + d);
+  aparece(0.6 + d);
   texto(ctx, `📖 ${t.palabra.referencia}`, SEGURO.x, 905, { f: r.f, peso: 700, tam: 78, color: COLOR.oro, max: SEGURO.ancho });
 
-  aparece(1.9 + d);
+  aparece(0.8 + d);
   lineas.forEach((l, i) =>
     texto(ctx, l, SEGURO.x, 1005 + i * RENGLON, { f: r.f, peso: 400, tam: 63, color: COLOR.suave, max: SEGURO.ancho })
   );
   if (conJugadores) {
-    aparece(2.3 + d);
+    aparece(1.1 + d);
     texto(ctx, `🙌 ${t.jugadores} hermanos jugaron`, SEGURO.x, 1005 + (lineas.length - 1) * RENGLON + 115, {
       f: r.f,
       peso: 700,
