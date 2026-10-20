@@ -12,7 +12,10 @@ import type { PalabraVozAlineacion, PalabraVozTikTok } from "@/types";
 const MODELO = "eleven_multilingual_v2";
 const AJUSTES = { stability: 0.45, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true };
 
-const archivo = (fecha: string, extension: "mp3" | "json") => `palabra-tiktok/${fecha}/voz.${extension}`;
+/** Carpeta de B2 de cada video: uno por día (Palabra) o por semana (Campeones, con la fecha del lunes). */
+export type CarpetaVoz = "palabra-tiktok" | "campeones-tiktok";
+
+const archivo = (carpeta: CarpetaVoz, fecha: string, extension: "mp3" | "json") => `${carpeta}/${fecha}/voz.${extension}`;
 
 interface RespuestaElevenLabs {
   audio_base64?: string;
@@ -32,18 +35,22 @@ function mensajeDeError(datos: RespuestaElevenLabs, status: number): string {
 }
 
 /** Datos de la voz guardada del día; null si todavía no se ha generado. */
-export async function leerVoz(fecha: string): Promise<PalabraVozTikTok | null> {
-  const respuesta = await bajarArchivoB2(archivo(fecha, "json"));
+export async function leerVoz(fecha: string, carpeta: CarpetaVoz = "palabra-tiktok"): Promise<PalabraVozTikTok | null> {
+  const respuesta = await bajarArchivoB2(archivo(carpeta, fecha, "json"));
   return respuesta ? ((await respuesta.json()) as PalabraVozTikTok) : null;
 }
 
 /** El MP3 guardado del día; null si no existe. */
-export function audioDeVoz(fecha: string): Promise<Response | null> {
-  return bajarArchivoB2(archivo(fecha, "mp3"));
+export function audioDeVoz(fecha: string, carpeta: CarpetaVoz = "palabra-tiktok"): Promise<Response | null> {
+  return bajarArchivoB2(archivo(carpeta, fecha, "mp3"));
 }
 
 /** Genera la voz con ElevenLabs y la guarda en B2 (reemplaza la anterior del día). */
-export async function generarVoz(fecha: string, guion: string): Promise<PalabraVozTikTok> {
+export async function generarVoz(
+  fecha: string,
+  guion: string,
+  carpeta: CarpetaVoz = "palabra-tiktok"
+): Promise<PalabraVozTikTok> {
   const clave = process.env.ELEVENLABS_API_KEY;
   const voz = process.env.ELEVENLABS_VOICE_ID;
   if (!clave || !voz) throw new Error("Faltan ELEVENLABS_API_KEY o ELEVENLABS_VOICE_ID en Vercel.");
@@ -73,7 +80,7 @@ export async function generarVoz(fecha: string, guion: string): Promise<PalabraV
   };
 
   // Primero el MP3 y al final los datos: si existe el JSON, el MP3 ya está.
-  await subirArchivoB2(archivo(fecha, "mp3"), Buffer.from(datos.audio_base64, "base64"), "audio/mpeg");
-  await subirArchivoB2(archivo(fecha, "json"), Buffer.from(JSON.stringify(guardada)), "application/json");
+  await subirArchivoB2(archivo(carpeta, fecha, "mp3"), Buffer.from(datos.audio_base64, "base64"), "audio/mpeg");
+  await subirArchivoB2(archivo(carpeta, fecha, "json"), Buffer.from(JSON.stringify(guardada)), "application/json");
   return guardada;
 }

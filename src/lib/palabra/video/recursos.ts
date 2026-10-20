@@ -29,9 +29,9 @@ export async function cargarFuentes(): Promise<Fuentes> {
   return f;
 }
 
-const fotoDesdeServidor = (avatar: string) => `/api/admin/palabra/tiktok/foto?url=${encodeURIComponent(avatar)}`;
+export const fotoDesdeServidor = (avatar: string) => `/api/admin/palabra/tiktok/foto?url=${encodeURIComponent(avatar)}`;
 
-function cargarImagen(src: string): Promise<HTMLImageElement | null> {
+export function cargarImagen(src: string): Promise<HTMLImageElement | null> {
   return new Promise((listo) => {
     const img = new Image();
     // La primera vez el servidor baja la foto y la guarda en B2: puede tardar.

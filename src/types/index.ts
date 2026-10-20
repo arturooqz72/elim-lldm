@@ -756,3 +756,58 @@ export interface PronProgreso {
   /** Sonidos que más falla, del más frecuente al menos. */
   sonidosDificiles: { sonido: InglesSonido; veces: number }[];
 }
+
+// ── Campeones de la semana (video de TikTok de los juegos, /admin/juegos/tiktok) ──
+
+export type CampeonesJuegoId = "trivia" | "ahorcado" | "ruleta";
+
+/**
+ * Un lugar del podio. El nombre ya viene corto ("Arturo O.") o como
+ * "Hermano/a participante" (sin foto) si no dio permiso de TikTok: el
+ * nombre completo y los ids nunca salen del servidor.
+ */
+export interface CampeonesFila {
+  posicion: number;
+  nombre: string;
+  avatar: string | null;
+  conPermiso: boolean;
+  puntos: number;
+  /** Partidas jugadas (en el Ahorcado, palabras). */
+  partidas: number;
+}
+
+export interface CampeonesJuego {
+  id: CampeonesJuegoId;
+  nombre: string;
+  /** Hasta 3, del primero al tercero. */
+  podio: CampeonesFila[];
+  /** Personas distintas (sin admins) que jugaron en la semana. */
+  jugadores: number;
+  /** Partidas terminadas en la semana. */
+  partidas: number;
+}
+
+export interface CampeonesPersonaPalabra {
+  nombre: string;
+  avatar: string | null;
+  conPermiso: boolean;
+  /** Racha: días seguidos al terminar la semana; "más días": días que la resolvió. */
+  valor: number;
+}
+
+export interface CampeonesPalabra {
+  racha: CampeonesPersonaPalabra;
+  masDias: CampeonesPersonaPalabra;
+  jugadores: number;
+}
+
+export interface CampeonesSemana {
+  /** Lunes y domingo de la semana (hora del Pacífico). */
+  lunes: string;
+  domingo: string;
+  /** Solo los juegos que van en el video, en orden (los que no cumplen se saltan). */
+  juegos: CampeonesJuego[];
+  palabra: CampeonesPalabra | null;
+  /** Por qué se saltó cada juego, para avisarlo en la página. */
+  saltados: { nombre: string; motivo: string }[];
+}

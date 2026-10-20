@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Mic, RotateCcw } from "lucide-react";
 import type { PalabraVozTikTok } from "@/types";
 import { MAX_GUION } from "@/lib/palabra/video/guion";
+import { API_VOZ_PALABRA } from "./useSonidoTikTok";
 
 interface Props {
   fecha: string;
@@ -17,11 +18,24 @@ interface Props {
   bajandoVoz: boolean;
   deshabilitado: boolean;
   alGenerar: (voz: PalabraVozTikTok) => void;
+  /** API que genera y guarda la voz (por defecto, la de la Palabra del Día). */
+  api?: string;
+  /** "día" o "semana", para los avisos. */
+  periodo?: string;
 }
 
 const fechaHora = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 
-export function PanelVozTikTok({ fecha, sugerido, voz, bajandoVoz, deshabilitado, alGenerar }: Props) {
+export function PanelVozTikTok({
+  fecha,
+  sugerido,
+  voz,
+  bajandoVoz,
+  deshabilitado,
+  alGenerar,
+  api = API_VOZ_PALABRA,
+  periodo = "día",
+}: Props) {
   const [guion, setGuion] = useState(sugerido);
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +52,7 @@ export function PanelVozTikTok({ fecha, sugerido, voz, bajandoVoz, deshabilitado
     setGenerando(true);
     setError(null);
     try {
-      const r = await fetch("/api/admin/palabra/tiktok/voz", {
+      const r = await fetch(api, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fecha, guion: limpio }),
@@ -104,7 +118,7 @@ export function PanelVozTikTok({ fecha, sugerido, voz, bajandoVoz, deshabilitado
 
       {voz === undefined ? (
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          Revisando si este día ya tiene voz…
+          Revisando si {periodo === "día" ? "este día" : "esta semana"} ya tiene voz…
         </p>
       ) : voz ? (
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -114,7 +128,8 @@ export function PanelVozTikTok({ fecha, sugerido, voz, bajandoVoz, deshabilitado
         </p>
       ) : (
         <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          Este día todavía no tiene voz. Mientras tanto el video lleva solo la canción de fondo.
+          {periodo === "día" ? "Este día" : "Esta semana"} todavía no tiene voz. Mientras tanto el video lleva solo la canción
+          de fondo.
         </p>
       )}
       {error && (

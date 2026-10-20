@@ -26,13 +26,24 @@ import {
   Radio,
   Trophy,
   Smartphone,
+  Clapperboard,
+  Medal,
   ChevronRight,
   LogOut,
 } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-const NAV = [
+interface ItemNav {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  /** Título de apartado que va arriba de este enlace. */
+  seccion?: string;
+}
+
+const NAV: ItemNav[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/en-linea", label: "En línea ahora", icon: Activity },
   { href: "/admin/historial", label: "Historial de visitas", icon: History },
@@ -50,7 +61,9 @@ const NAV = [
   { href: "/admin/ahorcado", label: "Ahorcado", icon: Puzzle },
   { href: "/admin/palabra", label: "Palabra del Día", icon: CalendarCheck },
   { href: "/tiktok-trivia", label: "Trivia TikTok", icon: Trophy },
-  { href: "/admin/archivo", label: "Archivo", icon: Archive },
+  { href: "/admin/palabra/tiktok", label: "Palabra del Día (diario)", icon: Clapperboard, seccion: "Videos TikTok" },
+  { href: "/admin/juegos/tiktok", label: "Campeones de la semana", icon: Medal },
+  { href: "/admin/archivo", label: "Archivo", icon: Archive, seccion: "Contenido" },
   { href: "/admin/categorias", label: "Categorías", icon: Folder },
   { href: "/admin/elimplay", label: "ElimPlay", icon: Music },
   { href: "/admin/videos", label: "Videos", icon: Video },
@@ -68,10 +81,12 @@ export function AdminSidebar() {
     router.push("/");
   }
 
-  function isActive(item: (typeof NAV)[0]) {
-    if (item.exact) return pathname === item.href;
-    return pathname.startsWith(item.href);
-  }
+  // Gana el enlace más largo que coincida: en /admin/juegos/tiktok se marca
+  // "Campeones de la semana", no también "Juegos".
+  const coincide = (item: ItemNav) =>
+    item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const activo = NAV.filter(coincide).sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const isActive = (item: ItemNav) => item.href === activo;
 
   return (
     <aside
@@ -107,8 +122,16 @@ export function AdminSidebar() {
           const Icon = item.icon;
           const active = isActive(item);
           return (
+            <div key={item.href} className="shrink-0 flex flex-col">
+            {item.seccion && (
+              <p
+                className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "var(--color-text-muted)", opacity: 0.75 }}
+              >
+                {item.seccion}
+              </p>
+            )}
             <Link
-              key={item.href}
               href={item.href}
               className="shrink-0 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
               style={{
@@ -121,6 +144,7 @@ export function AdminSidebar() {
               <span className="flex-1">{item.label}</span>
               {active && <ChevronRight size={13} />}
             </Link>
+            </div>
           );
         })}
       </nav>

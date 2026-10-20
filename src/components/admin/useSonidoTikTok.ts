@@ -10,8 +10,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PalabraVozTikTok } from "@/types";
 import { cargarAudio, URL_MUSICA, type Sonido } from "@/lib/palabra/video/sonido";
 
-const urlVoz = (v: PalabraVozTikTok) =>
-  `/api/admin/palabra/tiktok/voz/audio?fecha=${v.fecha}&v=${encodeURIComponent(v.creada)}`;
+/** API de la voz de la Palabra del Día; Campeones de la semana usa /api/admin/juegos/tiktok/voz. */
+export const API_VOZ_PALABRA = "/api/admin/palabra/tiktok/voz";
+
+const urlVoz = (api: string, v: PalabraVozTikTok) => `${api}/audio?fecha=${v.fecha}&v=${encodeURIComponent(v.creada)}`;
 
 export interface SonidoTikTok {
   /** undefined = todavía se está revisando si el día tiene voz. */
@@ -25,7 +27,7 @@ export interface SonidoTikTok {
   cambiarVoz: (nueva: PalabraVozTikTok) => void;
 }
 
-export function useSonidoTikTok(fecha: string): SonidoTikTok {
+export function useSonidoTikTok(fecha: string, api = API_VOZ_PALABRA): SonidoTikTok {
   const ctx = useRef<AudioContext | null>(null);
   const [voz, setVoz] = useState<PalabraVozTikTok | null | undefined>(undefined);
   const [sonido, setSonido] = useState<Sonido>({ voz: null, musica: null });
@@ -68,7 +70,7 @@ export function useSonidoTikTok(fecha: string): SonidoTikTok {
     let vivo = true;
     setVoz(undefined);
     setSonido((s) => ({ ...s, voz: null }));
-    fetch(`/api/admin/palabra/tiktok/voz?fecha=${fecha}`)
+    fetch(`${api}?fecha=${fecha}`)
       .then(async (r) => {
         const datos = (await r.json()) as { voz?: PalabraVozTikTok | null; error?: string };
         if (!r.ok) throw new Error(datos.error ?? "No se pudo revisar la voz guardada.");
@@ -82,20 +84,20 @@ export function useSonidoTikTok(fecha: string): SonidoTikTok {
     return () => {
       vivo = false;
     };
-  }, [fecha]);
+  }, [fecha, api]);
 
   // Su MP3, cada vez que cambia (al generar o regenerar).
   useEffect(() => {
     const c = contexto();
     if (!c || !voz) return;
     let vivo = true;
-    cargarAudio(c, urlVoz(voz))
+    cargarAudio(c, urlVoz(api, voz))
       .then((audio) => vivo && setSonido((s) => ({ ...s, voz: audio })))
       .catch(() => vivo && setError("No se pudo cargar el MP3 de la voz."));
     return () => {
       vivo = false;
     };
-  }, [voz, contexto]);
+  }, [voz, contexto, api]);
 
   const cambiarVoz = useCallback((nueva: PalabraVozTikTok) => {
     setError(null);

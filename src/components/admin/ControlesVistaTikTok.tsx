@@ -6,9 +6,13 @@
 "use client";
 
 import { ImageDown, Pause, Play } from "lucide-react";
-import type { Escena } from "@/lib/palabra/video/escenas";
+/** Lo único que necesitan los controles de cada escena (Palabra del Día o Campeones). */
+interface EscenaVista {
+  id: string;
+  nombre: string;
+}
 
-interface Props {
+interface Props<Escena extends EscenaVista> {
   listo: boolean;
   grabando: boolean;
   tocando: boolean;
@@ -26,7 +30,7 @@ interface Props {
 const boton = "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-60";
 const secundario = { background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" };
 
-export function ControlesVistaTikTok(p: Props) {
+export function ControlesVistaTikTok<Escena extends EscenaVista>(p: Props<Escena>) {
   return (
     <>
       <div className="flex items-center gap-2">

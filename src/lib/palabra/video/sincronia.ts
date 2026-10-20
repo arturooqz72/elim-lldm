@@ -81,7 +81,7 @@ function cuandoDice(palabra: string, al: PalabraVozAlineacion): { inicio: number
   return inicio === undefined || fin === undefined ? null : { inicio, fin };
 }
 
-function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]> {
+export function volumenMusica(tramos: TramoVoz[], dura: number): Array<[number, number]> {
   const puntos: Array<[number, number]> = [[0, 0], [0.4, VOLUMEN.fuerte]];
   // Nunca antes del punto anterior: las rampas tienen que ir hacia adelante.
   const poner = (t: number, v: number) => puntos.push([Math.max(t, puntos[puntos.length - 1][0]), v]);
