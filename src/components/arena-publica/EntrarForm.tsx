@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { MIN_JUGADORES_PARA_INICIAR, MAX_JUGADORES_POR_SALA } from "@/lib/arena-publica/config";
 
 interface EntrarFormProps {
-  onEntrado: (jugadorId: string, salaId: string) => void;
+  onEntrado?: (jugadorId: string, salaId: string) => void;
 }
 
 export function EntrarForm({ onEntrado }: EntrarFormProps) {
@@ -36,7 +36,19 @@ export function EntrarForm({ onEntrado }: EntrarFormProps) {
     }
 
     const data = await res.json();
-    onEntrado(data.jugador_id, data.sala_id);
+    if (onEntrado) {
+      onEntrado(data.jugador_id, data.sala_id);
+      return;
+    }
+    // Sin callback (uso desde page.tsx sin sala previa): guarda el jugador
+    // bajo la clave que lee ArenaPublicaRoom y recarga /arena-abierta, que
+    // ahora sí va a encontrar la sala recién creada.
+    try {
+      localStorage.setItem(`arena_publica_jugador_${data.sala_id}`, JSON.stringify({ id: data.jugador_id }));
+    } catch {
+      // localStorage no disponible
+    }
+    window.location.href = "/arena-abierta";
   }
 
   return (

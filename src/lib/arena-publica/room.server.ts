@@ -98,3 +98,33 @@ export async function getOrCreateOpenRoom(jugadoresDeseados = 2): Promise<{
 
   return { sala: nuevaSala as SalaActual, error: null };
 }
+
+/**
+ * Igual que getOrCreateOpenRoom() pero de solo lectura: nunca crea una
+ * sala. La usa la página para no adelantarse al selector "¿Cuántos van a
+ * jugar?" — si la página creara la sala con el valor por defecto, la
+ * elección del jugador casi nunca tendría efecto. Sin sala abierta, es
+ * /api/arena-publica/join quien la crea con la meta que eligió el jugador
+ * (mismo arreglo que peekOpenRoom() de Ruleta).
+ */
+export async function peekOpenRoom(): Promise<SalaActual | null> {
+  const service = await createServiceClient();
+
+  await healStaleRooms().catch((err) => {
+    console.error("[arena-publica/room] Error inesperado en healStaleRooms:", err);
+  });
+
+  const { data, error } = await service
+    .from("arena_publica_salas")
+    .select("*")
+    .in("status", ["lobby", "counting"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[arena-publica/room] Error en peekOpenRoom:", error);
+  }
+
+  return (data as SalaActual | null) ?? null;
+}

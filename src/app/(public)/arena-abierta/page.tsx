@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
-import { getOrCreateOpenRoom } from "@/lib/arena-publica/room.server";
+import { peekOpenRoom } from "@/lib/arena-publica/room.server";
 import { ArenaPublicaRoom } from "@/components/arena-publica/ArenaPublicaRoom";
+import { EntrarForm } from "@/components/arena-publica/EntrarForm";
 import type { ArenaJugador } from "@/types";
 import type { Metadata } from "next";
 
@@ -15,18 +16,15 @@ export default async function ArenaAbiertaPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login?returnUrl=/arena-abierta");
 
-  const { sala, error } = await getOrCreateOpenRoom();
+  const sala = await peekOpenRoom();
 
   if (!sala) {
+    // No hay sala abierta — no se crea aquí. El EntrarForm la crea vía
+    // /api/arena-publica/join con la meta que elija el jugador.
     return (
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-        <div className="w-full max-w-[430px] mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
-            Trivia en línea
-          </h1>
-          <p style={{ color: "var(--color-text-muted)" }}>
-            {error ?? "No se pudo cargar la sala."}
-          </p>
+        <div className="w-full max-w-[430px] mx-auto px-4 py-16 flex flex-col">
+          <EntrarForm />
         </div>
       </div>
     );
