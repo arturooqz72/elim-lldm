@@ -14,7 +14,7 @@ import { getResumenHub } from "@/lib/palabra/servidor";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado, ReglasRuletaLocal } from "@/components/juegos/ReglasJuegos";
 import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
-import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
+import { PermisoVideosProvider, CasillaPermisoJuego } from "@/components/juegos/PermisoVideosJuegos";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -24,10 +24,7 @@ export const metadata: Metadata = {
 async function getGameKeysConNotificacion(userId: string | null): Promise<Set<string>> {
   if (!userId) return new Set();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("game_notify_subscriptions")
-    .select("game_key")
-    .eq("user_id", userId);
+  const { data } = await supabase.from("game_notify_subscriptions").select("game_key").eq("user_id", userId);
   return new Set((data ?? []).map((r) => (r as { game_key: string }).game_key));
 }
 
@@ -54,199 +51,197 @@ export default async function JuegosHubPage() {
     getResumenHub(profile?.id ?? null),
   ]);
 
+  // Un solo permiso para todas las casillas; los admins no compiten.
+  const perfil = profile as { role?: string; tiktok_permiso?: boolean } | null;
+  const modoPermiso = !perfil ? "iniciar-sesion" : perfil.role === "admin" ? "oculto" : "casilla";
+
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-      <div
-        className="py-12 px-4"
-        style={{
-          background: "linear-gradient(to bottom, rgba(212,160,23,0.05) 0%, transparent 100%)",
-          borderBottom: "1px solid var(--color-border)",
-        }}
-      >
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center gap-4">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)" }}
-          >
-            <Gamepad2 size={32} style={{ color: "var(--color-primary)" }} />
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold mb-2" style={{ color: "var(--color-text)" }}>
-              Juegos en línea
-            </h1>
-            <p style={{ color: "var(--color-text-muted)" }}>
-              Elige una puerta y entra directo — sin códigos
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-8">
-        <JuegosPresence
-          currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null}
-        />
-
-        {profile && (
-          <PreguntaTikTokJuego titulo="¿Quieres aparecer en nuestro TikTok si quedas entre los ganadores de los juegos?" />
-        )}
-
-        <div className="flex flex-col gap-4">
-          <p
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Reto diario
-          </p>
-
-          <div
-            className="relative flex items-center gap-4 p-6 rounded-2xl"
-            style={{
-              background: "linear-gradient(135deg, rgba(212,160,23,0.12) 0%, var(--color-surface) 60%)",
-              border: "1px solid rgba(212,160,23,0.45)",
-              boxShadow: "0 0 24px rgba(212,160,23,0.08)",
-            }}
-          >
-            <span
-              className="absolute -top-2.5 left-5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-              style={{ background: "var(--color-primary)", color: "#000" }}
-            >
-              Reto diario
-            </span>
+    <PermisoVideosProvider modo={modoPermiso} inicial={perfil?.tiktok_permiso === true}>
+      <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+        <div
+          className="py-12 px-4"
+          style={{
+            background: "linear-gradient(to bottom, rgba(212,160,23,0.05) 0%, transparent 100%)",
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          <div className="max-w-4xl mx-auto flex flex-col items-center text-center gap-4">
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)" }}
             >
-              <CalendarCheck size={20} style={{ color: "var(--color-primary)" }} />
+              <Gamepad2 size={32} style={{ color: "var(--color-primary)" }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                <Link href="/juegos/palabra" className="after:absolute after:inset-0 after:rounded-2xl">
-                  Palabra del Día
-                </Link>
-              </h2>
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                {resumenPalabra?.jugoHoy
-                  ? `${resumenPalabra.resuelta ? "✅ Ya la resolviste" : "Ya jugaste"} hoy · 🔥 Racha: ${resumenPalabra.racha} — vuelve mañana`
-                  : resumenPalabra && resumenPalabra.racha > 0
-                    ? `🔥 Racha de ${resumenPalabra.racha} — ¡no la pierdas, juega la de hoy!`
-                    : "Adivina la palabra bíblica en 6 intentos — una nueva cada día"}
-              </p>
+            <div>
+              <h1 className="text-4xl font-bold mb-2" style={{ color: "var(--color-text)" }}>
+                Juegos en línea
+              </h1>
+              <p style={{ color: "var(--color-text-muted)" }}>Elige una puerta y entra directo — sin códigos</p>
             </div>
-            <BotonReglas juego="Palabra del Día">
-              <PalabraAyuda />
-            </BotonReglas>
-            <ChevronRight size={18} style={{ color: "var(--color-primary)" }} />
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <p
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Juegos en vivo
-          </p>
+        <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-8">
+          <JuegosPresence currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null} />
 
-          <div className="flex flex-col gap-3">
-            <PuertaArenaAbierta
-              disponible={estadoArenaAbierta.disponible}
-              jugandoAhora={estadoArenaAbierta.jugandoAhora}
-              esperando={estadoArenaAbierta.esperando}
-              notificacionesActivas={notificacionesActivas.has("arena_abierta")}
-            />
-            <TablaPosiciones
-              titulo="Tabla de posiciones — Trivia en línea"
-              filas={posicionesArena}
-              currentUserId={profile?.id ?? null}
-            />
-          </div>
+          <div className="flex flex-col gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              Reto diario
+            </p>
 
-          <div className="flex flex-col gap-3">
-            <PuertaRuleta
-              disponible={estadoRuleta.disponible}
-              jugandoAhora={estadoRuleta.jugandoAhora}
-              esperando={estadoRuleta.esperando}
-              notificacionesActivas={notificacionesActivas.has("ruleta")}
-            />
-            <TablaPosiciones
-              titulo="Tabla de posiciones — La Ruleta en línea"
-              filas={posicionesRuleta}
-              currentUserId={profile?.id ?? null}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <p
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Juegos individuales
-          </p>
-
-          <div className="flex flex-col gap-3">
             <div
-              className="relative flex items-center gap-4 p-6 rounded-2xl"
+              className="relative flex flex-col gap-3 p-6 rounded-2xl"
+              style={{
+                background: "linear-gradient(135deg, rgba(212,160,23,0.12) 0%, var(--color-surface) 60%)",
+                border: "1px solid rgba(212,160,23,0.45)",
+                boxShadow: "0 0 24px rgba(212,160,23,0.08)",
+              }}
+            >
+              <span
+                className="absolute -top-2.5 left-5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "var(--color-primary)", color: "#000" }}
+              >
+                Reto diario
+              </span>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.3)" }}
+                >
+                  <CalendarCheck size={20} style={{ color: "var(--color-primary)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                    <Link href="/juegos/palabra" className="after:absolute after:inset-0 after:rounded-2xl">
+                      Palabra del Día
+                    </Link>
+                  </h2>
+                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    {resumenPalabra?.jugoHoy
+                      ? `${resumenPalabra.resuelta ? "✅ Ya la resolviste" : "Ya jugaste"} hoy · 🔥 Racha: ${resumenPalabra.racha} — vuelve mañana`
+                      : resumenPalabra && resumenPalabra.racha > 0
+                        ? `🔥 Racha de ${resumenPalabra.racha} — ¡no la pierdas, juega la de hoy!`
+                        : "Adivina la palabra bíblica en 6 intentos — una nueva cada día"}
+                  </p>
+                </div>
+                <BotonReglas juego="Palabra del Día">
+                  <PalabraAyuda />
+                </BotonReglas>
+                <ChevronRight size={18} style={{ color: "var(--color-primary)" }} />
+              </div>
+              <CasillaPermisoJuego />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              Juegos en vivo
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <PuertaArenaAbierta
+                disponible={estadoArenaAbierta.disponible}
+                jugandoAhora={estadoArenaAbierta.jugandoAhora}
+                esperando={estadoArenaAbierta.esperando}
+                notificacionesActivas={notificacionesActivas.has("arena_abierta")}
+              />
+              <TablaPosiciones
+                titulo="Tabla de posiciones — Trivia en línea"
+                filas={posicionesArena}
+                currentUserId={profile?.id ?? null}
+              />
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <PuertaRuleta
+                disponible={estadoRuleta.disponible}
+                jugandoAhora={estadoRuleta.jugandoAhora}
+                esperando={estadoRuleta.esperando}
+                notificacionesActivas={notificacionesActivas.has("ruleta")}
+              />
+              <TablaPosiciones
+                titulo="Tabla de posiciones — La Ruleta en línea"
+                filas={posicionesRuleta}
+                currentUserId={profile?.id ?? null}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+              Juegos individuales
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <div
+                className="relative flex flex-col gap-3 p-6 rounded-2xl"
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.3)" }}
+                  >
+                    <Puzzle size={20} style={{ color: "#A78BFA" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                      <Link href="/juegos/ahorcado" className="after:absolute after:inset-0 after:rounded-2xl">
+                        Ahorcado del Nuevo Testamento
+                      </Link>
+                    </h2>
+                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      Personajes, lugares, palabras clave y libros — de un jugador
+                    </p>
+                  </div>
+                  <BotonReglas juego="Ahorcado">
+                    <ReglasAhorcado />
+                  </BotonReglas>
+                  <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
+                </div>
+                <CasillaPermisoJuego />
+              </div>
+              <TablaPosiciones
+                titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
+                filas={posicionesAhorcado}
+                currentUserId={profile?.id ?? null}
+                unidadSingular="palabra"
+                unidadPlural="palabras"
+                vacio="Aún nadie ha ganado una palabra. ¡Sé el primero!"
+              />
+            </div>
+
+            <div
+              className="relative flex flex-col gap-3 p-6 rounded-2xl"
               style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
             >
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.3)" }}
-              >
-                <Puzzle size={20} style={{ color: "#A78BFA" }} />
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                  style={{ background: "rgba(29,158,117,0.08)", border: "1px solid rgba(29,158,117,0.3)" }}
+                >
+                  <RotateCw size={20} style={{ color: "#1D9E75" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
+                    <a href="/juegos/ruleta-elimlldm.html" className="after:absolute after:inset-0 after:rounded-2xl">
+                      Ruleta de retos
+                    </a>
+                  </h2>
+                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                    La Ruleta para jugar en un solo dispositivo
+                  </p>
+                </div>
+                <BotonReglas juego="Ruleta de retos">
+                  <ReglasRuletaLocal />
+                </BotonReglas>
+                <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                  <Link href="/juegos/ahorcado" className="after:absolute after:inset-0 after:rounded-2xl">
-                    Ahorcado del Nuevo Testamento
-                  </Link>
-                </h2>
-                <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                  Personajes, lugares, palabras clave y libros — de un jugador
-                </p>
-              </div>
-              <BotonReglas juego="Ahorcado">
-                <ReglasAhorcado />
-              </BotonReglas>
-              <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
+              <CasillaPermisoJuego />
             </div>
-            <TablaPosiciones
-              titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
-              filas={posicionesAhorcado}
-              currentUserId={profile?.id ?? null}
-              unidadSingular="palabra"
-              unidadPlural="palabras"
-              vacio="Aún nadie ha ganado una palabra. ¡Sé el primero!"
-            />
-          </div>
-
-          <div
-            className="relative flex items-center gap-4 p-6 rounded-2xl"
-            style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-              style={{ background: "rgba(29,158,117,0.08)", border: "1px solid rgba(29,158,117,0.3)" }}
-            >
-              <RotateCw size={20} style={{ color: "#1D9E75" }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                <a href="/juegos/ruleta-elimlldm.html" className="after:absolute after:inset-0 after:rounded-2xl">
-                  Ruleta de retos
-                </a>
-              </h2>
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                La Ruleta para jugar en un solo dispositivo
-              </p>
-            </div>
-            <BotonReglas juego="Ruleta de retos">
-              <ReglasRuletaLocal />
-            </BotonReglas>
-            <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
           </div>
         </div>
       </div>
-    </div>
+    </PermisoVideosProvider>
   );
 }

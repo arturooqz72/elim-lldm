@@ -17,7 +17,7 @@ type Estado = "preguntando" | "guardando" | "si" | "no" | "error";
 export function PreguntaTikTok({
   nombre,
   vaGanando,
-  titulo = "¿Quieres aparecer en nuestro TikTok si eres el ganador del día?",
+  titulo = "¿Quieres aparecer en nuestros videos de TikTok, Instagram y YouTube si eres el ganador del día?",
 }: {
   nombre: string;
   vaGanando: boolean;

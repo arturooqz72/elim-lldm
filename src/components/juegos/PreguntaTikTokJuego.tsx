@@ -6,15 +6,15 @@ import { PreguntaTikTok } from "./palabra/PreguntaTikTok";
 import type { PalabraTikTokUsuario } from "@/types";
 
 /**
- * La tarjeta "¿Quieres aparecer en nuestro TikTok?" en /juegos (antes de
- * elegir juego) y al terminar una partida de Trivia en línea, Ruleta o
- * Ahorcado. Es la misma de la Palabra del Día
+ * La tarjeta "¿Quieres aparecer en nuestros videos?" al terminar una
+ * partida de Trivia en línea, Ruleta o Ahorcado. (En /juegos cada juego
+ * tiene en su lugar la casilla de PermisoVideosJuegos.) Es la misma de la Palabra del Día
  * (mismo permiso y mismas reglas: no sale si ya aceptó, ni en los 7 días
  * después de un "No, gracias"). Pregunta al servidor al aparecer; sin
  * sesión o si falla, no muestra nada.
  */
 export function PreguntaTikTokJuego({
-  titulo = "¿Quieres aparecer en nuestro TikTok si quedas entre los campeones de la semana?",
+  titulo = "¿Quieres aparecer en nuestros videos de TikTok, Instagram y YouTube si quedas entre los campeones de la semana?",
 }: {
   titulo?: string;
 }) {

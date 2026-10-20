@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Users, Share2 } from "lucide-react";
 import { GameNotifyBell } from "./GameNotifyBell";
+import { CasillaPermisoJuego } from "./PermisoVideosJuegos";
 import { BotonReglas } from "./BotonReglas";
 import { ReglasRuleta } from "./ReglasJuegos";
 
@@ -107,6 +108,7 @@ export function PuertaRuleta({
       </div>
 
       <GameNotifyBell gameKey="ruleta" esperando={esperando} initialSubscribed={notificacionesActivas} />
+      <CasillaPermisoJuego />
     </div>
   );
 }

@@ -279,7 +279,7 @@ export default async function PerfilPage({ searchParams }: Props) {
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Videos de TikTok
+            Videos de TikTok, Instagram y YouTube
           </h2>
           <PermisoTikTok inicial={p.tiktok_permiso === true} />
         </div>

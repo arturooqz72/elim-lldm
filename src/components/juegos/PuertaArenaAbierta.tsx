@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { GameNotifyBell } from "./GameNotifyBell";
+import { CasillaPermisoJuego } from "./PermisoVideosJuegos";
 import { BotonReglas } from "./BotonReglas";
 import { ReglasTrivia } from "./ReglasJuegos";
 
@@ -110,6 +111,7 @@ export function PuertaArenaAbierta({
       </div>
 
       <GameNotifyBell gameKey="arena_abierta" esperando={esperando} initialSubscribed={notificacionesActivas} />
+      <CasillaPermisoJuego />
     </div>
   );
 }

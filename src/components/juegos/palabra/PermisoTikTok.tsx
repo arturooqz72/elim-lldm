@@ -2,9 +2,10 @@
 "use client";
 
 import { useState } from "react";
+import { TEXTO_PERMISO_VIDEOS } from "@/lib/juegos/permiso-videos";
 
 /**
- * Casilla de permiso para salir en los videos de TikTok (0078). Desmarcada
+ * Casilla de permiso para salir en los videos de campeones (0078). Desmarcada
  * por defecto; se guarda al tocarla. Va después de resolver la Palabra del
  * Día y en /perfil.
  */
@@ -40,7 +41,7 @@ export function PermisoTikTok({ inicial }: { inicial: boolean }) {
           className="mt-0.5 w-5 h-5 shrink-0 accent-[#D4A017]"
         />
         <span className="text-sm leading-snug" style={{ color: "var(--color-text)" }}>
-          Acepto que mi nombre y foto aparezcan en los videos de Elim LLDM en TikTok
+          {TEXTO_PERMISO_VIDEOS}
         </span>
       </label>
       <p className="text-[11px] pl-8" style={{ color: estado === "error" ? "var(--color-destructive)" : "var(--color-text-muted)" }}>
