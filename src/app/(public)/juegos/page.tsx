@@ -14,6 +14,7 @@ import { getResumenHub } from "@/lib/palabra/servidor";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado, ReglasRuletaLocal } from "@/components/juegos/ReglasJuegos";
 import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
+import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -84,6 +85,10 @@ export default async function JuegosHubPage() {
         <JuegosPresence
           currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null}
         />
+
+        {profile && (
+          <PreguntaTikTokJuego titulo="¿Quieres aparecer en nuestro TikTok si quedas entre los ganadores de los juegos?" />
+        )}
 
         <div className="flex flex-col gap-4">
           <p
