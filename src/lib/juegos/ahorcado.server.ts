@@ -184,10 +184,27 @@ export async function adivinarLetra(
     return fresca ? estadoPublico(fresca, palabra) : { error: "No hay una partida en curso", status: 409 };
   }
 
+  if (estado !== "jugando") await guardarResultado(userId, corrida.palabra_id, estado === "ganada", vidas);
+
   let nuevoRecord: boolean | undefined;
   if (estado === "ganada") nuevoRecord = await guardarRanking(userId, puntos, ganadas);
 
   return estadoPublico(actualizada, palabra, nuevoRecord);
+}
+
+/**
+ * Una fila por palabra terminada (0080), para "Campeones de la semana".
+ * Si falla no se interrumpe la partida: solo se pierde esa fila.
+ */
+async function guardarResultado(userId: string, palabraId: string | null, ganada: boolean, vidas: number): Promise<void> {
+  const service = await createServiceClient();
+  const { error } = await service.from("ahorcado_resultados").insert({
+    user_id: userId,
+    palabra_id: palabraId,
+    ganada,
+    puntos: ganada ? vidas * PUNTOS_POR_VIDA : 0,
+  });
+  if (error) console.error("[ahorcado] No se pudo guardar el resultado:", error);
 }
 
 /** Guarda el puntaje de la racha si mejora el récord del jugador. */

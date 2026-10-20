@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Trophy, Heart, RotateCcw } from "lucide-react";
 import { AhorcadoDibujo } from "./AhorcadoDibujo";
 import { AhorcadoTeclado } from "./AhorcadoTeclado";
+import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 import { AhorcadoPista } from "./AhorcadoPista";
 import type { AhorcadoCategoria } from "@/types";
 
@@ -196,6 +197,7 @@ export function AhorcadoGame() {
               </button>
             </div>
           )}
+          {juegoTerminado && <PreguntaTikTokJuego />}
         </div>
       </div>
 

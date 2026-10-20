@@ -14,7 +14,16 @@ type Estado = "preguntando" | "guardando" | "si" | "no" | "error";
  * tiktok_permiso_at) y la tarjeta no vuelve a salir en 7 días. Después de
  * contestar se muestra la casilla, para que pueda cambiarlo ahí mismo.
  */
-export function PreguntaTikTok({ nombre, vaGanando }: { nombre: string; vaGanando: boolean }) {
+export function PreguntaTikTok({
+  nombre,
+  vaGanando,
+  titulo = "¿Quieres aparecer en nuestro TikTok si eres el ganador del día?",
+}: {
+  nombre: string;
+  vaGanando: boolean;
+  /** La pregunta en grande; los demás juegos hablan de "los campeones de la semana". */
+  titulo?: string;
+}) {
   const [estado, setEstado] = useState<Estado>("preguntando");
 
   async function contestar(acepta: boolean) {
@@ -57,7 +66,7 @@ export function PreguntaTikTok({ nombre, vaGanando }: { nombre: string; vaGanand
         </p>
       )}
       <p className="text-base font-bold leading-snug" style={{ color: "var(--color-text)" }}>
-        🏆 ¿Quieres aparecer en nuestro TikTok si eres el ganador del día?
+        🏆 {titulo}
       </p>
       <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
         Tu nombre aparecerá como <strong style={{ color: "var(--color-primary)" }}>“{nombre}”</strong>, con tu foto de perfil.

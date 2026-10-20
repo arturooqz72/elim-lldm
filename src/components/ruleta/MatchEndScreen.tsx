@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { Trophy } from "lucide-react";
 import Link from "next/link";
+import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 import type { RuletaJugador } from "@/types";
 
 interface MatchEndScreenProps {
@@ -46,6 +47,7 @@ export function MatchEndScreen({ jugadores, meId }: MatchEndScreenProps) {
           </p>
         )}
       </div>
+      <PreguntaTikTokJuego />
       <div className="w-full flex flex-col gap-2">
         {sorted.map((j, i) => {
           const isMe = j.id === meId;
