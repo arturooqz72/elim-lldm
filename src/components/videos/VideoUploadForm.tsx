@@ -9,6 +9,10 @@ interface VideoUploadFormProps {
   categories: Array<{ id: string; name: string }>;
 }
 
+// Los mismos límites que el bucket video-thumbnails (0081).
+const THUMB_MAX_BYTES = 5 * 1024 * 1024;
+const THUMB_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -186,7 +190,7 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
         const thumbPath = `thumbnails/${user.id}/${Date.now()}-${thumbFile.name}`;
         const { error: thumbErr } = await supabase.storage
           .from("video-thumbnails")
-          .upload(thumbPath, thumbFile, { cacheControl: "3600" });
+          .upload(thumbPath, thumbFile, { cacheControl: "3600", contentType: thumbFile.type });
         if (!thumbErr) {
           thumbnail_url = supabase.storage.from("video-thumbnails").getPublicUrl(thumbPath).data.publicUrl;
           log("Miniatura subida");
@@ -316,10 +320,22 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
           </span>
           <input
             type="file"
-            accept="image/*"
+            accept={THUMB_TYPES.join(",")}
             className="hidden"
             disabled={isUploading}
-            onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              if (file && !THUMB_TYPES.includes(file.type)) {
+                setError("La miniatura debe ser JPG, PNG, WebP o GIF");
+                setThumbFile(null);
+              } else if (file && file.size > THUMB_MAX_BYTES) {
+                setError("La miniatura debe pesar menos de 5 MB");
+                setThumbFile(null);
+              } else {
+                setError(null);
+                setThumbFile(file);
+              }
+            }}
           />
         </label>
       </Field>
