@@ -7,6 +7,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
+  CLAVE_RANKING,
   DIFICULTADES,
   PUNTOS_POR_PISTA,
   TOTAL_PISTAS,
@@ -17,7 +18,6 @@ import {
 } from "@/lib/juegos/ahorcado-dificultad";
 import type { AhorcadoCategoria } from "@/types";
 
-const GAME_KEY = "ahorcado";
 const LETRA_VALIDA = /^[A-ZÑ]$/;
 
 type Estado = "jugando" | "ganada" | "perdida";
@@ -392,28 +392,29 @@ async function guardarResultado(
   if (error) console.error("[ahorcado] No se pudo guardar el resultado:", error);
 }
 
-/** Guarda el puntaje de la racha si mejora el récord del jugador. */
+/** Guarda el puntaje de la racha si mejora el récord del jugador en ese nivel. */
 async function guardarRanking(
   userId: string,
   score: number,
   palabrasGanadas: number,
   dificultad: Dificultad,
 ): Promise<boolean> {
+  const gameKey = CLAVE_RANKING[dificultad];
   const service = await createServiceClient();
   const { data: existente } = await service
     .from("juego_individual_rankings")
     .select("id, score")
-    .eq("game_key", GAME_KEY)
+    .eq("game_key", gameKey)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existente && score <= (existente.score as number)) return false;
 
   const fila = {
-    game_key: GAME_KEY,
+    game_key: gameKey,
     user_id: userId,
     score,
-    metadata: { palabras_ganadas: palabrasGanadas, dificultad },
+    metadata: { palabras_ganadas: palabrasGanadas },
     updated_at: new Date().toISOString(),
   };
   const { error } = existente
@@ -424,4 +425,10 @@ async function guardarRanking(
     return false;
   }
   return true;
+}
+
+/** Nivel de la partida actual (o la última), para abrir la tabla de ese nivel. */
+export async function dificultadActual(userId: string): Promise<Dificultad> {
+  const corrida = await leerCorrida(userId);
+  return corrida?.dificultad ?? "normal";
 }

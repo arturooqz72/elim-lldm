@@ -7,6 +7,7 @@ import { getEstadoPuertaRuleta } from "@/lib/ruleta/estado-puerta.server";
 import { PuertaRuleta } from "@/components/juegos/PuertaRuleta";
 import { getTablaPosiciones } from "@/lib/juegos/tabla-posiciones.server";
 import { getRankingIndividual } from "@/lib/juegos/ranking-individual.server";
+import { CLAVE_RANKING } from "@/lib/juegos/ahorcado-dificultad";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
@@ -46,7 +47,7 @@ export default async function JuegosHubPage() {
     getEstadoPuertaRuleta(),
     getTablaPosiciones("arena_abierta"),
     getTablaPosiciones("ruleta"),
-    getRankingIndividual("ahorcado"),
+    getRankingIndividual(CLAVE_RANKING.normal),
     getGameKeysConNotificacion(profile?.id ?? null),
     getResumenHub(profile?.id ?? null),
   ]);
@@ -201,14 +202,23 @@ export default async function JuegosHubPage() {
                 </div>
                 <CasillaPermisoJuego />
               </div>
-              <TablaPosiciones
-                titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
-                filas={posicionesAhorcado}
-                currentUserId={profile?.id ?? null}
-                unidadSingular="palabra"
-                unidadPlural="palabras"
-                vacio="Aún nadie ha ganado una palabra. ¡Sé el primero!"
-              />
+              <div className="flex flex-col gap-2">
+                <TablaPosiciones
+                  titulo="Tabla de posiciones — Ahorcado (Normal)"
+                  filas={posicionesAhorcado}
+                  currentUserId={profile?.id ?? null}
+                  unidadSingular="palabra"
+                  unidadPlural="palabras"
+                  vacio="Temporada nueva: aún nadie tiene récord en Normal. ¡Sé el primero!"
+                />
+                <Link
+                  href="/juegos/ahorcado#tablas"
+                  className="self-end inline-flex items-center gap-1 text-xs font-semibold min-h-11 px-1"
+                  style={{ color: "var(--color-primary)" }}
+                >
+                  Ver todas las tablas <ChevronRight size={14} />
+                </Link>
+              </div>
             </div>
 
             <div

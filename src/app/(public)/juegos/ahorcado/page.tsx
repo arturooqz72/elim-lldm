@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { Puzzle } from "lucide-react";
 import { getProfile } from "@/lib/supabase/server";
 import { getRankingIndividual } from "@/lib/juegos/ranking-individual.server";
-import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
+import { dificultadActual } from "@/lib/juegos/ahorcado.server";
+import { CLAVE_RANKING, CLAVE_RANKING_HISTORICO } from "@/lib/juegos/ahorcado-dificultad";
 import { AhorcadoGame } from "@/components/juegos/ahorcado/AhorcadoGame";
+import { AhorcadoTablas } from "@/components/juegos/ahorcado/AhorcadoTablas";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
 
@@ -15,11 +17,19 @@ export const metadata: Metadata = {
     "Adivina personajes, lugares, palabras clave y libros del Nuevo Testamento, letra por letra.",
 };
 
+const FILAS_POR_TABLA = 10;
+
 export default async function AhorcadoPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login?returnUrl=/juegos/ahorcado");
 
-  const ranking = await getRankingIndividual("ahorcado");
+  const [facil, normal, dificil, historicos, nivel] = await Promise.all([
+    getRankingIndividual(CLAVE_RANKING.facil, FILAS_POR_TABLA),
+    getRankingIndividual(CLAVE_RANKING.normal, FILAS_POR_TABLA),
+    getRankingIndividual(CLAVE_RANKING.dificil, FILAS_POR_TABLA),
+    getRankingIndividual(CLAVE_RANKING_HISTORICO, FILAS_POR_TABLA),
+    dificultadActual(profile.id),
+  ]);
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
@@ -51,13 +61,11 @@ export default async function AhorcadoPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
         <AhorcadoGame />
-        <TablaPosiciones
-          titulo="Tabla de posiciones — Ahorcado del Nuevo Testamento"
-          filas={ranking}
+        <AhorcadoTablas
+          porNivel={{ facil, normal, dificil }}
+          historicos={historicos}
+          inicial={nivel}
           currentUserId={profile.id}
-          unidadSingular="palabra"
-          unidadPlural="palabras"
-          vacio="Aún nadie ha ganado una palabra. ¡Sé el primero!"
         />
       </div>
     </div>

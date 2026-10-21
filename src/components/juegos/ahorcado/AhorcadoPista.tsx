@@ -27,23 +27,29 @@ export function AhorcadoPista({
   onPedir,
 }: AhorcadoPistaProps) {
   const quedan = pistasTotales - pistas.length;
+  // Siempre en un renglón: los cuadritos se encogen para que quepan hasta
+  // las palabras más largas del banco (15 letras) en un celular de 360 px.
+  const largo = mascara.length;
+  const gap = largo <= 8 ? "gap-2" : "gap-1";
+  const texto = largo <= 8 ? "text-2xl" : largo <= 11 ? "text-lg" : "text-sm";
+  const esquina = largo <= 8 ? "rounded-xl" : "rounded-md";
 
   return (
     <div className="flex flex-col gap-4">
       <div
-        className="flex flex-wrap justify-center gap-2"
+        className={`flex justify-center ${gap}`}
         aria-label={`Palabra de ${mascara.filter((l) => l !== " ").length} letras`}
       >
         {mascara.map((letra, index) =>
           letra === " " ? (
-            <div key={index} className="w-4" />
+            <div key={index} className="w-2 shrink-0" />
           ) : (
             <div
               key={index}
-              className="w-9 h-12 sm:w-10 sm:h-14 flex items-center justify-center rounded-xl"
+              className={`flex-1 min-w-0 max-w-10 aspect-[5/7] flex items-center justify-center ${esquina}`}
               style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)" }}
             >
-              <span className="text-2xl font-bold" style={{ color: "var(--color-text)" }}>
+              <span className={`${texto} font-bold leading-none`} style={{ color: "var(--color-text)" }}>
                 {letra}
               </span>
             </div>

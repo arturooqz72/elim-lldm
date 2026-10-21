@@ -47,6 +47,18 @@ export const DIFICULTADES: Record<Dificultad, ConfigDificultad> = {
   },
 };
 
+/**
+ * game_key de juego_individual_rankings: una tabla por nivel desde la
+ * temporada que empezó con los niveles (2026-10). Los récords de antes
+ * quedaron con "ahorcado" y se muestran como "Récords históricos".
+ */
+export const CLAVE_RANKING: Record<Dificultad, string> = {
+  facil: "ahorcado_facil",
+  normal: "ahorcado_normal",
+  dificil: "ahorcado_dificil",
+};
+export const CLAVE_RANKING_HISTORICO = "ahorcado";
+
 export const TOTAL_PISTAS = 3;
 /** Puntos que resta cada pista en Normal (además de la vida). */
 export const PUNTOS_POR_PISTA = 5;

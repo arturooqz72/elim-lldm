@@ -128,7 +128,11 @@ export function ReglasAhorcado() {
           Con &quot;Siguiente palabra&quot; sigues sumando puntos. Si pierdes o cambias de dificultad, empiezas de
           cero.
         </li>
-        <li>Si tienes sesión iniciada, tu mejor récord se guarda en la tabla de posiciones.</li>
+        <li>
+          Tu mejor racha se guarda en la tabla de posiciones de su nivel: hay una tabla para Fácil, otra para Normal y
+          otra para Difícil.
+        </li>
+        <li>Los récords de antes de los niveles quedan en &quot;Récords históricos&quot;.</li>
       </Seccion>
     </div>
   );
