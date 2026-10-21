@@ -168,7 +168,7 @@ export function AhorcadoGame() {
         >
           <Heart size={16} style={{ color: "var(--color-live)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {partida.vidas} vidas
+            {partida.vidas} {partida.vidas === 1 ? "vida" : "vidas"}
           </span>
         </div>
         <div
