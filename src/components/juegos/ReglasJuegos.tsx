@@ -15,9 +15,7 @@ import {
   PREGUNTAS_POR_PARTIDA,
   ROUND_SECONDS,
 } from "@/lib/arena-publica/config";
-
-// Igual que VIDAS_INICIALES en AhorcadoGame.
-const VIDAS_AHORCADO = 6;
+import { DIFICULTADES, DIFICULTADES_ORDEN } from "@/lib/juegos/ahorcado-dificultad";
 
 const texto = { color: "var(--color-text)" } as const;
 const tenue = { color: "var(--color-text-muted)" } as const;
@@ -106,13 +104,30 @@ export function ReglasAhorcado() {
         un jugador.
       </p>
       <Seccion titulo="Cómo se juega">
+        <li>Al empezar eliges la dificultad. Solo ves los guiones de la palabra.</li>
         <li>Toca una letra. Si está en la palabra, se descubre en todos los lugares donde aparece.</li>
-        <li>Si no está, pierdes una vida. Tienes {VIDAS_AHORCADO} vidas por palabra.</li>
-        <li>Si te atoras, lee la pista de la palabra.</li>
+        <li>Si no está, pierdes una vida.</li>
+        <li>
+          Si te atoras, pide una pista con el botón &quot;Pista&quot;. Son tres, de la más general a la más concreta:
+          la categoría, el libro de la Biblia y la descripción.
+        </li>
+        <li>Al terminar la palabra, ganes o pierdas, ves la cita bíblica completa.</li>
+      </Seccion>
+      <Seccion titulo="Dificultad">
+        {DIFICULTADES_ORDEN.map((d) => (
+          <li key={d}>
+            <strong>{DIFICULTADES[d].nombre}:</strong> {DIFICULTADES[d].vidas} vidas.{" "}
+            {DIFICULTADES[d].descripcion}
+          </li>
+        ))}
+        <li>En Normal no puedes pedir una pista si te queda una sola vida.</li>
       </Seccion>
       <Seccion titulo="Puntos">
-        <li>Al adivinar la palabra ganas 10 puntos por cada vida que te quede.</li>
-        <li>Con &quot;Siguiente palabra&quot; sigues sumando puntos. &quot;Reiniciar juego&quot; empieza de cero.</li>
+        <li>Al adivinar la palabra ganas puntos por cada vida que te quede, según la dificultad.</li>
+        <li>
+          Con &quot;Siguiente palabra&quot; sigues sumando puntos. Si pierdes o cambias de dificultad, empiezas de
+          cero.
+        </li>
         <li>Si tienes sesión iniciada, tu mejor récord se guarda en la tabla de posiciones.</li>
       </Seccion>
     </div>

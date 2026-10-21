@@ -2,93 +2,109 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Trophy, Heart, RotateCcw } from "lucide-react";
+import { Trophy, Heart, Gauge, RotateCcw } from "lucide-react";
 import { AhorcadoDibujo } from "./AhorcadoDibujo";
 import { AhorcadoTeclado } from "./AhorcadoTeclado";
 import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 import { AhorcadoPista } from "./AhorcadoPista";
-import type { AhorcadoCategoria } from "@/types";
+import { AhorcadoDificultad } from "./AhorcadoDificultad";
+import { AhorcadoResultado } from "./AhorcadoResultado";
+import {
+  DIFICULTADES,
+  PUNTOS_POR_PISTA,
+  type Dificultad,
+  type EstadoAhorcado,
+  type SinPartidaAhorcado,
+} from "@/lib/juegos/ahorcado-dificultad";
 
-const VIDAS_INICIALES = 6;
+// El estado lo decide el servidor (ver ahorcado.server.ts): mientras se
+// juega nunca trae la palabra, la descripción ni la cita, solo las pistas
+// que ya se pidieron.
+type Respuesta = EstadoAhorcado | SinPartidaAhorcado;
 
-// Estado que devuelve el servidor (ver EstadoAhorcado en ahorcado.server.ts):
-// nunca trae la palabra completa mientras se juega.
-interface EstadoPartida {
-  mascara: string[];
-  letras: string[];
-  correctas: string[];
-  vidas: number;
-  estado: "jugando" | "ganada" | "perdida";
-  puntos: number;
-  ganadas: number;
-  puntosPalabra: number;
-  categoria: AhorcadoCategoria;
-  pista: string;
-  referencia_biblica: string | null;
-  palabra: string | null;
-  nuevoRecord?: boolean;
+function esSinPartida(r: Respuesta): r is SinPartidaAhorcado {
+  return "necesitaDificultad" in r;
+}
+
+async function enviar(url: string, cuerpo: object | null, mensajeError: string): Promise<Respuesta> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+  });
+  const data = (await res.json().catch(() => ({}))) as Respuesta | { error?: string };
+  if (!res.ok) throw new Error(("error" in data && data.error) || mensajeError);
+  return data as Respuesta;
 }
 
 export function AhorcadoGame() {
-  const [partida, setPartida] = useState<EstadoPartida | null>(null);
+  const [partida, setPartida] = useState<EstadoAhorcado | null>(null);
+  /** Se muestra el selector de dificultad (al inicio, al perder o con "Cambiar dificultad"). */
+  const [eligiendo, setEligiendo] = useState(false);
+  const [ultimaDificultad, setUltimaDificultad] = useState<Dificultad>("normal");
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pedirPalabra = useCallback(async (reiniciar = false) => {
-    setCargando(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/juegos/ahorcado/palabra", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reiniciar }),
-      });
-      if (!res.ok) throw new Error("No se pudo cargar una palabra nueva.");
-      setPartida((await res.json()) as EstadoPartida);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar una palabra nueva.");
-    } finally {
-      setCargando(false);
+  const aplicar = useCallback((r: Respuesta) => {
+    if (esSinPartida(r)) {
+      setUltimaDificultad(r.dificultad);
+      setEligiendo(true);
+      return;
     }
+    setPartida(r);
+    setUltimaDificultad(r.dificultad);
+    setEligiendo(false);
   }, []);
+
+  const pedirPalabra = useCallback(
+    async (dificultad?: Dificultad) => {
+      setCargando(true);
+      setError(null);
+      try {
+        aplicar(
+          await enviar(
+            "/api/juegos/ahorcado/palabra",
+            dificultad ? { dificultad } : null,
+            "No se pudo cargar una palabra nueva.",
+          ),
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo cargar una palabra nueva.");
+      } finally {
+        setCargando(false);
+      }
+    },
+    [aplicar],
+  );
 
   useEffect(() => {
     pedirPalabra();
   }, [pedirPalabra]);
 
-  async function manejarLetra(letra: string) {
-    if (!partida || partida.estado !== "jugando" || partida.letras.includes(letra) || enviando) return;
+  async function accion(url: string, cuerpo: object | null, mensajeError: string) {
+    if (!partida || partida.estado !== "jugando" || enviando) return;
     setEnviando(true);
     setError(null);
     try {
-      const res = await fetch("/api/juegos/ahorcado/letra", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ letra }),
-      });
-      if (!res.ok) throw new Error("No se pudo enviar la letra. Intenta de nuevo.");
-      setPartida((await res.json()) as EstadoPartida);
+      aplicar(await enviar(url, cuerpo, mensajeError));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar la letra. Intenta de nuevo.");
+      setError(err instanceof Error ? err.message : mensajeError);
     } finally {
       setEnviando(false);
     }
   }
 
-  const palabraActual = partida;
-  const juegoTerminado = partida ? partida.estado !== "jugando" : false;
-  const ganado = partida?.estado === "ganada";
-  const intentosRestantes = partida?.vidas ?? VIDAS_INICIALES;
-  const puntuacion = partida?.puntos ?? 0;
-  const mensajeRanking =
-    partida?.nuevoRecord === true
-      ? "¡Nuevo récord guardado!"
-      : partida?.nuevoRecord === false
-        ? "Tu récord anterior sigue siendo mayor."
-        : "";
+  function manejarLetra(letra: string) {
+    if (partida?.letras.includes(letra)) return;
+    void accion("/api/juegos/ahorcado/letra", { letra }, "No se pudo enviar la letra. Intenta de nuevo.");
+  }
 
-  if (cargando && !palabraActual) {
+  function manejarPista() {
+    void accion("/api/juegos/ahorcado/pista", null, "No se pudo pedir la pista. Intenta de nuevo.");
+  }
+
+  if (cargando && !partida && !eligiendo) {
     return (
       <div
         className="rounded-2xl p-8 text-center"
@@ -99,18 +115,40 @@ export function AhorcadoGame() {
     );
   }
 
-  if (error && !palabraActual) {
+  if (eligiendo) {
+    return (
+      <div className="flex flex-col gap-3">
+        <AhorcadoDificultad
+          inicial={ultimaDificultad}
+          cargando={cargando}
+          onEmpezar={(d) => pedirPalabra(d)}
+          onCancelar={partida?.estado === "jugando" ? () => setEligiendo(false) : undefined}
+        />
+        {error && (
+          <p className="text-xs text-center" style={{ color: "var(--color-destructive)" }}>
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (!partida) {
     return (
       <div
         className="rounded-2xl p-8 text-center"
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        <p style={{ color: "var(--color-destructive)" }}>{error}</p>
+        <p style={{ color: "var(--color-destructive)" }}>{error ?? "No se pudo cargar una palabra nueva."}</p>
       </div>
     );
   }
 
-  if (!palabraActual) return null;
+  const config = DIFICULTADES[partida.dificultad];
+  const juegoTerminado = partida.estado !== "jugando";
+  const costoPista = config.pistas === "gratis" ? "gratis" : `1 vida y ${PUNTOS_POR_PISTA} puntos`;
+  const motivoBloqueo =
+    config.pistas === "con-costo" && partida.vidas <= 1 ? "Te queda una sola vida: otra pista te haría perder." : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -121,7 +159,7 @@ export function AhorcadoGame() {
         >
           <Trophy size={16} style={{ color: "var(--color-primary)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {puntuacion} puntos
+            {partida.puntos} puntos
           </span>
         </div>
         <div
@@ -130,72 +168,45 @@ export function AhorcadoGame() {
         >
           <Heart size={16} style={{ color: "var(--color-live)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            {intentosRestantes} vidas
+            {partida.vidas} vidas
+          </span>
+        </div>
+        <div
+          className="flex items-center gap-2 px-4 py-2 rounded-xl"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <Gauge size={16} style={{ color: "var(--color-primary)" }} />
+          <span className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+            {config.nombre}
           </span>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
-        <AhorcadoDibujo errores={VIDAS_INICIALES - intentosRestantes} />
+        <AhorcadoDibujo errores={partida.vidasIniciales - partida.vidas} vidasIniciales={partida.vidasIniciales} />
 
         <div
           className="rounded-2xl p-5 flex flex-col gap-5"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <AhorcadoPista
-            mascara={palabraActual.mascara}
-            categoria={palabraActual.categoria}
-            pista={palabraActual.pista}
-            referenciaBiblica={palabraActual.referencia_biblica}
+            mascara={partida.mascara}
+            pistas={partida.pistas}
+            pistasTotales={juegoTerminado ? 0 : partida.pistasTotales}
+            costo={costoPista}
+            motivoBloqueo={motivoBloqueo}
+            pidiendo={enviando}
+            onPedir={manejarPista}
           />
 
           {juegoTerminado && (
-            <div
-              className="p-4 rounded-2xl text-center"
-              style={{
-                background: ganado ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-                border: `1px solid ${ganado ? "rgba(74,222,128,0.3)" : "rgba(248,113,113,0.3)"}`,
-              }}
-            >
-              {ganado ? (
-                <>
-                  <p className="font-bold text-lg mb-1" style={{ color: "var(--color-success)" }}>
-                    ¡Ganaste!
-                  </p>
-                  <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                    +{palabraActual.puntosPalabra} puntos
-                  </p>
-                  {mensajeRanking && (
-                    <p className="text-xs mt-2" style={{ color: "var(--color-text-muted)" }}>
-                      {mensajeRanking}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <p className="font-bold text-lg mb-1" style={{ color: "var(--color-destructive)" }}>
-                    Perdiste
-                  </p>
-                  <p className="text-sm" style={{ color: "var(--color-text)" }}>
-                    La palabra era: <strong>{palabraActual.palabra}</strong>
-                  </p>
-                </>
-              )}
-              {error && (
-                <p className="text-xs mt-2" style={{ color: "var(--color-destructive)" }}>
-                  {error}
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => pedirPalabra()}
-                disabled={cargando}
-                className="mt-3 px-4 py-2 rounded-xl text-sm font-bold"
-                style={{ background: "var(--color-primary)", color: "#000" }}
-              >
-                Siguiente palabra
-              </button>
-            </div>
+            <AhorcadoResultado
+              partida={partida}
+              error={error}
+              cargando={cargando}
+              onSiguiente={() => pedirPalabra()}
+              onNuevaRacha={() => setEligiendo(true)}
+            />
           )}
           {juegoTerminado && <PreguntaTikTokJuego />}
         </div>
@@ -206,24 +217,24 @@ export function AhorcadoGame() {
         style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
         <AhorcadoTeclado
-          correctas={palabraActual.correctas}
-          letrasAdivinadas={palabraActual.letras}
+          correctas={partida.correctas}
+          letrasAdivinadas={partida.letras}
           disabled={juegoTerminado || enviando}
           onLetra={manejarLetra}
         />
       </div>
 
       <div className="text-center">
-        {error && (
+        {error && !juegoTerminado && (
           <p className="text-xs mb-2" style={{ color: "var(--color-destructive)" }}>
             {error}
           </p>
         )}
         <button
           type="button"
-          onClick={() => pedirPalabra(true)}
+          onClick={() => setEligiendo(true)}
           disabled={cargando}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold min-h-11"
           style={{
             background: "var(--color-surface-elevated)",
             border: "1px solid var(--color-border)",
@@ -231,7 +242,7 @@ export function AhorcadoGame() {
           }}
         >
           <RotateCcw size={14} />
-          Reiniciar juego
+          Reiniciar o cambiar dificultad
         </button>
       </div>
     </div>
