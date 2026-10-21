@@ -142,12 +142,6 @@ export default async function AdminDashboard() {
           color="#60A5FA"
         />
         <QuickAction
-          href="/trivia/nueva"
-          label="Nueva sala de Trivia"
-          description="Abrir una sala de trivia en vivo"
-          color="var(--trivia-gold)"
-        />
-        <QuickAction
           href="/admin/archivo/nueva"
           label="Subir grabación"
           description="Agregar pláticas al archivo"
