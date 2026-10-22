@@ -18,36 +18,57 @@ function paraLeer(palabra: string): string {
   return p.charAt(0).toLocaleUpperCase("es-MX") + p.slice(1);
 }
 
+/**
+ * Nombre como lo dice la voz. Un usuario con números, guiones bajos,
+ * arrobas o sin vocales ("juan_123", "xXgamerXx", "JRZ") la voz lo lee
+ * raro: mejor "un hermano participante". La inicial del apellido se
+ * queda ("Arturo O.").
+ */
+export function nombreParaVoz(nombre: string): string {
+  const [primero = "", ...resto] = nombre.trim().split(/\s+/);
+  const inicialOk = resto.every((p) => /^\p{Lu}\.?$/u.test(p) || /^\p{L}+$/u.test(p));
+  const raro =
+    !/^\p{L}{2,15}$/u.test(primero) ||
+    !/[aeiouáéíóúü]/iu.test(primero) ||
+    // Mayúsculas a media palabra ("JuanPerez", "GAMER"): parece usuario.
+    /\p{Ll}\p{Lu}/u.test(primero) ||
+    (primero.length > 3 && primero === primero.toLocaleUpperCase("es-MX")) ||
+    !inicialOk;
+  return raro ? SIN_PERMISO_VOZ : nombre.trim();
+}
+
 /** Cierra la oración sin duplicar el punto de un nombre corto ("Luis R."). */
 const conPunto = (s: string) => (s.endsWith(".") ? s : `${s}.`);
 
 /** Quien va adelante en la semana; null si nadie sumó puntos. */
 export function liderSemana(t: PalabraTarjetaTikTok): string | null {
   const primero = t.top3Semana[0];
-  if (primero?.posicion === 1 && primero.nombre !== NOMBRE_SIN_PERMISO) return primero.nombre;
+  if (primero?.posicion === 1 && primero.nombre !== NOMBRE_SIN_PERMISO) return nombreParaVoz(primero.nombre);
   return t.top3Semana.length + t.otrosSemana > 0 ? SIN_PERMISO_VOZ : null;
 }
 
 export function guionDelDia(t: PalabraTarjetaTikTok): string {
   const g = t.ganador;
+  // Comas y puntos marcan las pausas de la voz: sin ellos lee todo de corrido.
   const partes: string[] = ["La paz del Señor."];
 
-  partes.push(g ? "¡Ya tenemos ganador de la Palabra del Día!" : "¡Aquí está la Palabra del Día!");
-  if (t.palabra) partes.push(`La palabra de ayer fue ${paraLeer(t.palabra.palabra)}.`);
+  partes.push(g ? "¡Ya tenemos ganador, de la Palabra del Día!" : "¡Aquí está, la Palabra del Día!");
+  if (t.palabra) partes.push(`La palabra de ayer fue... ${paraLeer(t.palabra.palabra)}.`);
 
   if (g) {
-    const nombre = t.ganadorConPermiso ? g.nombre : SIN_PERMISO_VOZ;
+    const nombre = t.ganadorConPermiso ? nombreParaVoz(g.nombre) : SIN_PERMISO_VOZ;
     const como = g.intentos === 1 ? "al primer intento" : `en solo ${g.intentos} intentos`;
-    partes.push(`Felicidades a ${nombre}, que la descubrió ${como}.`, "¡Excelente!");
+    partes.push(`Felicidades, a ${nombre}, que la descubrió ${como}.`, "¡Excelente!");
   } else {
-    partes.push("Nadie la descubrió esta vez.");
+    partes.push("Nadie la descubrió, esta vez.");
   }
 
   const lider = liderSemana(t);
-  if (lider) partes.push(conPunto(`Y en la semana, quien va adelante es ${lider}`), "¿Quién lo alcanzará?");
+  if (lider) partes.push(conPunto(`Y en la semana, quien va adelante, es ${lider}`), "¿Quién lo alcanzará?");
 
-  // Corto: el cierre del video dura 4 s como máximo.
-  partes.push("Juega hoy en elimlldm punto net.", "Dios los bendiga.");
+  // Corto: el cierre del video dura 4 s como máximo. El dominio deletreado:
+  // "elimlldm" de corrido la voz lo pronuncia como una palabra rara.
+  partes.push("Juega hoy, en elim l l d m punto net.", "Dios los bendiga.");
   return partes.join(" ");
 }
 
@@ -60,7 +81,7 @@ export const MARCAS = {
   ganador: ["felicidades", "nadie la"],
   top3: ["excelente"],
   semana: ["y en la semana", "en la semana", "esta semana"],
-  cierre: ["juega hoy", "juega en", "elimlldm"],
+  cierre: ["juega hoy", "juega en", "elimlldm", "elim l l d m"],
 } as const;
 
 /** Signos que abren una frase: el corte va antes de ellos ("¡Excelente!"). */

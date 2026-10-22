@@ -5,11 +5,11 @@
 // dio permiso de TikTok es "un hermano participante". El admin lo puede
 // editar antes de generar; las frases de MARCAS abren cada escena.
 import type { CampeonesFila, CampeonesJuego, CampeonesPersonaPalabra, CampeonesSemana } from "@/types";
-import { SIN_PERMISO_VOZ } from "@/lib/palabra/video/guion";
+import { SIN_PERMISO_VOZ, nombreParaVoz } from "@/lib/palabra/video/guion";
 
 /** Cierra la oración sin duplicar el punto de un nombre corto ("Luis R."). */
 const conPunto = (s: string) => (s.endsWith(".") ? s : `${s}.`);
-const nombreVoz = (p: { nombre: string; conPermiso: boolean }) => (p.conPermiso ? p.nombre : SIN_PERMISO_VOZ);
+const nombreVoz = (p: { nombre: string; conPermiso: boolean }) => (p.conPermiso ? nombreParaVoz(p.nombre) : SIN_PERMISO_VOZ);
 
 /** Cómo empieza la frase de cada juego (las MARCAS la buscan). */
 const ABRE: Record<CampeonesJuego["id"], string> = {
@@ -48,7 +48,7 @@ export function guionSemana(c: CampeonesSemana): string {
   for (const j of c.juegos) partes.push(fraseJuego(j));
   if (c.palabra) partes.push(frasePalabra(c.palabra.racha, c.palabra.masDias));
   // "Felicidades" va al final de la última escena: el cierre dura 4 s como máximo.
-  partes.push("¡Felicidades a todos!", "¿Te animas a jugar esta semana? Entra a elimlldm punto net.", "Dios los bendiga.");
+  partes.push("¡Felicidades a todos!", "¿Te animas a jugar esta semana? Entra a elim l l d m punto net.", "Dios los bendiga.");
   return partes.join(" ");
 }
 

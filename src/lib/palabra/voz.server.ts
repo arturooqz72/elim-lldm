@@ -60,7 +60,13 @@ export async function generarVoz(
     {
       method: "POST",
       headers: { "xi-api-key": clave, "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ text: guion, model_id: MODELO, voice_settings: AJUSTES }),
+      body: JSON.stringify({
+        text: guion,
+        model_id: MODELO,
+        voice_settings: AJUSTES,
+        // multilingual_v2 rechaza language_code; los demás modelos lo usan para no leer con acento de otro idioma.
+        ...(MODELO.startsWith("eleven_multilingual_v2") ? {} : { language_code: "es" }),
+      }),
       cache: "no-store",
     }
   );
