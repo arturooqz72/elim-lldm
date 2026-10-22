@@ -9,8 +9,9 @@ import "server-only";
 import { bajarArchivoB2, subirArchivoB2 } from "@/lib/b2/archivos";
 import type { PalabraVozAlineacion, PalabraVozTikTok } from "@/types";
 
-const MODELO = "eleven_multilingual_v2";
-const AJUSTES = { stability: 0.45, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true };
+// Los mismos ajustes que usa el admin en la web de ElevenLabs con la voz de Carlos Corella.
+const MODELO = "eleven_v3";
+const AJUSTES = { stability: 0.48, similarity_boost: 0.85, style: 0, speed: 1.13, use_speaker_boost: true };
 
 /** Carpeta de B2 de cada video: uno por día (Palabra) o por semana (Campeones, con la fecha del lunes). */
 export type CarpetaVoz = "palabra-tiktok" | "campeones-tiktok";

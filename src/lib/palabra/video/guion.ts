@@ -52,7 +52,7 @@ export function guionDelDia(t: PalabraTarjetaTikTok): string {
   // Comas y puntos marcan las pausas de la voz: sin ellos lee todo de corrido.
   const partes: string[] = ["La paz del Señor."];
 
-  partes.push(g ? "¡Ya tenemos ganador, de la Palabra del Día!" : "¡Aquí está, la Palabra del Día!");
+  partes.push(g ? "¡Ya tenemos ganador de la Palabra del Día!" : "¡Aquí está la Palabra del Día!");
   if (t.palabra) partes.push(`La palabra de ayer fue... ${paraLeer(t.palabra.palabra)}.`);
 
   if (g) {
