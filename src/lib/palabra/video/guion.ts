@@ -19,22 +19,13 @@ function paraLeer(palabra: string): string {
 }
 
 /**
- * Nombre como lo dice la voz. Un usuario con números, guiones bajos,
- * arrobas o sin vocales ("juan_123", "xXgamerXx", "JRZ") la voz lo lee
- * raro: mejor "un hermano participante". La inicial del apellido se
- * queda ("Arturo O.").
+ * Nombre como lo dice la voz: tal cual sale en la tarjeta (nombre corto,
+ * "Arturo O." o el usuario "roberto8287"), igual que antes del 22 de
+ * octubre. Solo quien no dio permiso es "un hermano participante".
  */
 export function nombreParaVoz(nombre: string): string {
-  const [primero = "", ...resto] = nombre.trim().split(/\s+/);
-  const inicialOk = resto.every((p) => /^\p{Lu}\.?$/u.test(p) || /^\p{L}+$/u.test(p));
-  const raro =
-    !/^\p{L}{2,15}$/u.test(primero) ||
-    !/[aeiouáéíóúü]/iu.test(primero) ||
-    // Mayúsculas a media palabra ("JuanPerez", "GAMER"): parece usuario.
-    /\p{Ll}\p{Lu}/u.test(primero) ||
-    (primero.length > 3 && primero === primero.toLocaleUpperCase("es-MX")) ||
-    !inicialOk;
-  return raro ? SIN_PERMISO_VOZ : nombre.trim();
+  const n = nombre.trim();
+  return !n || n === NOMBRE_SIN_PERMISO ? SIN_PERMISO_VOZ : n;
 }
 
 /** Cierra la oración sin duplicar el punto de un nombre corto ("Luis R."). */
