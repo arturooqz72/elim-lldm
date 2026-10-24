@@ -1,4 +1,4 @@
-import { CalendarCheck, Gamepad2, Puzzle, RotateCw, ChevronRight } from "lucide-react";
+import { CalendarCheck, Gamepad2, Puzzle, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getEstadoPuertaArenaAbierta } from "@/lib/arena-publica/estado-puerta.server";
@@ -13,7 +13,7 @@ import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
 import { getResumenHub } from "@/lib/palabra/servidor";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
-import { ReglasAhorcado, ReglasRuletaLocal } from "@/components/juegos/ReglasJuegos";
+import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
 import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
 import { PermisoVideosProvider, CasillaPermisoJuego } from "@/components/juegos/PermisoVideosJuegos";
 
@@ -219,35 +219,6 @@ export default async function JuegosHubPage() {
                   Ver todas las tablas <ChevronRight size={14} />
                 </Link>
               </div>
-            </div>
-
-            <div
-              className="relative flex flex-col gap-3 p-6 rounded-2xl"
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-                  style={{ background: "rgba(29,158,117,0.08)", border: "1px solid rgba(29,158,117,0.3)" }}
-                >
-                  <RotateCw size={20} style={{ color: "#1D9E75" }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold" style={{ color: "var(--color-text)" }}>
-                    <a href="/juegos/ruleta-elimlldm.html" className="after:absolute after:inset-0 after:rounded-2xl">
-                      Ruleta de retos
-                    </a>
-                  </h2>
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    La Ruleta para jugar en un solo dispositivo
-                  </p>
-                </div>
-                <BotonReglas juego="Ruleta de retos">
-                  <ReglasRuletaLocal />
-                </BotonReglas>
-                <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
-              </div>
-              <CasillaPermisoJuego />
             </div>
           </div>
         </div>

@@ -137,22 +137,3 @@ export function ReglasAhorcado() {
     </div>
   );
 }
-
-export function ReglasRuletaLocal() {
-  return (
-    <div className="flex flex-col gap-4 text-sm">
-      <p style={texto}>
-        La Ruleta para jugar en <strong>un solo dispositivo</strong>: en familia, en clase o con amigos, pasándose el
-        teléfono o viendo la misma pantalla.
-      </p>
-      <Seccion titulo="Cómo se juega">
-        <li>Al empezar eligen el número de jugadores y cuántas rondas hay que ganar.</li>
-        <li>En su turno, cada jugador gira la ruleta y elige una consonante. Gana esos puntos por cada vez que aparece.</li>
-        <li>Comprar una vocal cuesta {VOWEL_COST} puntos.</li>
-        <li>BANCARROTA: pierdes todos tus puntos y el turno. PIERDE TURNO: pasa al siguiente jugador.</li>
-        <li>Cuando alguien sepa la frase, toca &quot;Resolver Panel&quot; y la escribe completa.</li>
-      </Seccion>
-      <p style={tenue}>Gana quien llegue primero al número de rondas elegido.</p>
-    </div>
-  );
-}
