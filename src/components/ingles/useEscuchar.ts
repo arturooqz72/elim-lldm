@@ -2,12 +2,28 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-/** Voz en inglés del teléfono o la computadora (la de Estados Unidos si hay). */
+// La tutora es mujer (así sale en los anuncios de radio): se busca una voz
+// femenina por su nombre, porque el navegador no dice si es de hombre o de
+// mujer. En Windows la primera en inglés suele ser "Microsoft David".
+const FEMENINA =
+  /female|samantha|aria|jenny|zira|ava\b|allison|susan|victoria|karen|moira|tessa|fiona|serena|michelle|emma|libby|sonia|natasha|salli|joanna|kendra|kimberly|ivy|google us english|google uk english female|x-sfg|x-iob|x-iog|x-tpc|x-tpf/i;
+const MASCULINA =
+  /\bmale|david|mark|guy|alex\b|daniel|fred|tom\b|aaron|arthur|christopher|eric|roger|ryan|steffan|matthew|joey|justin|google uk english male|x-iom|x-tpd/i;
+
+/** Voz en inglés del teléfono o la computadora: de mujer y de Estados Unidos si hay. */
 function vozIngles(): SpeechSynthesisVoice | undefined {
   const voces = window.speechSynthesis.getVoices();
+  const esUS = (v: SpeechSynthesisVoice) => v.lang.replace("_", "-") === "en-US";
+  const esIngles = (v: SpeechSynthesisVoice) => v.lang.replace("_", "-").startsWith("en");
+  const esMujer = (v: SpeechSynthesisVoice) => FEMENINA.test(v.name);
+  const noEsHombre = (v: SpeechSynthesisVoice) => FEMENINA.test(v.name) || !MASCULINA.test(v.name);
   return (
-    voces.find((v) => v.lang.replace("_", "-") === "en-US") ??
-    voces.find((v) => v.lang.replace("_", "-").startsWith("en"))
+    voces.find((v) => esUS(v) && esMujer(v)) ??
+    voces.find((v) => esIngles(v) && esMujer(v)) ??
+    voces.find((v) => esUS(v) && noEsHombre(v)) ??
+    voces.find((v) => esIngles(v) && noEsHombre(v)) ??
+    voces.find(esUS) ??
+    voces.find(esIngles)
   );
 }
 
