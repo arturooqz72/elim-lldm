@@ -5,8 +5,8 @@ export interface Puzzle {
   readonly phrase: string;
 }
 
-// Real subset of the puzzle bank already used by the single-device game
-// (public/juegos/ruleta-elimlldm.html, DEFAULT_DATA.puzzles).
+// Real subset of the puzzle bank from the retired single-device game
+// (ruleta-elimlldm.html, DEFAULT_DATA.puzzles; removed 2026-10-24).
 export const PUZZLES: Puzzle[] = [
   { category: "Saludo Cristiano", phrase: "LA PAZ DE CRISTO SEA CON USTEDES" },
   { category: "Saludo Cristiano", phrase: "LA GRACIA DE DIOS SEA CON TODOS" },

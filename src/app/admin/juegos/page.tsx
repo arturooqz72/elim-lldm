@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Plus, Gamepad2, Settings } from "lucide-react";
+import { Plus, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 
@@ -21,16 +21,6 @@ export default async function AdminJuegosPage() {
           Juegos
         </h1>
         <div className="flex items-center gap-3">
-          <a
-            href="/juegos/ruleta-elimlldm.html?admin=1"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
-          >
-            <Settings size={16} />
-            Editar Ruleta
-          </a>
           <Link
             href="/admin/juegos/nueva"
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"

@@ -1,6 +1,6 @@
 // Public-safe game config — shared by server (API routes) and client
-// (Wheel component). Mirrors DATA.wheel from the original single-device
-// public/juegos/ruleta-elimlldm.html so the online version feels identical.
+// (Wheel component). Originally mirrored DATA.wheel from the retired
+// single-device ruleta-elimlldm.html (removed 2026-10-24).
 
 export type WheelSegmentType = "puntos" | "bancarrota" | "pierde_turno";
 
