@@ -1,7 +1,7 @@
 // src/lib/trivia/salas-banco.server.ts
 // Prepara, justo cuando le toca, la siguiente pregunta de una sala de
-// Trivia en línea (arena_publica_*) o de Elim Arena en modo banco
-// (elim_arena_*). Las dos familias de tablas tienen las mismas columnas.
+// Trivia en línea (arena_publica_*). Elim Arena (elim_arena_*) también lo
+// usaba hasta que se retiró en la Fase 3 (tablas borradas en 0084).
 //
 // La pregunta se escoge en el momento y no al crear la sala porque:
 //   - hay que saber quiénes juegan, para no darles nada que ya vieron;
@@ -11,7 +11,7 @@ import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { elegirDelBanco, marcarVistas, revolverOpciones, siguienteNivel } from "./banco.server";
 
-export type ArenaConBanco = "arena_publica" | "elim_arena";
+export type ArenaConBanco = "arena_publica";
 
 export interface PreguntaDeSala {
   id: string;
