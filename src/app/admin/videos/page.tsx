@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Video as VideoIcon, Folder } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import { adminId, categoriaElegida } from "@/lib/videos/categorias.server";
 import { VideoRowActions } from "./VideoRowActions";
 import type { VideoStatus } from "@/types";
 
@@ -11,20 +12,19 @@ export const metadata = { title: "Videos — Admin" };
 
 async function approveVideo(formData: FormData) {
   "use server";
-  const profile = await getProfile();
-  if (!profile || (profile as { role: string }).role !== "admin") return;
+  const reviewer = await adminId();
+  if (!reviewer) return;
 
   const id = formData.get("id") as string;
-  const category_id = (formData.get("category_id") as string) || null;
-
   const service = await createServiceClient();
+  const category_id = await categoriaElegida(service, formData);
   const { error } = await service
     .from("videos")
     .update({
       category_id,
       status: "approved",
       published_at: new Date().toISOString(),
-      reviewed_by: (profile as { id: string }).id,
+      reviewed_by: reviewer,
       reviewed_at: new Date().toISOString(),
       rejection_reason: null,
     })
@@ -32,12 +32,29 @@ async function approveVideo(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/videos");
+  revalidatePath("/videos");
+}
+
+// Solo cambia la categoría, sin tocar el estado: sirve para videos
+// pendientes, aprobados o rechazados, los haya subido quien sea.
+async function saveCategory(formData: FormData) {
+  "use server";
+  if (!(await adminId())) return;
+
+  const id = formData.get("id") as string;
+  const service = await createServiceClient();
+  const category_id = await categoriaElegida(service, formData);
+  const { error } = await service.from("videos").update({ category_id }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/videos");
+  revalidatePath("/videos");
 }
 
 async function rejectVideo(formData: FormData) {
   "use server";
-  const profile = await getProfile();
-  if (!profile || (profile as { role: string }).role !== "admin") return;
+  const reviewer = await adminId();
+  if (!reviewer) return;
 
   const id = formData.get("id") as string;
   const rejection_reason = (formData.get("rejection_reason") as string)?.trim() || null;
@@ -49,7 +66,7 @@ async function rejectVideo(formData: FormData) {
       status: "rejected",
       rejection_reason,
       published_at: null,
-      reviewed_by: (profile as { id: string }).id,
+      reviewed_by: reviewer,
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -60,8 +77,7 @@ async function rejectVideo(formData: FormData) {
 
 async function deleteVideo(formData: FormData) {
   "use server";
-  const profile = await getProfile();
-  if (!profile || (profile as { role: string }).role !== "admin") return;
+  if (!(await adminId())) return;
 
   const id = formData.get("id") as string;
   const service = await createServiceClient();
@@ -221,6 +237,7 @@ export default async function AdminVideosPage({
                   categoryId={item.category_id}
                   categories={categories}
                   approveAction={approveVideo}
+                  saveCategoryAction={saveCategory}
                   rejectAction={rejectVideo}
                   deleteAction={deleteVideo}
                 />

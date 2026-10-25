@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X, Trash2, Save } from "lucide-react";
 import type { VideoStatus } from "@/types";
 
@@ -11,6 +11,7 @@ interface VideoRowActionsProps {
   categoryId: string | null;
   categories: Array<{ id: string; name: string }>;
   approveAction: (formData: FormData) => void;
+  saveCategoryAction: (formData: FormData) => void;
   rejectAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
 }
@@ -21,6 +22,8 @@ const selectStyle = {
   color: "var(--color-text)",
 } as const;
 
+const NUEVA = "__nueva__";
+
 export function VideoRowActions({
   id,
   title,
@@ -28,11 +31,32 @@ export function VideoRowActions({
   categoryId,
   categories,
   approveAction,
+  saveCategoryAction,
   rejectAction,
   deleteAction,
 }: VideoRowActionsProps) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? "");
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+
+  // Al guardar, el servidor manda la categoría nueva (o la recién creada):
+  // el menú se pone en esa y se limpia el nombre escrito.
+  useEffect(() => {
+    setSelectedCategory(categoryId ?? "");
+    setNewCategoryName("");
+  }, [categoryId]);
+  const creandoCategoria = selectedCategory === NUEVA;
+  // Con "+ Nueva categoría…" no se guarda nada hasta escribir el nombre.
+  const faltaNombre = creandoCategoria && !newCategoryName.trim();
+  const sinCambios = !creandoCategoria && selectedCategory === (categoryId ?? "");
+
+  const camposCategoria = (
+    <>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="category_id" value={selectedCategory} />
+      <input type="hidden" name="new_category_name" value={newCategoryName} />
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -49,29 +73,43 @@ export function VideoRowActions({
               {c.name}
             </option>
           ))}
+          <option value={NUEVA}>+ Nueva categoría…</option>
         </select>
 
-        {status === "approved" ? (
+        {creandoCategoria && (
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="Nombre de la categoría"
+            maxLength={60}
+            autoFocus
+            className="rounded-lg px-2.5 py-1.5 text-xs outline-none w-44"
+            style={selectStyle}
+          />
+        )}
+
+        <form action={saveCategoryAction}>
+          {camposCategoria}
+          <button
+            type="submit"
+            disabled={faltaNombre || sinCambios}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium disabled:opacity-40"
+            style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
+            title="Cambiar solo la categoría, sin aprobar ni rechazar"
+          >
+            <Save size={12} />
+            Guardar categoría
+          </button>
+        </form>
+
+        {status !== "approved" && (
           <form action={approveAction}>
-            <input type="hidden" name="id" value={id} />
-            <input type="hidden" name="category_id" value={selectedCategory} />
+            {camposCategoria}
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
-              style={{ background: "var(--color-surface-elevated)", color: "var(--color-text)" }}
-              title="Guardar categoría"
-            >
-              <Save size={12} />
-              Guardar
-            </button>
-          </form>
-        ) : (
-          <form action={approveAction}>
-            <input type="hidden" name="id" value={id} />
-            <input type="hidden" name="category_id" value={selectedCategory} />
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+              disabled={faltaNombre}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
               style={{ background: "var(--color-success)", color: "#000" }}
               title="Aprobar"
             >
