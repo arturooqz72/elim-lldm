@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { buildLldmSystemPrompt, SYSTEM_PROMPT_GENERAL } from "@/lib/elim-ia/prompts";
 import { elimIaEnMantenimiento, MENSAJE_MANTENIMIENTO } from "@/lib/elim-ia/mantenimiento";
+import { puedeUsarElimIa } from "@/lib/elim-ia/acceso";
 import type { ElimIADocument, ElimIAMessage, ElimIAMode } from "@/types";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -25,6 +26,12 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+  // Solo moderadores hacia arriba (role es columna pública de profiles).
+  const { data: perfil } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!puedeUsarElimIa((perfil as { role: string } | null)?.role)) {
+    return NextResponse.json({ error: "Elim IA es solo para moderadores" }, { status: 403 });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

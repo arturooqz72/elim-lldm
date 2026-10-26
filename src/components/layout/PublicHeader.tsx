@@ -8,6 +8,7 @@ import { createClient, createFreshClient } from "@/lib/supabase/client";
 import { LiveBadge } from "./LiveBadge";
 import { EnlaceNav, EtiquetaMantenimiento, NavEscritorio } from "./NavEscritorio";
 import { NAV_LINKS, esActivo } from "./navLinks";
+import { puedeUsarElimIa } from "@/lib/elim-ia/acceso";
 import { usePresenciaSitio } from "./usePresenciaSitio";
 import { useRegistrarVisita } from "./useRegistrarVisita";
 import { InvitacionJuego } from "./InvitacionJuego";
@@ -33,6 +34,8 @@ export function PublicHeader({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(initialProfile);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  // Elim IA solo sale en el menú de moderadores hacia arriba.
+  const links = NAV_LINKS.filter((l) => l.href !== "/elim-ia" || puedeUsarElimIa(profile?.role));
 
   useEffect(() => {
     const supabase = createClient();
@@ -97,7 +100,7 @@ export function PublicHeader({
           </Link>
 
           {/* Desktop Nav — enlaces principales + "Más ▾" (ver navLinks.ts). */}
-          <NavEscritorio pathname={pathname} enMantenimiento={enMantenimiento} />
+          <NavEscritorio pathname={pathname} links={links} enMantenimiento={enMantenimiento} />
 
           {/* Auth */}
           <div className="flex items-center gap-2 shrink-0">
@@ -243,7 +246,7 @@ export function PublicHeader({
             className="xl:hidden px-4 pb-4 flex flex-col gap-1"
             style={{ borderTop: "1px solid var(--color-border)", background: "var(--color-bg)" }}
           >
-            {NAV_LINKS.map(({ href, label, icon: Icon, destacado, documento }) => {
+            {links.map(({ href, label, icon: Icon, destacado, documento }) => {
               const active = esActivo(pathname, href);
               const isSaludo = href === "/saludo" || Boolean(destacado);
               return (

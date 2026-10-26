@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { LiveBadge } from "./LiveBadge";
-import { NAV_LINKS, esActivo } from "./navLinks";
+import { esActivo, type NavLink } from "./navLinks";
 import { RedesMenu } from "./RedesMenu";
 
 /**
@@ -39,16 +39,18 @@ export function EnlaceNav({
 
 interface Props {
   pathname: string;
+  /** Enlaces que puede ver este usuario (NAV_LINKS ya filtrado por rol). */
+  links: NavLink[];
   /** hrefs de secciones en mantenimiento. */
   enMantenimiento: string[];
 }
 
 /** Menú de escritorio: enlaces principales a la vista y el resto en "Más ▾". */
-export function NavEscritorio({ pathname, enMantenimiento }: Props) {
+export function NavEscritorio({ pathname, links, enMantenimiento }: Props) {
   const [masAbierto, setMasAbierto] = useState(false);
   const masRef = useRef<HTMLDivElement>(null);
-  const principales = NAV_LINKS.filter((l) => !l.enMas);
-  const enMas = NAV_LINKS.filter((l) => l.enMas);
+  const principales = links.filter((l) => !l.enMas);
+  const enMas = links.filter((l) => l.enMas);
   const masActivo = enMas.some((l) => esActivo(pathname, l.href));
 
   // Se cierra al navegar, al hacer clic fuera o con Escape.

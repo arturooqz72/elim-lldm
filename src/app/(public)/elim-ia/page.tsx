@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getProfile } from "@/lib/supabase/server";
 import { ElimIaChat } from "@/components/elim-ia/ElimIaChat";
 import { elimIaEnMantenimiento } from "@/lib/elim-ia/mantenimiento";
+import { puedeUsarElimIa } from "@/lib/elim-ia/acceso";
 import type { ElimIAMessage, Profile } from "@/types";
 
 export const metadata = { title: "Elim IA — Elim LLDM" };
@@ -9,6 +10,8 @@ export const metadata = { title: "Elim IA — Elim LLDM" };
 export default async function ElimIaPage() {
   const profile = (await getProfile()) as Profile | null;
   if (!profile) redirect("/login?returnUrl=/elim-ia");
+  // Solo moderadores hacia arriba; los demás vuelven al inicio.
+  if (!puedeUsarElimIa(profile.role)) redirect("/");
 
   // En mantenimiento no se carga el historial: el chat muestra el aviso.
   const mantenimiento = elimIaEnMantenimiento();
