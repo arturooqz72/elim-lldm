@@ -30,7 +30,6 @@ const ROLES_VALIDOS = [
   "super_moderador",
   "moderador",
   "anfitrion",
-  "oyente_plus",
   "participante",
 ] as const;
 
@@ -127,7 +126,6 @@ export default async function UsuariosPage({
           <option value="super_moderador">Super Moderador</option>
           <option value="moderador">Moderador</option>
           <option value="anfitrion">Anfitrión</option>
-          <option value="oyente_plus">Oyente Plus</option>
           <option value="participante">Participante</option>
         </select>
         <button
