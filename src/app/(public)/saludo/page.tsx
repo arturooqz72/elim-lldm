@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { SaludoRecorder } from "@/components/saludo/SaludoRecorder";
 
 export const metadata: Metadata = {
-  title: "Deja tu saludo — Elim LLDM",
+  title: "Saludos a la radio — Elim LLDM",
   description: "Graba un saludo en audio desde tu navegador para que lo escuchemos en Elim LLDM Radio.",
 };
 
@@ -22,7 +22,7 @@ export default function SaludoPage() {
             <AudioLines size={24} style={{ color: "var(--color-primary)" }} />
           </div>
           <h1 className="text-4xl font-bold mb-3" style={{ color: "var(--color-text)" }}>
-            Deja tu saludo
+            Saludos a la radio
           </h1>
           <p className="text-base" style={{ color: "var(--color-text-muted)" }}>
             Graba un saludo en audio (hasta 60 segundos) y podría sonar en Elim LLDM Radio.

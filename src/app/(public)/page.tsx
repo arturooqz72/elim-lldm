@@ -258,7 +258,7 @@ export default async function LandingPage() {
                 },
                 {
                   icon: AudioLines,
-                  title: "Saludos para la Radio",
+                  title: "Saludos a la radio",
                   description:
                     "Graba un saludo en audio desde tu navegador y podría sonar en Elim LLDM Radio.",
                   href: "/saludo",

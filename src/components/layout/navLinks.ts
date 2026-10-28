@@ -16,7 +16,6 @@ import {
   Radio,
   Smartphone,
   Video,
-  Volume2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,8 +44,7 @@ export const NAV_LINKS: NavLink[] = [
     destacado: true,
     documento: true,
   },
-  { href: "/saludo", label: "Saludos", icon: AudioLines },
-  { href: "/saludo-directo", label: "Saludo a la radio en vivo", icon: Volume2 },
+  { href: "/saludo", label: "Saludos a la radio", icon: AudioLines },
   { href: "/platikas", label: "Estudio en Vivo", icon: Mic },
   { href: "/juegos", label: "Juegos en línea", icon: Gamepad2 },
   { href: "/archivo", label: "Archivo", icon: Archive, enMas: true },
