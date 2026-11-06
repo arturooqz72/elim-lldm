@@ -321,7 +321,7 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
       <Field label="Portada (opcional)">
         <div className="flex flex-col gap-3">
           <EscenaPortadaPicker
-            videoFile={videoFile}
+            source={videoFile}
             disabled={isUploading}
             onPick={(file, seconds) => {
               setError(null);
