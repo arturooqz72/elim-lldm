@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { Upload, Loader2, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { EscenaPortadaPicker } from "@/components/videos/EscenaPortadaPicker";
+import { PortadaPreview } from "@/components/videos/PortadaPreview";
+import { formatTime } from "@/lib/audio-recording";
 
 interface ArchiveUploadFormProps {
   categories: Array<{ id: string; name: string }>;
@@ -15,6 +18,9 @@ export function ArchiveUploadForm({ categories, platikas }: ArchiveUploadFormPro
   const [isPending, startTransition] = useTransition();
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
+  // Segundo del video usado como portada; null si la portada es una imagen subida.
+  const [escenaSegundos, setEscenaSegundos] = useState<number | null>(null);
+  const imagenSubida = thumbFile !== null && escenaSegundos === null;
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -49,7 +55,7 @@ export function ArchiveUploadForm({ categories, platikas }: ArchiveUploadFormPro
         const thumbPath = `thumbnails/${Date.now()}-${thumbFile.name}`;
         const { error: thumbErr } = await supabase.storage
           .from("recordings")
-          .upload(thumbPath, thumbFile, { cacheControl: "3600" });
+          .upload(thumbPath, thumbFile, { cacheControl: "3600", contentType: thumbFile.type });
         if (!thumbErr) {
           const { data: thumbUrl } = supabase.storage.from("recordings").getPublicUrl(thumbPath);
           thumbnail_url = thumbUrl.publicUrl;
@@ -136,29 +142,55 @@ export function ArchiveUploadForm({ categories, platikas }: ArchiveUploadFormPro
             type="file"
             accept="video/*"
             className="hidden"
-            onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              setVideoFile(e.target.files?.[0] ?? null);
+              if (escenaSegundos !== null) {
+                setThumbFile(null);
+                setEscenaSegundos(null);
+              }
+            }}
           />
         </label>
       </Field>
 
-      <Field label="Miniatura (thumbnail)">
-        <label
-          className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
-          style={{
-            background: "var(--color-surface-elevated)",
-            border: `2px dashed ${thumbFile ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
-          }}
-        >
-          <span className="text-sm" style={{ color: thumbFile ? "var(--color-primary)" : "var(--color-text-muted)" }}>
-            {thumbFile ? thumbFile.name : "Imagen de portada (opcional)"}
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
+      <Field label="Portada">
+        <div className="flex flex-col gap-3">
+          <EscenaPortadaPicker
+            videoFile={videoFile}
+            disabled={isPending}
+            onPick={(file, seconds) => {
+              setThumbFile(file);
+              setEscenaSegundos(seconds);
+            }}
           />
-        </label>
+          <label
+            className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: `2px dashed ${imagenSubida ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
+            }}
+          >
+            <span className="text-sm" style={{ color: imagenSubida ? "var(--color-primary)" : "var(--color-text-muted)" }}>
+              {imagenSubida && thumbFile ? thumbFile.name : "Subir una imagen como portada (opcional)"}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                // Permite volver a elegir la misma imagen después de usar una escena.
+                e.target.value = "";
+                setThumbFile(file);
+                setEscenaSegundos(null);
+              }}
+            />
+          </label>
+          <PortadaPreview
+            file={thumbFile}
+            label={escenaSegundos !== null ? `escena en ${formatTime(escenaSegundos)}` : thumbFile?.name ?? ""}
+          />
+        </div>
       </Field>
 
       <Field label="Categoría">
