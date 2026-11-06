@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Upload, Loader2, CheckCircle, Film, ImageIcon } from "lucide-react";
 import { createFreshClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { EscenaPortadaPicker } from "@/components/videos/EscenaPortadaPicker";
+import { PortadaPreview } from "@/components/videos/PortadaPreview";
+import { formatTime } from "@/lib/audio-recording";
 
 interface VideoUploadFormProps {
   categories: Array<{ id: string; name: string }>;
@@ -94,6 +97,9 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
   const router = useRouter();
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
+  // Segundo del video usado como portada; null si la portada es una imagen subida.
+  const [escenaSegundos, setEscenaSegundos] = useState<number | null>(null);
+  const imagenSubida = thumbFile !== null && escenaSegundos === null;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -301,43 +307,67 @@ export function VideoUploadForm({ categories }: VideoUploadFormProps) {
             accept="video/*"
             className="hidden"
             disabled={isUploading}
-            onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-      </Field>
-
-      <Field label="Miniatura (opcional)">
-        <label
-          className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
-          style={{
-            background: "var(--color-surface-elevated)",
-            border: `2px dashed ${thumbFile ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
-          }}
-        >
-          <ImageIcon size={18} style={{ color: thumbFile ? "var(--color-primary)" : "var(--color-text-muted)" }} />
-          <span className="text-sm" style={{ color: thumbFile ? "var(--color-primary)" : "var(--color-text-muted)" }}>
-            {thumbFile ? thumbFile.name : "Imagen de portada (opcional)"}
-          </span>
-          <input
-            type="file"
-            accept={THUMB_TYPES.join(",")}
-            className="hidden"
-            disabled={isUploading}
             onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              if (file && !THUMB_TYPES.includes(file.type)) {
-                setError("La miniatura debe ser JPG, PNG, WebP o GIF");
+              setVideoFile(e.target.files?.[0] ?? null);
+              if (escenaSegundos !== null) {
                 setThumbFile(null);
-              } else if (file && file.size > THUMB_MAX_BYTES) {
-                setError("La miniatura debe pesar menos de 5 MB");
-                setThumbFile(null);
-              } else {
-                setError(null);
-                setThumbFile(file);
+                setEscenaSegundos(null);
               }
             }}
           />
         </label>
+      </Field>
+
+      <Field label="Portada (opcional)">
+        <div className="flex flex-col gap-3">
+          <EscenaPortadaPicker
+            videoFile={videoFile}
+            disabled={isUploading}
+            onPick={(file, seconds) => {
+              setError(null);
+              setThumbFile(file);
+              setEscenaSegundos(seconds);
+            }}
+          />
+          <label
+            className="flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer"
+            style={{
+              background: "var(--color-surface-elevated)",
+              border: `2px dashed ${imagenSubida ? "rgba(212,160,23,0.5)" : "var(--color-border)"}`,
+            }}
+          >
+            <ImageIcon size={18} style={{ color: imagenSubida ? "var(--color-primary)" : "var(--color-text-muted)" }} />
+            <span className="text-sm" style={{ color: imagenSubida ? "var(--color-primary)" : "var(--color-text-muted)" }}>
+              {imagenSubida && thumbFile ? thumbFile.name : "Subir una imagen como portada"}
+            </span>
+            <input
+              type="file"
+              accept={THUMB_TYPES.join(",")}
+              className="hidden"
+              disabled={isUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                // Permite volver a elegir la misma imagen después de usar una escena.
+                e.target.value = "";
+                setEscenaSegundos(null);
+                if (file && !THUMB_TYPES.includes(file.type)) {
+                  setError("La miniatura debe ser JPG, PNG, WebP o GIF");
+                  setThumbFile(null);
+                } else if (file && file.size > THUMB_MAX_BYTES) {
+                  setError("La miniatura debe pesar menos de 5 MB");
+                  setThumbFile(null);
+                } else {
+                  setError(null);
+                  setThumbFile(file);
+                }
+              }}
+            />
+          </label>
+          <PortadaPreview
+            file={thumbFile}
+            label={escenaSegundos !== null ? `escena en ${formatTime(escenaSegundos)}` : thumbFile?.name ?? ""}
+          />
+        </div>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
