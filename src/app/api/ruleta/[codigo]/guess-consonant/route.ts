@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { registrarPuntosLiga } from "@/lib/liga/registrar.server";
+import { LIGA_PUNTOS } from "@/lib/liga/config";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ALPHABET, VOWELS, TURN_SECONDS, RONDA_FIN_SECONDS } from "@/lib/ruleta/wheel";
 import { buildBoardShape, countLetterInPhrase, isPhraseSolved, nextJugadorId } from "@/lib/ruleta/game.server";
@@ -109,7 +111,7 @@ export async function POST(
 
     const { data: jugador } = await service
       .from("ruleta_jugadores")
-      .select("id, puntos")
+      .select("id, puntos, user_id")
       .eq("id", body.jugador_id)
       .single();
 
@@ -121,6 +123,20 @@ export async function POST(
       if (jugadorUpdateError) {
         return NextResponse.json({ error: jugadorUpdateError.message }, { status: 500 });
       }
+    }
+
+    // Liga de Iglesias: solo después de validar la jugada en el servidor.
+    if (jugador?.user_id) {
+      const userId = jugador.user_id as string;
+      after(() =>
+        registrarPuntosLiga({
+          jugador: userId,
+          juego: "ruleta",
+          puntos: LIGA_PUNTOS.ruletaPorLetra,
+          partidaRef: sala.id,
+          eventoRef: `${ronda.id}:${letra}`,
+        })
+      );
     }
 
     await channel.send({

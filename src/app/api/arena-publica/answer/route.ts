@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { registrarPuntosLiga } from "@/lib/liga/registrar.server";
+import { LIGA_PUNTOS } from "@/lib/liga/config";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ROUND_SECONDS } from "@/lib/arena-publica/config";
 import { registrarRespuesta } from "@/lib/trivia/banco.server";
@@ -107,6 +109,19 @@ export async function POST(request: Request) {
   }
 
   if (pregunta.question_id) await registrarRespuesta(pregunta.question_id, esCorrecta);
+
+  // Liga de Iglesias: la respuesta ya se evaluó aquí, en el servidor.
+  if (esCorrecta) {
+    after(() =>
+      registrarPuntosLiga({
+        jugador: user.id,
+        juego: "trivia",
+        puntos: LIGA_PUNTOS.triviaPorCorrecta,
+        partidaRef: sala.id,
+        eventoRef: pregunta.id,
+      })
+    );
+  }
 
   // Los puntos NO se suman aquí: el cambio viajaría por Realtime y delataría
   // quién acertó antes de tiempo. Se suman al revelar (sumarPuntosSala en

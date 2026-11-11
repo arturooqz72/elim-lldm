@@ -5,7 +5,10 @@
 // que ya pidió; la palabra, su descripción y la cita, cuando la partida
 // termina (0082_ahorcado_dificultad.sql).
 import "server-only";
+import { after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { registrarPuntosLiga } from "@/lib/liga/registrar.server";
+import { LIGA_PUNTOS } from "@/lib/liga/config";
 import {
   CLAVE_RANKING,
   DIFICULTADES,
@@ -334,6 +337,14 @@ export async function adivinarLetra(
 
   let nuevoRecord: boolean | undefined;
   if (estado === "ganada") nuevoRecord = await guardarRanking(userId, puntos, ganadas, corrida.dificultad);
+
+  // Liga de Iglesias: palabra ganada, ya validada aquí en el servidor.
+  if (estado === "ganada") {
+    const ref = `${corrida.palabra_id ?? "sin-palabra"}:${actualizada.updated_at}`;
+    after(() =>
+      registrarPuntosLiga({ jugador: userId, juego: "ahorcado", puntos: LIGA_PUNTOS.ahorcadoPorPalabra, partidaRef: ref, eventoRef: ref })
+    );
+  }
 
   return estadoPublico(actualizada, palabra, nuevoRecord);
 }

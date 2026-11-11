@@ -10,7 +10,9 @@
 //   día). El servidor es la fuente de verdad: guarda cada intento, impide
 //   jugar dos veces el mismo día y recalcula la racha al terminar.
 // - Sin sesión: 401, hay que registrarse para jugar.
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { registrarPuntosLiga } from "@/lib/liga/registrar.server";
+import { puntosPalabraLiga } from "@/lib/liga/config";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { PALABRA_MAX_INTENTOS } from "@/lib/palabra/config";
 import { evaluarIntento, normalizarPalabra, tieneFormatoValido } from "@/lib/palabra/logica";
@@ -136,6 +138,20 @@ export async function POST(request: Request) {
       revelado: null,
       pista: segundaPista(palabraHoy, intentos.length, false),
     });
+  }
+
+  // Liga de Iglesias: solo partidas con sesión (esta ruta), una vez por día.
+  if (resuelta) {
+    const jugador = user.id;
+    after(() =>
+      registrarPuntosLiga({
+        jugador,
+        juego: "palabra",
+        puntos: puntosPalabraLiga(intentos.length),
+        partidaRef: hoy,
+        eventoRef: hoy,
+      })
+    );
   }
 
   await recalcularRacha(user.id, service);
