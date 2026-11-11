@@ -136,7 +136,7 @@ Diseño vertical, celular primero, con el estilo actual del sitio (santuario osc
 2. **Mi iglesia (destacado):** "La Iglesia de [Ciudad] va en el lugar #X" y "¡Les faltan N puntos para pasar a la Iglesia de ___! Invita a tus hermanos". Si va primero: "¡Van en primer lugar! Invita a tus hermanos para no perderlo". Si su iglesia está pendiente: "Tu iglesia está esperando aprobación; tus puntos ya se están guardando". Sin iglesia, botón para elegirla. Sin sesión, invitación a entrar.
 3. **Botón "Invitar a mis hermanos":** usa `navigator.share` y, si no está disponible, abre WhatsApp (`wa.me/?text=`). Texto: "Ayuda a la Iglesia de [Ciudad] a ganar la Liga de Elim LLDM 🏆 juega aquí: https://www.elimlldm.net/juegos/liga".
 4. **Top 10 de la semana:** lugar, "Iglesia de [Ciudad]", 🏆 si fue la campeona de la semana anterior, puntos, jugadores activos (jugadores distintos con puntos esa semana) y barra de progreso relativa al primer lugar. Se actualiza cada 30 segundos con `GET /api/liga/tabla`. No se usa Realtime para no tener que hacer legible la tabla de puntos.
-5. **Mejores jugadores de mi iglesia esta semana:** top 10 con nombre corto (nombre e inicial del apellido) si tiene `tiktok_permiso`; si no, "Hermano/a participante". Sin fotos.
+5. **Mejores jugadores de mi iglesia esta semana:** top 10 con nombre corto (nombre e inicial del apellido) y foto si tiene `tiktok_permiso`; si no, "Hermano/a participante" sin foto.
 6. **Historial:** campeonas de semanas anteriores (semana, iglesia, puntos, jugadores).
 
 En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que lleva a /juegos/liga y muestra el lugar de la iglesia del jugador.
@@ -155,14 +155,15 @@ En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que l
 - **"Generar tarjeta de la Liga":** imagen vertical 1080x1920 en canvas del navegador, con el mismo enfoque que la tarjeta de `/admin/juegos/tiktok`:
   - Título "Liga de Iglesias · Semana del __".
   - Las 3 primeras iglesias con sus puntos.
-  - El mejor jugador de la semana, solo si tiene `tiktok_permiso`; si no, esa sección no aparece. Sin foto.
+  - El mejor jugador de la semana con nombre y foto, solo si tiene `tiktok_permiso`; si no, esa sección no aparece.
   - Botón para descargar PNG. Se puede elegir la semana (la actual o una cerrada).
 - **Enlace en el menú de admin.**
 
 ## 8. Casilla de permiso
 
-- **Texto nuevo** en `TEXTO_PERMISO_VIDEOS`: **"Acepto que mi nombre aparezca en la Liga y en los videos de Elim LLDM"**. Quienes ya la marcaron siguen contando.
-- **Fotos:** como el texto ya no menciona la foto, las tarjetas y videos de campeones (`/admin/juegos/tiktok`, `/admin/palabra/tiktok` y la imagen para historias) dejan de mostrar la foto real y usan un círculo con la inicial. El nombre se sigue mostrando como hoy.
+- **Texto actual** (`src/lib/juegos/permiso-videos.ts`): "Acepto que mi nombre (nombre e inicial del apellido) y mi foto aparezcan en los videos de campeones de Elim LLDM en TikTok, Instagram y YouTube".
+- **Texto nuevo** en `TEXTO_PERMISO_VIDEOS`: **"Acepto que mi nombre y foto aparezcan en la Liga y en los videos de Elim LLDM"**. Quienes ya la marcaron siguen contando.
+- **Fotos:** el texto actual ya menciona la foto, así que las tarjetas y videos de campeones siguen mostrando la foto como ahora. En la Liga también se muestra la foto de quienes marcaron la casilla.
 
 ## 9. Migración
 
@@ -187,7 +188,7 @@ Se aplica en el SQL Editor de Supabase con autorización del usuario.
   - Las 6 rutas de juego donde se llama a `registrarPuntosLiga()` (una línea y el cálculo de puntos).
   - Las páginas de los 4 juegos (montan el aviso de iglesia).
   - `/juegos` (tarjeta), `/perfil` (cambiar iglesia).
-  - `permiso-videos.ts` (texto) y las tarjetas de TikTok (sin foto).
+  - `permiso-videos.ts` (texto).
   - El menú de admin y `vercel.json` (crons).
 
 ## 11. Pruebas
