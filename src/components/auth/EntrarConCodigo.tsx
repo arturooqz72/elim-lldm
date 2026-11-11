@@ -18,6 +18,8 @@ interface Props {
   onPidiendoNombre?: () => void;
   /** Viene de "Crear cuenta": los textos hablan de crear la cuenta. */
   crear?: boolean;
+  /** En /login: al pedir el nombre de una cuenta nueva, también pide "Acepto" de la regla de los juegos. */
+  conReglas?: boolean;
 }
 
 /** Mensajes de Supabase Auth → español. */
@@ -44,6 +46,7 @@ export function EntrarConCodigo({
   pedirCorreo,
   onPidiendoNombre,
   crear,
+  conReglas,
 }: Props) {
   const [correo, setCorreo] = useState(correoInicial);
   const [codigo, setCodigo] = useState("");
@@ -99,7 +102,7 @@ export function EntrarConCodigo({
     window.location.replace(returnUrl);
   }
 
-  if (paso === "nombre") return <PedirNombre onListo={() => window.location.replace(returnUrl)} />;
+  if (paso === "nombre") return <PedirNombre conReglas={conReglas} onListo={() => window.location.replace(returnUrl)} />;
 
   const estiloCampo = {
     background: "var(--color-surface-elevated)",

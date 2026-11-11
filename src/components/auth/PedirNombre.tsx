@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { NOTA_NOMBRE_PARA_MOSTRAR, REGLAS_VERSION, TEXTO_REGLA_PARTICIPACION } from "@/lib/reglas";
 
 const GOLD = "#f5c842";
 
@@ -9,8 +11,10 @@ const GOLD = "#f5c842";
  * nace con la parte del correo antes de la @ como nombre). Se usa en /login,
  * en la app de Elim English y en /ingles si alguien se fue sin ponerlo.
  */
-export function PedirNombre({ onListo }: { onListo: () => void }) {
+export function PedirNombre({ onListo, conReglas = false }: { onListo: () => void; conReglas?: boolean }) {
   const [nombre, setNombre] = useState("");
+  // Solo en /login (registro): "Acepto" de la regla de los juegos, sin marcar.
+  const [acepto, setAcepto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Hasta que React toma la página, lo que se escriba se perdería: el campo espera.
@@ -28,6 +32,15 @@ export function PedirNombre({ onListo }: { onListo: () => void }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "No se pudo guardar. Intenta de nuevo.");
+      if (conReglas) {
+        const r = await fetch("/api/cuenta/reglas", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: REGLAS_VERSION, display_name: nombre }),
+        });
+        const d = (await r.json()) as { error?: string };
+        if (!r.ok) throw new Error(d.error ?? "No se pudo guardar. Intenta de nuevo.");
+      }
       onListo();
     } catch (e) {
       setGuardando(false);
@@ -71,6 +84,30 @@ export function PedirNombre({ onListo }: { onListo: () => void }) {
           aria-label="Tu nombre"
           disabled={!listo}
         />
+        {conReglas && (
+          <>
+            <p className="text-xs text-left" style={{ color: "var(--color-text-muted)" }}>
+              {NOTA_NOMBRE_PARA_MOSTRAR}. Puede ser tu nombre o un apodo.
+            </p>
+            <label
+              className="flex items-start gap-3 p-3 rounded-xl text-sm text-left cursor-pointer"
+              style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+            >
+              <input
+                type="checkbox"
+                checked={acepto}
+                onChange={(e) => setAcepto(e.target.checked)}
+                className="mt-1 w-4 h-4 shrink-0 accent-[#D4A017]"
+              />
+              <span>
+                <strong>Acepto.</strong> {TEXTO_REGLA_PARTICIPACION}{" "}
+                <Link href="/reglas" target="_blank" className="underline" style={{ color: "var(--color-primary)" }}>
+                  Ver reglas
+                </Link>
+              </span>
+            </label>
+          </>
+        )}
         {error && (
           <p className="text-sm" style={{ color: "var(--color-destructive)" }} role="alert">
             {error}
@@ -78,7 +115,7 @@ export function PedirNombre({ onListo }: { onListo: () => void }) {
         )}
         <button
           type="submit"
-          disabled={guardando || nombre.trim().length < 2}
+          disabled={guardando || nombre.trim().length < 2 || (conReglas && !acepto)}
           className="w-full py-3.5 rounded-xl text-base font-bold disabled:opacity-60"
           style={{ background: GOLD, color: "#000" }}
         >

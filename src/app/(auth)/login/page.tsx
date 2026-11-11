@@ -269,6 +269,7 @@ function LoginForm() {
                   enviado={codigoPara.enviado}
                   returnUrl={returnUrl}
                   onPidiendoNombre={() => setPidiendoNombre(true)}
+                  conReglas
                 />
               ) : (
                 <EntrarConCodigo
@@ -277,6 +278,7 @@ function LoginForm() {
                   pedirCorreo
                   crear={mode === "register"}
                   onPidiendoNombre={() => setPidiendoNombre(true)}
+                  conReglas
                 />
               )}
             </div>
