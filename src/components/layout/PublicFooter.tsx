@@ -38,6 +38,7 @@ export function PublicFooter() {
             { href: "/archivo", label: "Archivo" },
             { href: "/contacto", label: "Contáctanos" },
             { href: "/saludo", label: "Saludos para la radio en audio" },
+            { href: "/reglas", label: "Reglas" },
             { href: "/privacidad", label: "Privacidad" },
           ].map(({ href, label }) => {
             const isSaludo = href === "/saludo";

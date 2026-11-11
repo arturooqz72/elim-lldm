@@ -21,6 +21,7 @@ import { PalabraBarraSuperior } from "./PalabraBarraSuperior";
 import { PalabraModales } from "./PalabraModales";
 import { PalabraResultado } from "./PalabraResultado";
 import { InvitacionSesion } from "./InvitacionSesion";
+import { InvitacionLiga } from "@/components/juegos/liga/InvitacionLiga";
 import { PalabraPista } from "./PalabraPista";
 import { ESTILOS_PALABRA } from "./estilos";
 
@@ -292,6 +293,7 @@ export function PalabraGame({
       )}
 
       {!conSesion && !partida.terminada && <InvitacionSesion />}
+      {!conSesion && partida.terminada && revelandoFila === null && <InvitacionLiga returnUrl="/juegos/palabra" />}
 
       <PalabraModales
         modal={modal}

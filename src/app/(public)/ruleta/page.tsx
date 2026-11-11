@@ -6,6 +6,7 @@ import { EntrarForm } from "@/components/ruleta/EntrarForm";
 import { buildBoardShape } from "@/lib/ruleta/game.server";
 import type { RuletaJugador, RuletaSala } from "@/types";
 import type { Metadata } from "next";
+import { AvisosJuego, type PerfilAvisos } from "@/components/juegos/liga/AvisosJuego";
 
 export const metadata: Metadata = {
   title: "La Ruleta en línea — Elim LLDM",
@@ -24,6 +25,7 @@ export default async function RuletaPage() {
     // /api/ruleta/join con la meta que elija el jugador.
     return (
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+        <AvisosJuego perfil={profile as PerfilAvisos | null} />
         <div className="w-full max-w-[480px] mx-auto px-4 py-16 flex flex-col">
           <EntrarForm />
         </div>
@@ -89,11 +91,14 @@ export default async function RuletaPage() {
   }
 
   return (
-    <RuletaRoom
-      sala={sala as RuletaSala}
-      jugadoresIniciales={(jugadoresRaw ?? []) as RuletaJugador[]}
-      initialRound={initialRound}
-      initialJugadorId={initialJugadorId}
-    />
+    <>
+      <AvisosJuego perfil={profile as PerfilAvisos | null} />
+      <RuletaRoom
+        sala={sala as RuletaSala}
+        jugadoresIniciales={(jugadoresRaw ?? []) as RuletaJugador[]}
+        initialRound={initialRound}
+        initialJugadorId={initialJugadorId}
+      />
+    </>
   );
 }

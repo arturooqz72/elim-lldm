@@ -11,10 +11,13 @@ import { CLAVE_RANKING } from "@/lib/juegos/ahorcado-dificultad";
 import { TablaPosiciones } from "@/components/juegos/TablaPosiciones";
 import { JuegosPresence } from "@/components/juegos/JuegosPresence";
 import { getProfile, createClient } from "@/lib/supabase/server";
+import { getTablaLiga } from "@/lib/liga/consultas.server";
+import { TarjetaLigaHub } from "@/components/juegos/liga/TarjetaLigaHub";
 import { getResumenHub } from "@/lib/palabra/servidor";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
 import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
+import { AvisosJuego, type PerfilAvisos } from "@/components/juegos/liga/AvisosJuego";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -41,6 +44,7 @@ export default async function JuegosHubPage() {
     posicionesAhorcado,
     notificacionesActivas,
     resumenPalabra,
+    tablaLiga,
   ] = await Promise.all([
     getEstadoPuertaArenaAbierta(),
     getEstadoPuertaRuleta(),
@@ -49,11 +53,13 @@ export default async function JuegosHubPage() {
     getRankingIndividual(CLAVE_RANKING.normal),
     getGameKeysConNotificacion(profile?.id ?? null),
     getResumenHub(profile?.id ?? null),
+    getTablaLiga(profile?.id ?? null),
   ]);
 
 
   return (
     <>
+      <AvisosJuego perfil={profile as PerfilAvisos | null} preguntarIglesia={false} />
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
         <div
           className="py-12 px-4"
@@ -74,12 +80,16 @@ export default async function JuegosHubPage() {
                 Juegos en línea
               </h1>
               <p style={{ color: "var(--color-text-muted)" }}>Elige una puerta y entra directo — sin códigos</p>
+              <Link href="/reglas" className="inline-block mt-2 text-xs underline" style={{ color: "var(--color-primary)" }}>
+                Reglas de los juegos · todos son bienvenidos
+              </Link>
             </div>
           </div>
         </div>
 
         <div className="max-w-2xl mx-auto px-4 py-10 flex flex-col gap-8">
           <JuegosPresence currentUser={profile ? { id: profile.id, nombre: profile.display_name } : null} />
+          <TarjetaLigaHub mia={tablaLiga.mia} lider={tablaLiga.top[0] ?? null} />
 
           <div className="flex flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>

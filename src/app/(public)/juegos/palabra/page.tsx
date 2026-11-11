@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { getProfile } from "@/lib/supabase/server";
+import { getMiIglesia } from "@/lib/liga/consultas.server";
 import { numeroDelDia } from "@/lib/palabra/logica";
 import { fechaDeHoy, getEstadoJugador, hayPalabraHoy } from "@/lib/palabra/servidor";
 import { PalabraGame } from "@/components/juegos/palabra/PalabraGame";
+import { AvisosJuego, type PerfilAvisos } from "@/components/juegos/liga/AvisosJuego";
 
 export const metadata: Metadata = {
   title: "Palabra del Día — Elim LLDM",
@@ -30,6 +32,7 @@ export default async function PalabraDelDiaPage() {
   const hoy = fechaDeHoy();
   // Igual que el resto de los juegos: hay que registrarse para jugar.
   const profile = await getProfile();
+  const liga = profile ? await getMiIglesia(profile.id as string) : null;
   if (!profile) redirect("/login?returnUrl=/juegos/palabra");
 
   const [hayPalabra, estado] = await Promise.all([
@@ -39,6 +42,7 @@ export default async function PalabraDelDiaPage() {
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+      <AvisosJuego perfil={profile as PerfilAvisos | null} />
       <div
         // En celular se oculta: el título va en la barra del juego para que
         // tablero y teclado quepan en pantalla sin scroll.
@@ -73,7 +77,7 @@ export default async function PalabraDelDiaPage() {
           hayPalabra={hayPalabra}
           conSesion={Boolean(profile)}
           estadoInicial={estado}
-          usuario={profile ? { iglesia: (profile.iglesia as string | null | undefined) ?? null } : null}
+          usuario={profile ? { iglesia: liga?.iglesia?.aprobada ? liga.iglesia.nombre : "" } : null}
           tiktok={null}
         />
       </div>

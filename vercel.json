@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/ingles-recordatorio",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/liga-cierre",
+      "schedule": "5 7 * * 1"
+    },
+    {
+      "path": "/api/cron/liga-cierre",
+      "schedule": "5 8 * * 1"
     }
   ]
 }

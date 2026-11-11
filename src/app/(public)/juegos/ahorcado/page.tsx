@@ -10,6 +10,7 @@ import { AhorcadoGame } from "@/components/juegos/ahorcado/AhorcadoGame";
 import { AhorcadoTablas } from "@/components/juegos/ahorcado/AhorcadoTablas";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
+import { AvisosJuego, type PerfilAvisos } from "@/components/juegos/liga/AvisosJuego";
 
 export const metadata: Metadata = {
   title: "Ahorcado del Nuevo Testamento — Elim LLDM",
@@ -33,6 +34,7 @@ export default async function AhorcadoPage() {
 
   return (
     <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+      <AvisosJuego perfil={profile as PerfilAvisos | null} />
       <div
         className="py-10 px-4"
         style={{

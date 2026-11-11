@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { PalabraPanelPuntos } from "@/types";
 import { RankingLista } from "./RankingLista";
-import { PreguntaIglesia } from "./PreguntaIglesia";
 import { ListaHoy, ListaRachas, ListaSemana } from "./PuntosListas";
 
 type Pestana = "hoy" | "semana" | "rachas" | "iglesias";
@@ -36,8 +35,8 @@ export function PalabraRanking({ usuario }: PalabraRankingProps) {
   const [pestana, setPestana] = useState<Pestana>("hoy");
   const [datos, setDatos] = useState<PalabraPanelPuntos | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [iglesia, setIglesia] = useState<string | null>(usuario?.iglesia ?? null);
-  const [editando, setEditando] = useState(false);
+  // Nombre del equipo de la Liga de Iglesias (solo si está aprobado).
+  const iglesia = usuario?.iglesia ?? null;
 
   useEffect(() => {
     let vivo = true;
@@ -55,7 +54,6 @@ export function PalabraRanking({ usuario }: PalabraRankingProps) {
     };
   }, []);
 
-  const preguntarIglesia = pestana === "iglesias" && usuario !== null && (iglesia === null || editando);
   const nota = (texto: string) => (
     <p className="text-[11px] px-1 pb-2" style={{ color: "var(--color-text-muted)" }}>
       {texto}
@@ -120,42 +118,32 @@ export function PalabraRanking({ usuario }: PalabraRankingProps) {
               <ListaRachas filas={datos.rachas} />
             </>
           )}
-          {pestana === "iglesias" &&
-            (preguntarIglesia ? (
-              <PreguntaIglesia
-                valorInicial={iglesia ?? ""}
-                onGuardado={(valor) => {
-                  setIglesia(valor);
-                  setEditando(false);
-                }}
-                onCancelar={editando ? () => setEditando(false) : undefined}
+          {pestana === "iglesias" && (
+            <>
+              {nota(`${rango} · puntos sumados por equipo de la Liga de Iglesias`)}
+              <RankingLista
+                vacio="Aún no hay puntos por equipo en los últimos 7 días."
+                filas={datos.iglesias.map((f) => ({
+                  clave: f.iglesia,
+                  esYo: Boolean(iglesia) && f.iglesia === iglesia,
+                  nombre: f.iglesia,
+                  avatar: null,
+                  icono: true,
+                  detalle: null,
+                  valor: `${f.puntos} pts`,
+                  subvalor: `${f.jugadores} ${f.jugadores === 1 ? "jugador" : "jugadores"}`,
+                }))}
               />
-            ) : (
-              <>
-                {nota(`${rango} · puntos sumados por iglesia o ciudad`)}
-                <RankingLista
-                  vacio="Aún no hay puntos por iglesia en los últimos 7 días."
-                  filas={datos.iglesias.map((f) => ({
-                    clave: f.iglesia,
-                    esYo: Boolean(iglesia) && f.iglesia.toLowerCase() === iglesia?.trim().toLowerCase(),
-                    nombre: f.iglesia,
-                    avatar: null,
-                    icono: true,
-                    detalle: null,
-                    valor: `${f.puntos} pts`,
-                    subvalor: `${f.jugadores} ${f.jugadores === 1 ? "jugador" : "jugadores"}`,
-                  }))}
-                />
-                {usuario && (
-                  <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
-                    Tu iglesia o ciudad: <strong>{iglesia || "sin especificar"}</strong> ·{" "}
-                    <button type="button" onClick={() => setEditando(true)} className="underline" style={{ color: "var(--color-primary)" }}>
-                      cambiar
-                    </button>
-                  </p>
-                )}
-              </>
-            ))}
+              {usuario && (
+                <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
+                  Tu equipo: <strong>{iglesia || "sin elegir"}</strong> ·{" "}
+                  <a href="/juegos/liga" className="underline" style={{ color: "var(--color-primary)" }}>
+                    {iglesia ? "ver la Liga" : "elegir mi equipo"}
+                  </a>
+                </p>
+              )}
+            </>
+          )}
           <p className="text-[11px] text-center pt-3" style={{ color: "var(--color-text-muted)" }}>
             🎬 Los ganadores aparecen en nuestro TikTok
           </p>

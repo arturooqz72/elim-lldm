@@ -5,6 +5,7 @@ import { ArenaPublicaRoom } from "@/components/arena-publica/ArenaPublicaRoom";
 import { EntrarForm } from "@/components/arena-publica/EntrarForm";
 import type { ArenaJugador } from "@/types";
 import type { Metadata } from "next";
+import { AvisosJuego, type PerfilAvisos } from "@/components/juegos/liga/AvisosJuego";
 
 export const metadata: Metadata = { title: "Trivia en línea — Elim LLDM" };
 
@@ -23,6 +24,7 @@ export default async function ArenaAbiertaPage() {
     // /api/arena-publica/join con la meta que elija el jugador.
     return (
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
+        <AvisosJuego perfil={profile as PerfilAvisos | null} />
         <div className="w-full max-w-[430px] mx-auto px-4 py-16 flex flex-col">
           <EntrarForm />
         </div>
@@ -46,17 +48,20 @@ export default async function ArenaAbiertaPage() {
   ]);
 
   return (
-    <ArenaPublicaRoom
-      salaId={sala.id}
-      status={sala.status}
-      preguntaActual={sala.pregunta_actual}
-      jugadoresDeseados={sala.jugadores_deseados}
-      cuentaTerminaEn={toMs(sala.cuenta_termina_en)}
-      preguntaTerminaEn={toMs(sala.pregunta_termina_en)}
-      revealTerminaEn={toMs(sala.reveal_termina_en)}
-      preguntas={preguntasRaw ?? []}
-      totalPreguntas={sala.total_preguntas}
-      jugadoresIniciales={(jugadoresRaw ?? []) as ArenaJugador[]}
-    />
+    <>
+      <AvisosJuego perfil={profile as PerfilAvisos | null} />
+      <ArenaPublicaRoom
+        salaId={sala.id}
+        status={sala.status}
+        preguntaActual={sala.pregunta_actual}
+        jugadoresDeseados={sala.jugadores_deseados}
+        cuentaTerminaEn={toMs(sala.cuenta_termina_en)}
+        preguntaTerminaEn={toMs(sala.pregunta_termina_en)}
+        revealTerminaEn={toMs(sala.reveal_termina_en)}
+        preguntas={preguntasRaw ?? []}
+        totalPreguntas={sala.total_preguntas}
+        jugadoresIniciales={(jugadoresRaw ?? []) as ArenaJugador[]}
+      />
+    </>
   );
 }
