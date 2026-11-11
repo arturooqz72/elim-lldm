@@ -1,12 +1,19 @@
 # Liga de Iglesias — Diseño
 
-Fecha: 2026-11-11 · Estado: aprobado por el usuario; actualizado el mismo día con la regla general de participación (§8), que reemplaza la casilla de permiso
+Fecha: 2026-11-11 · Estado: aprobado por el usuario; actualizado el mismo día con la regla general de participación (§8, reemplaza la casilla de permiso) y con la Liga abierta a todas las iglesias (§1 y §2)
 
 ## Objetivo
 
 Cada jugador pertenece a la iglesia de su ciudad. Los puntos que gana en los juegos de /juegos suman para su iglesia y cada semana hay una iglesia campeona. El fin es que la gente invite a sus hermanos y regrese a jugar.
 
-**Lenguaje:** en toda la interfaz se dice "Iglesia de [Ciudad]" (ej. "Iglesia de Las Vegas"). Nunca se usa la palabra "congregación".
+**Para todos:** la Liga no es solo para miembros de la Iglesia La Luz del Mundo. Nadie se discrimina y todos son bienvenidos; solo se pregunta de qué iglesia es cada quien para formar los equipos y saber cuántos son LLDM y cuántos de otras denominaciones. Todos compiten en la misma Liga con las mismas reglas de puntos.
+
+**Lenguaje:**
+- "Iglesia de [Ciudad]" (ej. "Iglesia de Las Vegas") se usa **solo** para las de la Iglesia La Luz del Mundo.
+- Las de otras denominaciones se muestran "[Denominación] · [Ciudad]" (ej. "Bautista · Las Vegas").
+- El equipo general se llama "Amigos de Elim".
+- Nunca se usa la palabra "congregación".
+- En este documento "iglesia" o "equipo" significa cualquiera de los tres tipos.
 
 ## Lo que existe hoy (revisado antes de diseñar)
 
@@ -30,15 +37,28 @@ Cada jugador pertenece a la iglesia de su ciudad. Los puntos que gana en los jue
 | Columna | Tipo | Notas |
 |---|---|---|
 | id | UUID PK | |
-| ciudad | TEXT NOT NULL | Como la escribió (máx. 60) |
-| estado | TEXT NOT NULL | Estado/provincia (máx. 60) |
-| pais | TEXT NOT NULL | (máx. 60) |
-| clave | TEXT NOT NULL UNIQUE | `normalizar(ciudad)|normalizar(estado)|normalizar(pais)`: minúsculas, sin acentos, espacios colapsados |
+| comunidad | TEXT NOT NULL | `'lldm'` \| `'otra'` \| `'amigos'` (ver abajo) |
+| denominacion | TEXT NULL | Solo para `'otra'`: una de la lista fija |
+| ciudad | TEXT NULL | Como la escribió (máx. 60). NULL solo en "Amigos de Elim" |
+| estado | TEXT NULL | Estado/provincia (máx. 60). NULL solo en "Amigos de Elim" |
+| pais | TEXT NULL | (máx. 60). NULL solo en "Amigos de Elim" |
+| clave | TEXT NOT NULL UNIQUE | `comunidad|normalizar(denominacion)|normalizar(ciudad)|normalizar(estado)|normalizar(pais)`: minúsculas, sin acentos, espacios colapsados. Por incluir comunidad y denominación, "Bautista · Las Vegas" e "Iglesia de Las Vegas" son equipos distintos |
 | aprobada | BOOLEAN NOT NULL DEFAULT FALSE | |
 | creada_por | UUID FK profiles NULL | Quién la propuso |
 | creada_en | TIMESTAMPTZ DEFAULT NOW() | |
 
-- **Nombre que se muestra:** "Iglesia de " + ciudad. Si hay otra iglesia **aprobada** con la misma ciudad normalizada, se agrega el estado ("Iglesia de Victoria, Texas"). Si también coincide el estado, se agrega el país. Lo calcula una sola función en `src/lib/liga/nombre.ts`.
+- **`comunidad`:** pediste `'lldm' | 'otra'`. Agrego un tercer valor, `'amigos'`, para el equipo general "Amigos de Elim". Así ese equipo vive en la misma tabla y compite en la misma Liga sin casos especiales en los puntos.
+  - Es una sola fila, creada en la migración, aprobada desde el inicio y sin ciudad.
+  - No se puede rechazar, editar ni juntar con otra.
+  - Un CHECK asegura que `'lldm'` y `'otra'` tengan ciudad, estado y país, que solo `'otra'` tenga denominación, y que `'amigos'` no tenga ninguno de los dos.
+- **Denominaciones** (lista fija en `src/lib/liga/config.ts`, validada en el servidor): Católica, Bautista, Pentecostal, Adventista, Evangélica, Otra cristiana, Otra religión.
+- **Nombre que se muestra** (una sola función en `src/lib/liga/nombre.ts`):
+  - LLDM: "Iglesia de " + ciudad.
+  - Otra: denominación + " · " + ciudad (ej. "Bautista · Las Vegas").
+  - Amigos: "Amigos de Elim".
+
+  Si hay otro equipo **aprobado del mismo tipo** (misma comunidad y misma denominación) con la misma ciudad, se agrega el estado ("Iglesia de Victoria, Texas", "Bautista · Victoria, Texas"). Si también coincide el estado, se agrega el país.
+- **En frases:** las LLDM llevan artículo ("La Iglesia de Las Vegas va en el lugar #2", "Ayuda a la Iglesia de Las Vegas…"); las demás van sin artículo ("Bautista · Las Vegas va en el lugar #3", "Ayuda a Amigos de Elim…"). Un helper `enFrase(equipo)` lo resuelve.
 - **RLS:** lectura pública solo de las aprobadas, más las pendientes que creó el propio usuario. Sin INSERT/UPDATE/DELETE para anon/authenticated; todo pasa por API routes con service role.
 
 ### Columnas nuevas en `profiles`
@@ -51,7 +71,7 @@ Siguiendo 0076, estas columnas no se agregan al GRANT de SELECT por columnas: la
 
 ### Iglesias que ya existen (texto libre)
 
-Se crean como aprobadas y se asignan a sus 4 jugadores en la migración:
+Se crean como aprobadas, con `comunidad = 'lldm'` (las escribieron en el ranking de Palabra del Día, que hasta hoy era para miembros), y se asignan a sus 4 jugadores en la migración:
 
 | Texto actual | Iglesia |
 |---|---|
@@ -64,11 +84,20 @@ Se crean como aprobadas y se asignan a sus 4 jugadores en la migración:
 
 ## 2. Elegir iglesia
 
-- **Aviso:** la primera vez que un usuario con sesión, sin `iglesia_id` y con `iglesia_preguntada = false`, entra a cualquiera de los 4 juegos, aparece un modal: "¿De qué ciudad es tu iglesia? Tus puntos sumarán para tu iglesia". Botones: elegir / "Ahora no".
-- **Buscador:** escribe la ciudad y se muestran iglesias aprobadas que coinciden (búsqueda normalizada, sin acentos). Sale una lista con el nombre completo (ciudad, estado, país).
-- **Agregar:** si no aparece, llena ciudad, estado y país. Antes de crearla, el servidor busca iglesias con clave igual o parecida y, si hay, se las muestra: "¿Es alguna de estas?". Si la clave ya existe (aprobada o pendiente), se usa esa y no se crea otra. La nueva queda **pendiente** y el jugador queda asignado a ella.
-- **Cambiar:** desde /perfil y /juegos/liga. El servidor rechaza el cambio si no han pasado 30 días desde `iglesia_cambiada_en` y le dice cuándo podrá cambiar. La primera elección no cuenta como cambio.
-- **API:** `GET /api/liga/iglesias?q=` (buscar), `POST /api/liga/mi-iglesia` (elegir o agregar), `POST /api/liga/no-preguntar`.
+- **Aviso:** la primera vez que un usuario con sesión, sin `iglesia_id` y con `iglesia_preguntada = false`, entra a cualquiera de los 4 juegos (y ya aceptó las reglas, §8), aparece un modal amable: "En Elim LLDM todos son bienvenidos. ¿De qué iglesia eres?", con el subtítulo "Tus puntos sumarán para tu equipo en la Liga". También tiene "Ahora no".
+- **Paso 1, la pregunta** "¿Perteneces a la Iglesia La Luz del Mundo?", con cuatro botones grandes:
+  - **"Sí"**: pasa al paso 2 con LLDM. El resultado se muestra "Iglesia de [Ciudad]".
+  - **"No, soy de otra iglesia"**: primero elige su denominación de la lista y luego pasa al paso 2 con esa denominación. Se muestra "[Denominación] · [Ciudad]".
+  - **"No pertenezco a ninguna"** y **"Prefiero no decir"**: entra directo a "Amigos de Elim", sin más pasos. No se guarda cuál de los dos eligió.
+- **Paso 2, la ciudad:** escribe la ciudad y se muestran los equipos aprobados **del mismo tipo** (LLDM, o la misma denominación) que coinciden (búsqueda normalizada, sin acentos). Sale una lista con el nombre completo (ciudad, estado, país).
+- **Agregar:** si no aparece, llena ciudad, estado y país. Antes de crearla, el servidor busca equipos del mismo tipo con clave igual o la misma ciudad y, si hay, se los muestra: "¿Es alguna de estas?". Si la clave ya existe (aprobada o pendiente), se usa esa y no se crea otra. La nueva queda **pendiente** (LLDM y otras denominaciones por igual, para evitar duplicados y nombres inapropiados) y el jugador queda asignado a ella.
+- **Cambiar:** desde /perfil y /juegos/liga. El servidor rechaza el cambio si no han pasado 30 días desde `iglesia_cambiada_en` y le dice cuándo podrá cambiar. Hay dos excepciones:
+  - La primera elección no cuenta como cambio.
+  - **Salir de "Amigos de Elim" siempre está permitido**: es el equipo de quien todavía no decide, y no queremos frenar a quien después elige su iglesia. Sí cuenta para el siguiente cambio.
+- **API:**
+  - `GET /api/liga/iglesias?q=&comunidad=&denominacion=` busca solo del tipo elegido.
+  - `POST /api/liga/mi-iglesia` elige con `{ iglesia_id }`, con `{ amigos: true }` o con `{ nueva: { comunidad, denominacion?, ciudad, estado, pais } }`.
+  - `POST /api/liga/no-preguntar`.
 
 ## 3. Puntos
 
@@ -135,9 +164,9 @@ Al terminar una partida sin sesión (hoy solo Palabra del Día en modo `local`),
 Diseño vertical, celular primero, con el estilo actual del sitio (santuario oscuro, dorado).
 
 1. **Título:** "Liga de Iglesias" y la semana ("Semana del 9 al 15 de noviembre").
-2. **Mi iglesia (destacado):** "La Iglesia de [Ciudad] va en el lugar #X" y "¡Les faltan N puntos para pasar a la Iglesia de ___! Invita a tus hermanos". Si va primero: "¡Van en primer lugar! Invita a tus hermanos para no perderlo". Si su iglesia está pendiente: "Tu iglesia está esperando aprobación; tus puntos ya se están guardando". Sin iglesia, botón para elegirla. Sin sesión, invitación a entrar.
-3. **Botón "Invitar a mis hermanos":** usa `navigator.share` y, si no está disponible, abre WhatsApp (`wa.me/?text=`). Texto: "Ayuda a la Iglesia de [Ciudad] a ganar la Liga de Elim LLDM 🏆 juega aquí: https://www.elimlldm.net/juegos/liga".
-4. **Top 10 de la semana:** lugar, "Iglesia de [Ciudad]", 🏆 si fue la campeona de la semana anterior, puntos, jugadores activos (jugadores distintos con puntos esa semana) y barra de progreso relativa al primer lugar. Se actualiza cada 30 segundos con `GET /api/liga/tabla`. No se usa Realtime para no tener que hacer legible la tabla de puntos.
+2. **Mi equipo (destacado):** "La Iglesia de [Ciudad] va en el lugar #X" (o "Bautista · Las Vegas va…", "Amigos de Elim va…", con `enFrase`) y "¡Les faltan N puntos para pasar a ___! Invita a tus hermanos". Si va primero: "¡Van en primer lugar! Invita a tus hermanos para no perderlo". Si su iglesia está pendiente: "Tu iglesia está esperando aprobación; tus puntos ya se están guardando". Sin iglesia, botón para elegirla. Sin sesión, invitación a entrar.
+3. **Botón "Invitar a mis hermanos":** usa `navigator.share` y, si no está disponible, abre WhatsApp (`wa.me/?text=`). Texto: "Ayuda a la Iglesia de [Ciudad] a ganar la Liga de Elim LLDM 🏆 juega aquí: https://www.elimlldm.net/juegos/liga" (para otros equipos, el nombre con `enFrase`: "Ayuda a Bautista · Las Vegas…", "Ayuda a Amigos de Elim…").
+4. **Top 10 de la semana:** todos los equipos juntos (LLDM, otras denominaciones y Amigos de Elim). Lugar, nombre del equipo, 🏆 si fue la campeona de la semana anterior, puntos, jugadores activos (jugadores distintos con puntos esa semana) y barra de progreso relativa al primer lugar. Se actualiza cada 30 segundos con `GET /api/liga/tabla`. No se usa Realtime para no tener que hacer legible la tabla de puntos.
 5. **Mejores jugadores de mi iglesia esta semana:** top 10 con su nombre para mostrar y su foto de perfil (si no tiene foto, la inicial en un círculo). Quien todavía no acepta las reglas (§8) sale como "Hermano/a participante", sin foto.
 6. **Historial:** campeonas de semanas anteriores (semana, iglesia, puntos, jugadores).
 
@@ -152,11 +181,18 @@ En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que l
 
 ## 7. Admin: /admin/liga
 
-- **Iglesias pendientes:** ciudad, estado, país, quién la propuso, cuántos jugadores y puntos tiene, e iglesias parecidas. Acciones: Aprobar, Rechazar y "Juntar con…" (elige la iglesia que se conserva). Solo rol `admin`, verificado en el servidor con `adminId()`.
-- **Iglesias aprobadas:** lista con jugadores; se puede corregir ciudad, estado o país (recalcula la clave y evita chocar con otra).
+- **Resumen arriba de todo:** cuántos jugadores (sin admins) tienen equipo y de qué tipo:
+  - LLDM;
+  - otras denominaciones, desglosado (Católica 3, Bautista 2…);
+  - Amigos de Elim;
+  - además, cuántos todavía no eligen.
+
+  Cuenta perfiles por `iglesia_id`, incluyendo los de equipos pendientes, y se muestra con números simples.
+- **Iglesias pendientes:** tipo (LLDM o la denominación), ciudad, estado, país, quién la propuso, cuántos jugadores y puntos tiene, e iglesias parecidas. Acciones: Aprobar, Rechazar y "Juntar con…" (elige el equipo que se conserva; normalmente del mismo tipo). Solo rol `admin`, verificado en el servidor con `adminId()`.
+- **Iglesias aprobadas:** lista con jugadores, separada por tipo. Se puede corregir ciudad, estado, país y, en las de otras denominaciones, la denominación; al guardar se recalcula la clave y no deja chocar con otra. "Amigos de Elim" sale aparte y no se edita.
 - **"Generar tarjeta de la Liga":** imagen vertical 1080x1920 en canvas del navegador, con el mismo enfoque que la tarjeta de `/admin/juegos/tiktok`:
   - Título "Liga de Iglesias · Semana del __".
-  - Las 3 primeras iglesias con sus puntos.
+  - Los 3 primeros equipos con sus puntos (de cualquier tipo, con su nombre como se muestra).
   - El mejor jugador de la semana con su nombre para mostrar y su foto (o la inicial). Si no ha aceptado las reglas, esa sección no aparece.
   - Botón para descargar PNG. Se puede elegir la semana (la actual o una cerrada).
 - **Enlace en el menú de admin.**
@@ -193,7 +229,7 @@ En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que l
     - `/api/liga/mi-iglesia`.
   - Las partidas que ya están en curso no se cortan.
   - La revisión está en un solo helper: `aceptoReglas(userId)` en `src/lib/reglas.server.ts`.
-- **Orden de las pantallas:** primero la de las reglas y, ya aceptadas, la de "¿De qué ciudad es tu iglesia?" (§2).
+- **Orden de las pantallas:** primero la de las reglas y, ya aceptadas, la de "En Elim LLDM todos son bienvenidos. ¿De qué iglesia eres?" (§2).
 - **Admins:** también la ven, pero no compiten.
 
 ### 8.3 Nombre para mostrar
@@ -215,7 +251,12 @@ En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que l
 
 ### 8.5 Página /reglas
 
-Una página pública con todas las reglas de los juegos y la Liga, en lenguaje sencillo:
+Una página pública con todas las reglas de los juegos y la Liga, en lenguaje sencillo. Empieza con:
+
+> "Elim LLDM es para todos. No importa tu iglesia o denominación, todos son bienvenidos a jugar y participar."
+
+Y sigue con:
+- **Los equipos:** Iglesia de [Ciudad] para la Iglesia La Luz del Mundo, [Denominación] · [Ciudad] para otras iglesias y Amigos de Elim para quien no pertenece a ninguna o prefiere no decir. Todos compiten con las mismas reglas.
 - **La regla de participación** (nombre para mostrar y foto).
 - **Cómo se ganan puntos en la Liga:** las mismas cifras de `src/lib/liga/config.ts`, leídas de ahí para que no se desfasen.
 - **Topes:** máximo por partida y 40 por juego por día.
@@ -234,7 +275,8 @@ Se enlaza desde la pantalla de aceptación, el formulario de registro, /juegos, 
 - `handle_new_user()` actualizada para guardar el nombre para mostrar y la aceptación que vienen del registro con correo.
 - RLS, REVOKE y GRANT, los índices `(semana, iglesia_id)`, `(jugador, juego, dia)` y `(jugador, juego, partida_ref)`.
 - Las funciones `liga_registrar_puntos`, `liga_tabla_semana`, `liga_jugadores_iglesia` y `liga_cerrar_semana`.
-- El alta de las 4 iglesias existentes.
+- El alta de las 4 iglesias existentes (LLDM) y del equipo "Amigos de Elim".
+- Las columnas `comunidad` y `denominacion` con su CHECK.
 
 Se aplica en el SQL Editor de Supabase con autorización del usuario.
 
