@@ -1,6 +1,6 @@
 # Liga de Iglesias — Diseño
 
-Fecha: 2026-11-11 · Estado: aprobado por el usuario (pendiente revisión del documento)
+Fecha: 2026-11-11 · Estado: aprobado por el usuario; actualizado el mismo día con la regla general de participación (§8), que reemplaza la casilla de permiso
 
 ## Objetivo
 
@@ -19,7 +19,9 @@ Cada jugador pertenece a la iglesia de su ciudad. Los puntos que gana en los jue
 
 - Elim Arena y Trivia en Vivo se retiraron el 2026-10-24 (tablas borradas en 0084). No entran a la Liga.
 - `profiles.iglesia` (0054) es texto libre "iglesia o ciudad" que pide Palabra del Día. Solo 6 personas lo llenaron. Se reemplaza por la tabla `iglesias`; la columna vieja se deja sin borrar.
-- `profiles.tiktok_permiso` (0078) es la casilla de permiso para salir con nombre. Se reutiliza para la Liga.
+- `profiles.tiktok_permiso` (0078) es la casilla de permiso para salir con nombre y foto en los videos. **Se deja de usar** (la columna no se borra): la reemplaza la regla general de participación (§8).
+- Registro de cuentas (`/login`): correo y contraseña (modo "registro"), Google y otros proveedores (OAuth), y entrar con código por correo (`EntrarConCodigo`, de Elim English). Con OAuth y con código no hay un formulario de registro propio: la cuenta se crea al volver del proveedor.
+- El nombre para mostrar es `profiles.display_name` (2 a 60 letras), que ya se edita en /perfil. Al crear la cuenta lo llena `handle_new_user()` (0001) con `full_name` del proveedor, o con la parte del correo antes de la @.
 
 ## 1. Iglesias
 
@@ -136,7 +138,7 @@ Diseño vertical, celular primero, con el estilo actual del sitio (santuario osc
 2. **Mi iglesia (destacado):** "La Iglesia de [Ciudad] va en el lugar #X" y "¡Les faltan N puntos para pasar a la Iglesia de ___! Invita a tus hermanos". Si va primero: "¡Van en primer lugar! Invita a tus hermanos para no perderlo". Si su iglesia está pendiente: "Tu iglesia está esperando aprobación; tus puntos ya se están guardando". Sin iglesia, botón para elegirla. Sin sesión, invitación a entrar.
 3. **Botón "Invitar a mis hermanos":** usa `navigator.share` y, si no está disponible, abre WhatsApp (`wa.me/?text=`). Texto: "Ayuda a la Iglesia de [Ciudad] a ganar la Liga de Elim LLDM 🏆 juega aquí: https://www.elimlldm.net/juegos/liga".
 4. **Top 10 de la semana:** lugar, "Iglesia de [Ciudad]", 🏆 si fue la campeona de la semana anterior, puntos, jugadores activos (jugadores distintos con puntos esa semana) y barra de progreso relativa al primer lugar. Se actualiza cada 30 segundos con `GET /api/liga/tabla`. No se usa Realtime para no tener que hacer legible la tabla de puntos.
-5. **Mejores jugadores de mi iglesia esta semana:** top 10 con nombre corto (nombre e inicial del apellido) y foto si tiene `tiktok_permiso`; si no, "Hermano/a participante" sin foto.
+5. **Mejores jugadores de mi iglesia esta semana:** top 10 con su nombre para mostrar y su foto de perfil (si no tiene foto, la inicial en un círculo). Quien todavía no acepta las reglas (§8) sale como "Hermano/a participante", sin foto.
 6. **Historial:** campeonas de semanas anteriores (semana, iglesia, puntos, jugadores).
 
 En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que lleva a /juegos/liga y muestra el lugar de la iglesia del jugador.
@@ -155,21 +157,81 @@ En /juegos se agrega una tarjeta "Liga de Iglesias" arriba de las puertas, que l
 - **"Generar tarjeta de la Liga":** imagen vertical 1080x1920 en canvas del navegador, con el mismo enfoque que la tarjeta de `/admin/juegos/tiktok`:
   - Título "Liga de Iglesias · Semana del __".
   - Las 3 primeras iglesias con sus puntos.
-  - El mejor jugador de la semana con nombre y foto, solo si tiene `tiktok_permiso`; si no, esa sección no aparece.
+  - El mejor jugador de la semana con su nombre para mostrar y su foto (o la inicial). Si no ha aceptado las reglas, esa sección no aparece.
   - Botón para descargar PNG. Se puede elegir la semana (la actual o una cerrada).
 - **Enlace en el menú de admin.**
 
-## 8. Casilla de permiso
+## 8. Regla general de participación (reemplaza la casilla de permiso)
 
-- **Texto actual** (`src/lib/juegos/permiso-videos.ts`): "Acepto que mi nombre (nombre e inicial del apellido) y mi foto aparezcan en los videos de campeones de Elim LLDM en TikTok, Instagram y YouTube".
-- **Texto nuevo** en `TEXTO_PERMISO_VIDEOS`: **"Acepto que mi nombre y foto aparezcan en la Liga y en los videos de Elim LLDM"**. Quienes ya la marcaron siguen contando.
-- **Fotos:** el texto actual ya menciona la foto, así que las tarjetas y videos de campeones siguen mostrando la foto como ahora. En la Liga también se muestra la foto de quienes marcaron la casilla.
+**Texto de la regla** (versión `2026-11-11`, en `src/lib/reglas.ts` junto con `REGLAS_VERSION`):
+
+> "Al participar en los juegos de Elim LLDM aceptas que tu nombre para mostrar y tu foto de perfil puedan aparecer en la Liga, en las tablas de resultados y en los videos de Elim LLDM en redes sociales."
+
+**Columnas nuevas en `profiles`:** `acepto_reglas_en TIMESTAMPTZ NULL` y `acepto_reglas_version TEXT NULL`. Solo las escribe el servidor (están en el mismo trigger de protección que las de la Liga). Alguien "aceptó" cuando `acepto_reglas_version = REGLAS_VERSION`. Si en el futuro cambia el texto, se sube la versión y se vuelve a pedir una vez.
+
+### 8.1 Al registrarse
+
+- **Con correo y contraseña** (`/login`, modo registro): dos campos nuevos.
+  - "Nombre para mostrar", con la nota "Este es el nombre que verán los demás y que puede salir en los videos".
+  - La regla con una casilla "Acepto" **sin marcar**. Sin marcarla no se puede crear la cuenta.
+  - El nombre y la versión aceptada viajan en los metadatos de `signUp`. `handle_new_user()` se actualiza para guardar `display_name` con ese nombre, y `acepto_reglas_en = NOW()` y `acepto_reglas_version` cuando vienen en los metadatos.
+- **Con Google, otro proveedor o código por correo:** no hay formulario antes de crear la cuenta. Estas cuentas nuevas ven la pantalla de §8.2 la primera vez que entran a un juego o a la Liga, igual que las cuentas que ya existen.
+
+### 8.2 Cuentas que todavía no aceptan
+
+- **Pantalla de aceptación:** al entrar a cualquiera de los 4 juegos, a /juegos/liga o a /juegos (el vestíbulo), un usuario con sesión que no ha aceptado la versión actual ve una sola vez una pantalla encima de la página. Contiene:
+  - la regla;
+  - el campo "Nombre para mostrar", ya lleno con su nombre actual y con la nota de arriba;
+  - el botón **"Acepto"**, que guarda nombre, fecha y versión con `POST /api/cuenta/reglas`;
+  - "Ahora no, solo quiero ver".
+- **Hasta que acepte, puede ver pero no jugar:**
+  - Las páginas se ven normal y queda una barra fija abajo: "Para jugar, acepta las reglas de los juegos", con un botón que vuelve a abrir la pantalla.
+  - El servidor rechaza con 403 (`{ error: "Acepta las reglas de los juegos para jugar", codigo: "reglas" }`) en las rutas donde se empieza o se juega una partida:
+    - `/api/juegos/palabra/intento`, solo con sesión (sin sesión se sigue jugando en modo local, que no muestra nombres);
+    - `/api/arena-publica/join` y `/api/ruleta/join`;
+    - las rutas de Ahorcado que empiezan una palabra (`/api/juegos/ahorcado/palabra` y `/palabra-aleatoria`);
+    - `/api/liga/mi-iglesia`.
+  - Las partidas que ya están en curso no se cortan.
+  - La revisión está en un solo helper: `aceptoReglas(userId)` en `src/lib/reglas.server.ts`.
+- **Orden de las pantallas:** primero la de las reglas y, ya aceptadas, la de "¿De qué ciudad es tu iglesia?" (§2).
+- **Admins:** también la ven, pero no compiten.
+
+### 8.3 Nombre para mostrar
+
+- **En /perfil:** el campo de nombre (`ProfileForm`) se titula "Nombre para mostrar" y lleva la nota "Este es el nombre que verán los demás y que puede salir en los videos". Puede ser su nombre o un apodo (ej. "Hermano Juan GDL"). Se mantiene el límite actual de 2 a 60 letras.
+- **Dónde se usa:** ese nombre, tal cual, es el que sale en la Liga, en las tablas de resultados y en las tarjetas y videos. Se deja de usar `nombreCorto()` (nombre e inicial del apellido) en los videos.
+
+### 8.4 Se quita la casilla de permiso
+
+- **Se quitan de la interfaz:**
+  - `CasillaPermisoJuego` y `PermisoVideosProvider` de /juegos;
+  - la pregunta de TikTok al terminar una partida (`PreguntaTikTok`, `PreguntaTikTokJuego` y `PermisoTikTok` en Palabra, Ahorcado, Trivia y Ruleta);
+  - la sección "Videos de TikTok, Instagram y YouTube" de /perfil.
+- **Archivos que quedan sin uso:** `/api/cuenta/tiktok`, `PermisoVideosJuegos.tsx`, `PermisoTikTok.tsx`, `PreguntaTikTok.tsx` y `PreguntaTikTokJuego.tsx`. **No se borran** (regla del usuario: nunca `rm`).
+- **Tarjetas y videos de campeones** (`/admin/juegos/tiktok`, `/admin/palabra/tiktok`, imagen para historias y tarjeta de la Liga):
+  - Usan siempre el nombre para mostrar y la foto de perfil; si no tiene foto, la inicial en un círculo.
+  - El criterio "con permiso" pasa de `tiktok_permiso = true` a "aceptó las reglas".
+  - Quien nunca aceptó y tiene resultados de antes sale como "Hermano/a participante", sin foto, como hoy.
+
+### 8.5 Página /reglas
+
+Una página pública con todas las reglas de los juegos y la Liga, en lenguaje sencillo:
+- **La regla de participación** (nombre para mostrar y foto).
+- **Cómo se ganan puntos en la Liga:** las mismas cifras de `src/lib/liga/config.ts`, leídas de ahí para que no se desfasen.
+- **Topes:** máximo por partida y 40 por juego por día.
+- **La semana:** de lunes a domingo, hora del Pacífico, y la campeona del lunes.
+- **Elegir y cambiar de iglesia:** una vez cada 30 días, y qué pasa con las iglesias pendientes.
+- **Las partidas sin sesión** no suman puntos.
+- **Juego limpio:** no usar varias cuentas ni trampas; el admin puede quitar puntos o iglesias.
+
+Se enlaza desde la pantalla de aceptación, el formulario de registro, /juegos, /juegos/liga y el pie de página.
 
 ## 9. Migración
 
 `supabase/migrations/0086_liga_iglesias.sql` (la 0085 está en el repo pero no aplicada; no depende de ella). Incluye:
 - Las tablas `iglesias`, `liga_puntos` y `liga_campeonas`.
-- Las columnas nuevas de `profiles`.
+- Las columnas nuevas de `profiles` (Liga y reglas: `acepto_reglas_en`, `acepto_reglas_version`), protegidas por un trigger para que solo el servidor las cambie.
+- `handle_new_user()` actualizada para guardar el nombre para mostrar y la aceptación que vienen del registro con correo.
 - RLS, REVOKE y GRANT, los índices `(semana, iglesia_id)`, `(jugador, juego, dia)` y `(jugador, juego, partida_ref)`.
 - Las funciones `liga_registrar_puntos`, `liga_tabla_semana`, `liga_jugadores_iglesia` y `liga_cerrar_semana`.
 - El alta de las 4 iglesias existentes.
@@ -188,7 +250,8 @@ Se aplica en el SQL Editor de Supabase con autorización del usuario.
   - Las 6 rutas de juego donde se llama a `registrarPuntosLiga()` (una línea y el cálculo de puntos).
   - Las páginas de los 4 juegos (montan el aviso de iglesia).
   - `/juegos` (tarjeta), `/perfil` (cambiar iglesia).
-  - `permiso-videos.ts` (texto).
+  - `/login` (campos del registro), `ProfileForm` (nota del nombre), las pantallas de reglas en juegos y Liga, y la página nueva `/reglas`.
+  - Quitar la casilla y la pregunta de TikTok de los juegos y de /perfil (§8.4); `campeones.server.ts` y `palabra/puntos.server.ts` con el criterio "aceptó las reglas" y el nombre para mostrar completo.
   - El menú de admin y `vercel.json` (crons).
 
 ## 11. Pruebas
