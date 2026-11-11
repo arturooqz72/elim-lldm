@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { EntrarConCodigo } from "@/components/auth/EntrarConCodigo";
+import { NOMBRE_MAX, NOMBRE_MIN, NOTA_NOMBRE_PARA_MOSTRAR, REGLAS_VERSION, TEXTO_REGLA_PARTICIPACION } from "@/lib/reglas";
 
 type SocialProvider = "google" | "facebook";
 
@@ -24,6 +25,9 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Registro con correo: nombre para mostrar y "Acepto" (sin marcar) de la regla general.
+  const [nombreMostrar, setNombreMostrar] = useState("");
+  const [aceptoReglas, setAceptoReglas] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
@@ -59,6 +63,8 @@ function LoginForm() {
     setModoCodigo(next === "register");
     setPassword("");
     setConfirmPassword("");
+    setNombreMostrar("");
+    setAceptoReglas(false);
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -80,6 +86,17 @@ function LoginForm() {
       setMessage({ type: "error", text: "Las contraseñas no coinciden." });
       return;
     }
+    const nombreLimpio = nombreMostrar.replace(/\s+/g, " ").trim();
+    if (mode === "register") {
+      if (nombreLimpio.length < NOMBRE_MIN || nombreLimpio.length > NOMBRE_MAX) {
+        setMessage({ type: "error", text: `Tu nombre para mostrar debe tener de ${NOMBRE_MIN} a ${NOMBRE_MAX} letras.` });
+        return;
+      }
+      if (!aceptoReglas) {
+        setMessage({ type: "error", text: 'Para crear tu cuenta, marca "Acepto" en la regla de los juegos.' });
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -89,7 +106,7 @@ function LoginForm() {
           email: cleanEmail,
           password: cleanPassword,
           options: {
-            data: { full_name: cleanEmail.split("@")[0] },
+            data: { full_name: nombreLimpio, display_name: nombreLimpio, acepto_reglas_version: REGLAS_VERSION },
             emailRedirectTo: `${window.location.origin}/callback?returnUrl=${encodeURIComponent(returnUrl)}`,
           },
         });
@@ -348,6 +365,45 @@ function LoginForm() {
                 onFocus={(e) => { e.currentTarget.style.borderColor = "var(--color-primary)"; }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; }}
               />
+            )}
+
+            {mode === "register" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="text"
+                    placeholder="Nombre para mostrar"
+                    value={nombreMostrar}
+                    onChange={(e) => setNombreMostrar(e.target.value)}
+                    required
+                    minLength={NOMBRE_MIN}
+                    maxLength={NOMBRE_MAX}
+                    autoComplete="nickname"
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
+                    style={inputStyle}
+                  />
+                  <span className="text-xs px-1" style={{ color: "var(--color-text-muted)" }}>
+                    {NOTA_NOMBRE_PARA_MOSTRAR}
+                  </span>
+                </div>
+                <label
+                  className="flex items-start gap-3 p-3 rounded-xl text-sm cursor-pointer"
+                  style={{ background: "var(--color-surface-elevated)", border: "1px solid var(--color-border)", color: "var(--color-text)" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={aceptoReglas}
+                    onChange={(e) => setAceptoReglas(e.target.checked)}
+                    className="mt-1 w-4 h-4 shrink-0 accent-[#D4A017]"
+                  />
+                  <span>
+                    <strong>Acepto.</strong> {TEXTO_REGLA_PARTICIPACION}{" "}
+                    <Link href="/reglas" target="_blank" className="underline" style={{ color: "var(--color-primary)" }}>
+                      Ver reglas
+                    </Link>
+                  </span>
+                </label>
+              </>
             )}
 
             <button

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
+import { NOTA_NOMBRE_PARA_MOSTRAR } from "@/lib/reglas";
 
 const BIO_MAX = 160;
 const NAME_MAX = 60;
@@ -45,7 +46,7 @@ export function ProfileForm({
             className="text-xs font-medium"
             style={{ color: "var(--color-text-muted)" }}
           >
-            Nombre público
+            Nombre para mostrar
           </label>
           <span
             className="text-xs font-mono"
@@ -85,6 +86,9 @@ export function ProfileForm({
                 : "var(--color-border)";
           }}
         />
+        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          {NOTA_NOMBRE_PARA_MOSTRAR}. Puede ser tu nombre o un apodo, por ejemplo &quot;Hermano Juan GDL&quot;.
+        </p>
         {!nameOk && name.length > 0 && name.trim().length < 2 && (
           <p className="text-xs" style={{ color: "var(--color-destructive)" }}>
             El nombre debe tener al menos 2 caracteres.

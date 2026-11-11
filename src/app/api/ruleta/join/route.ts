@@ -4,6 +4,7 @@ import { getOrCreateOpenRoom } from "@/lib/ruleta/room.server";
 import { tryStartMatch } from "@/lib/ruleta/advance.server";
 import { MIN_PLAYERS, MAX_PLAYERS } from "@/lib/ruleta/wheel";
 import { notifyGameWaiting } from "@/lib/juegos/notify-waiting.server";
+import { aceptoReglas, faltaAceptarReglas } from "@/lib/reglas.server";
 
 // Deliberadamente SIN [codigo] en la ruta — a diferencia de las demás
 // rutas de Ruleta (que ya operan dentro de una sala conocida), esta es la
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
   }
+  if (!(await aceptoReglas(user.id))) return faltaAceptarReglas();
 
   let body: { jugadores_deseados?: number };
   try {

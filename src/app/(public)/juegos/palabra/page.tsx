@@ -5,7 +5,6 @@ import { CalendarCheck } from "lucide-react";
 import { getProfile } from "@/lib/supabase/server";
 import { numeroDelDia } from "@/lib/palabra/logica";
 import { fechaDeHoy, getEstadoJugador, hayPalabraHoy } from "@/lib/palabra/servidor";
-import { debePreguntarTikTok, nombreCorto } from "@/lib/palabra/puntos";
 import { PalabraGame } from "@/components/juegos/palabra/PalabraGame";
 
 export const metadata: Metadata = {
@@ -75,14 +74,7 @@ export default async function PalabraDelDiaPage() {
           conSesion={Boolean(profile)}
           estadoInicial={estado}
           usuario={profile ? { iglesia: (profile.iglesia as string | null | undefined) ?? null } : null}
-          tiktok={{
-            permiso: profile.tiktok_permiso === true,
-            preguntar: debePreguntarTikTok(
-              profile.tiktok_permiso === true,
-              (profile.tiktok_permiso_at as string | null | undefined) ?? null
-            ),
-            nombre: nombreCorto(profile.display_name ?? ""),
-          }}
+          tiktok={null}
         />
       </div>
     </div>

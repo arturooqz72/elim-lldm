@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { siguientePalabra } from "@/lib/juegos/ahorcado.server";
 import { esDificultad } from "@/lib/juegos/ahorcado-dificultad";
+import { aceptoReglas, faltaAceptarReglas } from "@/lib/reglas.server";
 
 // Palabra para jugar al Ahorcado (ver ahorcado.server.ts). Devuelve solo
 // lo que el navegador puede ver: letras acertadas, vidas, puntos y las
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
+  if (!(await aceptoReglas(user.id))) return faltaAceptarReglas();
 
   let body: { dificultad?: unknown } = {};
   try {

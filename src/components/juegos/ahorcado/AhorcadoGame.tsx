@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Trophy, Heart, Gauge, RotateCcw } from "lucide-react";
 import { AhorcadoDibujo } from "./AhorcadoDibujo";
 import { AhorcadoTeclado } from "./AhorcadoTeclado";
-import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 import { AhorcadoPista } from "./AhorcadoPista";
 import { AhorcadoDificultad } from "./AhorcadoDificultad";
 import { AhorcadoResultado } from "./AhorcadoResultado";
@@ -208,7 +207,6 @@ export function AhorcadoGame() {
               onNuevaRacha={() => setEligiendo(true)}
             />
           )}
-          {juegoTerminado && <PreguntaTikTokJuego />}
         </div>
       </div>
 

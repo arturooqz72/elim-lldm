@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getProfile, createClient, createServiceClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/perfil/ProfileForm";
-import { PermisoTikTok } from "@/components/juegos/palabra/PermisoTikTok";
 import { formatDate } from "@/lib/utils";
+import { getMiIglesia } from "@/lib/liga/consultas.server";
+import { LIGA_DIAS_CAMBIO } from "@/lib/liga/config";
+import { aceptoVersionActual } from "@/lib/reglas";
+import { CambiarIglesia } from "@/components/juegos/liga/CambiarIglesia";
 import {
   ShieldCheck,
   Gamepad2,
@@ -63,7 +66,9 @@ export default async function PerfilPage({ searchParams }: Props) {
     bio: string | null;
     created_at: string;
     tiktok_permiso?: boolean;
+    acepto_reglas_version?: string | null;
   };
+  const liga = await getMiIglesia(p.id);
 
   // Stats via service client — game_players / platikas_requests lack public SELECT policies
   const service = await createServiceClient();
@@ -273,15 +278,23 @@ export default async function PerfilPage({ searchParams }: Props) {
           />
         </div>
 
-        {/* ── TIKTOK ─────────────────────────────────────────────── */}
+        {/* ── LIGA DE IGLESIAS ─────────────────────────────────────── */}
         <div
           className="rounded-2xl p-5 flex flex-col gap-3"
           style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <h2 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-            Videos de TikTok, Instagram y YouTube
+            Mi equipo en la Liga
           </h2>
-          <PermisoTikTok inicial={p.tiktok_permiso === true} />
+          <CambiarIglesia
+            nombre={liga.iglesia?.nombre ?? null}
+            aprobada={liga.iglesia?.aprobada ?? false}
+            puedeElegir={aceptoVersionActual(p.acepto_reglas_version)}
+          />
+          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            Puedes cambiarlo una vez cada {LIGA_DIAS_CAMBIO} días (salir de Amigos de Elim siempre se puede). Para
+            elegir, primero acepta las reglas en cualquier juego.
+          </p>
         </div>
 
         {/* ── ACCOUNT INFO ─────────────────────────────────────────── */}

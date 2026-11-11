@@ -22,7 +22,6 @@ import {
 import type { ArenaJugador, AnswerOption } from "@/types";
 import { InvitarConectados } from "@/components/juegos/InvitarConectados";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
-import { PreguntaTikTokJuego } from "@/components/juegos/PreguntaTikTokJuego";
 import { ReglasTrivia } from "@/components/juegos/ReglasJuegos";
 
 type ArenaPublicaPhase = "lobby" | "counting" | "playing" | "reveal" | "finished";
@@ -603,7 +602,6 @@ function FinishedScreen({ jugadores, meId }: { jugadores: ArenaJugador[]; meId: 
         )}
       </div>
 
-      <PreguntaTikTokJuego />
 
       <div className="w-full">
         <Leaderboard jugadores={jugadores} meId={meId} />

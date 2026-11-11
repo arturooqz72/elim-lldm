@@ -15,7 +15,6 @@ import { getResumenHub } from "@/lib/palabra/servidor";
 import { BotonReglas } from "@/components/juegos/BotonReglas";
 import { ReglasAhorcado } from "@/components/juegos/ReglasJuegos";
 import { PalabraAyuda } from "@/components/juegos/palabra/PalabraAyuda";
-import { PermisoVideosProvider, CasillaPermisoJuego } from "@/components/juegos/PermisoVideosJuegos";
 
 export const metadata: Metadata = {
   title: "Juegos en línea — Elim LLDM",
@@ -52,12 +51,9 @@ export default async function JuegosHubPage() {
     getResumenHub(profile?.id ?? null),
   ]);
 
-  // Un solo permiso para todas las casillas; los admins no compiten.
-  const perfil = profile as { role?: string; tiktok_permiso?: boolean } | null;
-  const modoPermiso = !perfil ? "iniciar-sesion" : perfil.role === "admin" ? "oculto" : "casilla";
 
   return (
-    <PermisoVideosProvider modo={modoPermiso} inicial={perfil?.tiktok_permiso === true}>
+    <>
       <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
         <div
           className="py-12 px-4"
@@ -130,7 +126,6 @@ export default async function JuegosHubPage() {
                 </BotonReglas>
                 <ChevronRight size={18} style={{ color: "var(--color-primary)" }} />
               </div>
-              <CasillaPermisoJuego />
             </div>
           </div>
 
@@ -200,7 +195,6 @@ export default async function JuegosHubPage() {
                   </BotonReglas>
                   <ChevronRight size={18} style={{ color: "var(--color-text-muted)" }} />
                 </div>
-                <CasillaPermisoJuego />
               </div>
               <div className="flex flex-col gap-2">
                 <TablaPosiciones
@@ -223,6 +217,6 @@ export default async function JuegosHubPage() {
           </div>
         </div>
       </div>
-    </PermisoVideosProvider>
+    </>
   );
 }

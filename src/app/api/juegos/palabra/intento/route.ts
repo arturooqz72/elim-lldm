@@ -26,6 +26,7 @@ import {
 } from "@/lib/palabra/servidor";
 import { PALABRAS_VALIDAS } from "@/lib/palabra/validas";
 import type { PalabraIntento } from "@/types";
+import { aceptoReglas, faltaAceptarReglas } from "@/lib/reglas.server";
 
 function error(status: number, codigo: string, mensaje: string) {
   return NextResponse.json({ error: codigo, mensaje }, { status });
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
 
   // Se exige sesión, igual que en la página: nada de partidas anónimas.
   if (!user) return error(401, "sin_sesion", "Inicia sesión para jugar.");
+  if (!(await aceptoReglas(user.id))) return faltaAceptarReglas();
 
   // ---------- Con sesión ----------
   const buscarPartida = async () =>

@@ -13,7 +13,8 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { rachaEfectiva, sumarDias } from "./logica";
-import { NOMBRE_SIN_PERMISO, nombreCorto, puntosDe, vioPista } from "./puntos";
+import { NOMBRE_SIN_PERMISO, puntosDe, vioPista } from "./puntos";
+import { COLUMNAS_IGLESIA, nombreIglesia, type IglesiaBase } from "@/lib/liga/nombre";
 import { getPalabraPorFecha, revelar } from "./servidor";
 import type {
   PalabraFilaRankingIglesia,
@@ -64,16 +65,20 @@ async function perfiles(service: ServiceClient, ids: string[]): Promise<Map<stri
   if (ids.length === 0) return mapa;
   const { data, error } = await service
     .from("profiles")
-    .select("id, display_name, avatar_url, iglesia, role, tiktok_permiso")
+    .select("id, display_name, avatar_url, iglesia_id, role, acepto_reglas_en")
     .in("id", ids);
   if (error) throw new Error(error.message);
+  // La iglesia sale del equipo de la Liga de Iglesias (ya no del texto libre).
+  const { data: igl } = await service.from("iglesias").select(COLUMNAS_IGLESIA).eq("aprobada", true);
+  const aprob = (igl ?? []) as IglesiaBase[];
+  const nombrePorId = new Map(aprob.map((i) => [i.id, nombreIglesia(i, aprob)]));
   for (const p of (data ?? []) as Array<Record<string, unknown>>) {
     mapa.set(p.id as string, {
       nombre: ((p.display_name as string | null) ?? "").trim() || "Jugador",
       avatar: (p.avatar_url as string | null) ?? null,
-      iglesia: ((p.iglesia as string | null) ?? "").trim() || null,
+      iglesia: nombrePorId.get(p.iglesia_id as string) ?? null,
       admin: p.role === "admin",
-      tiktok: p.tiktok_permiso === true,
+      tiktok: Boolean(p.acepto_reglas_en),
     });
   }
   return mapa;
@@ -222,8 +227,8 @@ export async function getPanelPuntos(hoy: string, userId: string | null): Promis
 
 /**
  * Video de TikTok de un día YA TERMINADO (fecha < hoy; quien llama lo
- * valida). Sin admins. Con nombre y foto solo quien dio permiso, y el
- * nombre en forma corta ("Arturo O."). El ganador y el top 3 de la semana
+ * valida). Sin admins. Con nombre para mostrar y foto quien aceptó la
+ * regla general de participación (nombre completo, tal cual lo eligió). El ganador y el top 3 de la semana
  * siempre salen, como "Hermano/a participante" sin foto si no dio
  * permiso; el 2.º y 3.º del día sin permiso se resumen en "y N hermanos
  * más". Nunca iglesia ni correo.
@@ -244,7 +249,7 @@ export async function getTarjetaTikTok(fecha: string): Promise<PalabraTarjetaTik
   const persona = (id: string, posicion: number) => {
     const p = mapa.get(id);
     return p?.tiktok
-      ? { posicion, nombre: nombreCorto(p.nombre), avatar: p.avatar, esYo: false }
+      ? { posicion, nombre: p.nombre, avatar: p.avatar, esYo: false }
       : { posicion, nombre: NOMBRE_SIN_PERMISO, avatar: null, esYo: false };
   };
   const filaDia = (p: Partida, i: number): PalabraPuntosHoyFila => ({

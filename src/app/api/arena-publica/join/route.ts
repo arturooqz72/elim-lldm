@@ -4,6 +4,7 @@ import { getOrCreateOpenRoom } from "@/lib/arena-publica/room.server";
 import { tryStartCounting } from "@/lib/arena-publica/advance.server";
 import { MIN_JUGADORES_PARA_INICIAR, MAX_JUGADORES_POR_SALA } from "@/lib/arena-publica/config";
 import { notifyGameWaiting } from "@/lib/juegos/notify-waiting.server";
+import { aceptoReglas, faltaAceptarReglas } from "@/lib/reglas.server";
 
 export async function POST(request: Request) {
   const authClient = await createClient();
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Inicia sesión para jugar" }, { status: 401 });
   }
+  if (!(await aceptoReglas(user.id))) return faltaAceptarReglas();
 
   let body: { jugadores_deseados?: number };
   try {
