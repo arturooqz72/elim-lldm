@@ -64,7 +64,7 @@ export function PantallaReglas({ nombreInicial }: { nombreInicial: string }) {
 
   if (!abierta) {
     return (
-      <div className="fixed bottom-0 inset-x-0 z-40 p-3" style={{ background: "rgba(10,10,18,0.95)", borderTop: "1px solid rgba(212,160,23,0.4)" }}>
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-3" style={{ background: "rgba(10,10,18,0.95)", borderTop: "1px solid rgba(212,160,23,0.4)" }}>
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <p className="flex-1 text-sm" style={{ color: "var(--color-text)" }}>Para jugar, acepta las reglas de los juegos.</p>
           <button type="button" onClick={() => setAbierta(true)} className="px-4 py-2.5 rounded-xl text-sm font-bold min-h-11" style={{ background: "var(--color-primary)", color: "#000" }}>
