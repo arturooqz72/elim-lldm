@@ -65,7 +65,7 @@ async function perfiles(service: ServiceClient, ids: string[]): Promise<Map<stri
   if (ids.length === 0) return mapa;
   const { data, error } = await service
     .from("profiles")
-    .select("id, display_name, avatar_url, iglesia_id, role, acepto_reglas_en")
+    .select("id, display_name, avatar_url, iglesia_id, role, acepto_reglas_en, tiktok_permiso")
     .in("id", ids);
   if (error) throw new Error(error.message);
   // La iglesia sale del equipo de la Liga de Iglesias (ya no del texto libre).
@@ -78,7 +78,8 @@ async function perfiles(service: ServiceClient, ids: string[]): Promise<Map<stri
       avatar: (p.avatar_url as string | null) ?? null,
       iglesia: nombrePorId.get(p.iglesia_id as string) ?? null,
       admin: p.role === "admin",
-      tiktok: Boolean(p.acepto_reglas_en),
+      // Regla general aceptada, o el permiso de la casilla vieja de TikTok (sigue contando).
+      tiktok: Boolean(p.acepto_reglas_en) || p.tiktok_permiso === true,
     });
   }
   return mapa;

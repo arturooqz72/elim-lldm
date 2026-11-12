@@ -37,6 +37,7 @@ interface Perfil {
   avatar_url: string | null;
   role: string | null;
   acepto_reglas_en: string | null;
+  tiktok_permiso: boolean | null;
 }
 
 /** Instante (ISO) en que empieza `fecha` en hora del Pacífico (cuida el cambio de horario). */
@@ -138,7 +139,7 @@ async function perfiles(service: Service, ids: string[]): Promise<Map<string, Pe
   for (let i = 0; i < ids.length; i += 200) {
     const { data, error } = await service
       .from("profiles")
-      .select("id, display_name, avatar_url, role, acepto_reglas_en")
+      .select("id, display_name, avatar_url, role, acepto_reglas_en, tiktok_permiso")
       .in("id", ids.slice(i, i + 200));
     if (error) throw new Error(`profiles: ${error.message}`);
     for (const p of (data ?? []) as Perfil[]) mapa.set(p.id, p);
@@ -149,7 +150,9 @@ async function perfiles(service: Service, ids: string[]): Promise<Map<string, Pe
 function persona(p: Perfil | undefined): { nombre: string; avatar: string | null; conPermiso: boolean } {
   // Regla general (§8 del diseño de la Liga): quien aceptó sale con su
   // nombre para mostrar y su foto; quien nunca aceptó, "Hermano/a participante".
-  if (!p?.acepto_reglas_en) return { nombre: NOMBRE_SIN_PERMISO, avatar: null, conPermiso: false };
+  // El permiso de la casilla vieja de TikTok (0078) sigue contando para los
+  // videos: quien la marcó ya aceptó salir con nombre y foto.
+  if (!p?.acepto_reglas_en && p?.tiktok_permiso !== true) return { nombre: NOMBRE_SIN_PERMISO, avatar: null, conPermiso: false };
   return { nombre: (p.display_name ?? "").trim() || "Jugador", avatar: p.avatar_url, conPermiso: true };
 }
 
