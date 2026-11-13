@@ -7,14 +7,16 @@ import { formatTime } from "@/lib/audio-recording";
 const MAX_WIDTH = 1280;
 const JPEG_QUALITY = 0.85;
 const CAPTURE_ERROR = "No se pudo capturar la escena, intenta otra vez.";
+const CORS_ERROR = "Este video no permite tomar escenas; puedes subir una imagen como portada.";
 
 interface EscenaPortadaPickerProps {
-  videoFile: File | null;
+  /** Archivo local recién elegido, o URL de un video ya subido. */
+  source: File | string | null;
   onPick: (file: File, seconds: number) => void;
   disabled?: boolean;
 }
 
-export function EscenaPortadaPicker({ videoFile, onPick, disabled }: EscenaPortadaPickerProps) {
+export function EscenaPortadaPicker({ source, onPick, disabled }: EscenaPortadaPickerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
@@ -27,21 +29,29 @@ export function EscenaPortadaPicker({ videoFile, onPick, disabled }: EscenaPorta
     setError(null);
     setDuration(0);
     setTime(0);
-    if (!videoFile) {
+    if (!source) {
       setSrc(null);
       return;
     }
-    const objectUrl = URL.createObjectURL(videoFile);
+    if (typeof source === "string") {
+      setSrc(source);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(source);
     setSrc(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
-  }, [videoFile]);
+  }, [source]);
 
-  if (!videoFile || !src) return null;
+  if (!source || !src) return null;
+  // Un video remoto necesita CORS para poder copiar sus fotogramas al canvas.
+  const remoto = typeof source === "string";
 
   if (unsupported) {
     return (
       <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-        Este formato no se puede previsualizar aquí; puedes subir una imagen como portada.
+        {remoto
+          ? "No se pudo cargar el video para tomar una escena; puedes subir una imagen como portada."
+          : "Este formato no se puede previsualizar aquí; puedes subir una imagen como portada."}
       </p>
     );
   }
@@ -79,20 +89,25 @@ export function EscenaPortadaPicker({ videoFile, onPick, disabled }: EscenaPorta
       setError(CAPTURE_ERROR);
       return;
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const seconds = video.currentTime;
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setError(CAPTURE_ERROR);
-          return;
-        }
-        const file = new File([blob], `escena-${Math.floor(seconds)}s.jpg`, { type: "image/jpeg" });
-        onPick(file, seconds);
-      },
-      "image/jpeg",
-      JPEG_QUALITY,
-    );
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            setError(CAPTURE_ERROR);
+            return;
+          }
+          const file = new File([blob], `escena-${Math.floor(seconds)}s.jpg`, { type: "image/jpeg" });
+          onPick(file, seconds);
+        },
+        "image/jpeg",
+        JPEG_QUALITY,
+      );
+    } catch {
+      // SecurityError: el servidor del video no manda cabeceras CORS.
+      setError(CORS_ERROR);
+    }
   }
 
   return (
@@ -100,6 +115,7 @@ export function EscenaPortadaPicker({ videoFile, onPick, disabled }: EscenaPorta
       <video
         ref={videoRef}
         src={src}
+        crossOrigin={remoto ? "anonymous" : undefined}
         controls
         muted
         playsInline

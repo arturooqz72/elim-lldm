@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { adminId, categoriaElegida } from "@/lib/videos/categorias.server";
 import { VideoRowActions } from "./VideoRowActions";
+import { CambiarPortada } from "./CambiarPortada";
 import type { VideoStatus } from "@/types";
 
 export const metadata = { title: "Videos — Admin" };
@@ -49,6 +50,30 @@ async function saveCategory(formData: FormData) {
 
   revalidatePath("/admin/videos");
   revalidatePath("/videos");
+}
+
+// Cambia la portada de un video ya subido. La imagen la sube el admin desde
+// el navegador a su carpeta de video-thumbnails; aquí solo se acepta una URL
+// de esa carpeta, para que nadie pueda apuntar la portada a otro sitio.
+async function saveThumbnail(id: string, thumbnailUrl: string): Promise<{ error: string | null }> {
+  "use server";
+  const admin = await adminId();
+  if (!admin) return { error: "Solo un administrador puede cambiar la portada." };
+
+  const carpeta = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/video-thumbnails/thumbnails/${admin}/`;
+  if (typeof id !== "string" || typeof thumbnailUrl !== "string" || !thumbnailUrl.startsWith(carpeta)) {
+    return { error: "La imagen de portada no es válida." };
+  }
+
+  const service = await createServiceClient();
+  const { error } = await service.from("videos").update({ thumbnail_url: thumbnailUrl }).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/videos");
+  revalidatePath("/videos");
+  revalidatePath(`/videos/${id}`);
+  revalidatePath("/");
+  return { error: null };
 }
 
 async function rejectVideo(formData: FormData) {
@@ -123,7 +148,7 @@ export default async function AdminVideosPage({
   let query = supabase
     .from("videos")
     .select(
-      "id, title, status, category_id, rejection_reason, created_at, video_categories(name), profiles!videos_created_by_fkey(display_name)"
+      "id, title, status, category_id, rejection_reason, created_at, video_url, thumbnail_url, video_categories(name), profiles!videos_created_by_fkey(display_name)"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -188,6 +213,8 @@ export default async function AdminVideosPage({
               category_id: string | null;
               rejection_reason: string | null;
               created_at: string;
+              video_url: string | null;
+              thumbnail_url: string | null;
               video_categories: { name: string } | null;
               profiles: { display_name: string } | null;
             }>
@@ -241,6 +268,15 @@ export default async function AdminVideosPage({
                   rejectAction={rejectVideo}
                   deleteAction={deleteVideo}
                 />
+
+                {item.video_url && (
+                  <CambiarPortada
+                    id={item.id}
+                    videoUrl={item.video_url}
+                    thumbnailUrl={item.thumbnail_url}
+                    saveAction={saveThumbnail}
+                  />
+                )}
               </div>
             );
           })}

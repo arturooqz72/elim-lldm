@@ -156,7 +156,7 @@ export function ArchiveUploadForm({ categories, platikas }: ArchiveUploadFormPro
       <Field label="Portada">
         <div className="flex flex-col gap-3">
           <EscenaPortadaPicker
-            videoFile={videoFile}
+            source={videoFile}
             disabled={isPending}
             onPick={(file, seconds) => {
               setThumbFile(file);
