@@ -237,6 +237,26 @@ export default async function LandingPage() {
                 </Link>
               </div>
             )}
+
+            {/* Instalar la radio como app */}
+            <div className="flex flex-col sm:flex-row items-center gap-x-5 gap-y-2 text-sm font-medium">
+              <Link
+                href="/videos/8535c92f-4771-45d4-8a5b-7a4a6a24c54d"
+                className="flex items-center gap-1.5 underline-offset-4 hover:underline"
+                style={{ color: "var(--color-primary)" }}
+              >
+                <Play size={14} />
+                Descargar la radio como app
+              </Link>
+              <Link
+                href="/escuchar"
+                className="flex items-center gap-1.5 underline-offset-4 hover:underline"
+                style={{ color: "var(--color-primary)" }}
+              >
+                <Radio size={14} />
+                Radio Elim en directo
+              </Link>
+            </div>
           </div>
         </section>
 
